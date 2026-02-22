@@ -50,7 +50,9 @@ export function LoginForm() {
       toast.success('เข้าสู่ระบบสำเร็จ', {
         description: 'Welcome back!',
       });
-      const redirect = searchParams.get('redirect') || '/';
+      // Validate redirect param — only allow relative paths (prevent open redirect)
+      const raw = searchParams.get('redirect') || '/';
+      const redirect = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
       router.push(redirect);
     } catch (error: unknown) {
       setShakeError(true);

@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsBoolean, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsBoolean, IsString, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -22,5 +22,6 @@ export class LinkRegimenDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   notes?: string;
 }

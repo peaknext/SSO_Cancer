@@ -20,6 +20,7 @@ export class AuthService {
   private readonly refreshTokenTtl: string;
   private readonly refreshSecret: string;
   private readonly passwordHistoryCount: number;
+  private readonly maxConcurrentSessions: number;
 
   constructor(
     private readonly usersService: UsersService,
@@ -43,18 +44,30 @@ export class AuthService {
       'JWT_REFRESH_TTL',
       '7d',
     );
-    this.refreshSecret = this.configService.get<string>(
-      'JWT_REFRESH_SECRET',
-      'dev-jwt-refresh-secret',
-    );
+    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
+    if (!refreshSecret) throw new Error('JWT_REFRESH_SECRET environment variable is required');
+    this.refreshSecret = refreshSecret;
     this.passwordHistoryCount = this.configService.get<number>(
       'PASSWORD_HISTORY_COUNT',
+      5,
+    );
+    this.maxConcurrentSessions = this.configService.get<number>(
+      'MAX_CONCURRENT_SESSIONS',
       5,
     );
   }
 
   async login(dto: LoginDto, ip: string, userAgent: string) {
     const user = await this.usersService.findByEmail(dto.email);
+
+    // Constant-time: always run bcrypt.compare even if user not found
+    // This prevents timing attacks that reveal valid emails
+    const dummyHash = '$2b$12$LJ3m4ys3Lg7Yt18G4WQJG.vGPqFnsgXOdGmCd7JnRqT1l/TCSeDV6';
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user?.passwordHash ?? dummyHash,
+    );
+
     if (!user) {
       throw new UnauthorizedException('INVALID_CREDENTIALS');
     }
@@ -67,10 +80,6 @@ export class AuthService {
       throw new UnauthorizedException('ACCOUNT_LOCKED');
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      dto.password,
-      user.passwordHash,
-    );
     if (!isPasswordValid) {
       await this.usersService.incrementFailedAttempts(user.id);
       const updated = await this.usersService.findById(user.id);
@@ -93,10 +102,13 @@ export class AuthService {
         userId: user.id,
         tokenId,
         ipAddress: ip,
-        userAgent: userAgent || null,
+        userAgent: userAgent?.substring(0, 500) || null,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
+
+    // Enforce max concurrent sessions — remove oldest if over limit
+    await this.enforceMaxSessions(user.id);
 
     await this.logAudit(user.id, 'LOGIN', 'User', user.id, ip, userAgent);
 
@@ -194,9 +206,12 @@ export class AuthService {
     await this.usersService.addPasswordHistory(userId, user.passwordHash);
     await this.usersService.updatePassword(userId, newHash);
 
+    // Revoke all existing sessions to force re-login
+    await this.prisma.session.deleteMany({ where: { userId } });
+
     await this.logAudit(
       userId,
-      'CHANGE_PASSWORD',
+      'PASSWORD_CHANGE',
       'User',
       userId,
       ip,
@@ -252,6 +267,22 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  private async enforceMaxSessions(userId: number) {
+    const sessions = await this.prisma.session.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    if (sessions.length > this.maxConcurrentSessions) {
+      const idsToDelete = sessions
+        .slice(this.maxConcurrentSessions)
+        .map((s) => s.id);
+      await this.prisma.session.deleteMany({
+        where: { id: { in: idsToDelete } },
+      });
+    }
+  }
+
   private async logAudit(
     userId: number,
     action: string,
@@ -267,7 +298,7 @@ export class AuthService {
         entityType,
         entityId,
         ipAddress,
-        userAgent: userAgent || null,
+        userAgent: userAgent?.substring(0, 500) || null,
       },
     });
   }

@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsInt, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, IsInt, IsBoolean, MaxLength } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
@@ -7,6 +7,7 @@ export class QueryVisitsDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Search by VN or diagnosis' })
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   search?: string;
 
   @ApiPropertyOptional({ description: 'Filter by resolved cancer site ID' })

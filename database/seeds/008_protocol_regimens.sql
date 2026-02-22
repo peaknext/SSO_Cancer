@@ -1,302 +1,148 @@
--- 008: Protocol Regimens — protocol to regimen mappings
+-- 008: Protocol Regimens — โปรโตคอล ↔ สูตรยา
+-- Exported from database: 131 rows
 
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0111' AND r.regimen_code = 'AC'
+INSERT INTO protocol_regimens (id, protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
+VALUES
+  (7, 2, 13, 1, false, NULL),
+  (9, 5, 11, 1, false, NULL),
+  (10, 5, 10, 1, false, NULL),
+  (11, 5, 9, 1, false, NULL),
+  (12, 5, 8, 1, true, NULL),
+  (13, 9, 26, 1, true, 'Weekly cisplatin 40 mg/m2'),
+  (15, 11, 28, NULL, false, NULL),
+  (16, 16, 43, 1, true, NULL),
+  (17, 18, 40, 1, true, NULL),
+  (18, 30, 26, 1, true, NULL),
+  (19, 31, 26, 1, true, NULL),
+  (20, 32, 27, 1, true, NULL),
+  (21, 34, 26, 1, true, NULL),
+  (25, 45, 21, 1, true, NULL),
+  (26, 45, 24, 1, false, NULL),
+  (27, 45, 23, 1, false, NULL),
+  (28, 46, 25, 2, true, NULL),
+  (29, 48, 22, 1, false, NULL),
+  (30, 48, 20, 1, true, NULL),
+  (31, 49, 22, 1, false, NULL),
+  (32, 49, 20, 1, true, NULL),
+  (33, 54, 18, 1, false, NULL),
+  (34, 54, 13, 1, false, NULL),
+  (35, 54, 15, 1, true, NULL),
+  (36, 54, 17, 1, false, NULL),
+  (37, 57, 16, 1, false, NULL),
+  (38, 57, 14, 1, false, NULL),
+  (39, 57, 15, 1, true, NULL),
+  (40, 57, 17, 1, false, NULL),
+  (41, 58, 28, 1, true, 'With concurrent radiation'),
+  (42, 60, 19, 1, true, NULL),
+  (43, 77, 28, 1, false, NULL),
+  (44, 77, 29, 1, true, NULL),
+  (45, 84, 23, 1, true, NULL),
+  (46, 94, 26, 1, true, NULL),
+  (47, 100, 45, 1, true, NULL),
+  (48, 103, 44, 1, true, NULL),
+  (49, 104, 44, 1, true, NULL),
+  (50, 108, 36, 1, true, NULL),
+  (51, 115, 37, 1, true, NULL),
+  (52, 120, 38, 1, true, NULL),
+  (53, 127, 36, 1, true, 'With TKI'),
+  (54, 131, 35, 1, false, 'Hodgkin lymphoma'),
+  (55, 131, 31, 1, false, NULL),
+  (56, 131, 32, 1, true, 'CD20+ B-cell lymphoma'),
+  (57, 147, 41, 1, true, NULL),
+  (58, 148, 41, 1, true, NULL),
+  (59, 155, 42, 1, true, NULL),
+  (60, 156, 42, 1, true, NULL),
+  (63, 2, 6, NULL, false, NULL)
 ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
 
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0111' AND r.regimen_code = 'AC-T'
+INSERT INTO protocol_regimens (id, protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
+VALUES
+  (64, 2, 4, NULL, false, NULL),
+  (65, 2, 1, NULL, false, NULL),
+  (66, 2, 25, NULL, false, NULL),
+  (67, 2, 51, NULL, false, NULL),
+  (68, 2, 50, NULL, false, NULL),
+  (75, 9, 53, 1, false, NULL),
+  (76, 9, 54, 1, false, NULL),
+  (77, 9, 55, 1, false, NULL),
+  (78, 9, 20, 1, false, NULL),
+  (79, 1, 6, NULL, false, NULL),
+  (80, 1, 1, NULL, false, NULL),
+  (81, 1, 4, NULL, false, NULL),
+  (82, 1, 7, NULL, false, NULL),
+  (83, 1, 2, NULL, false, NULL),
+  (84, 1, 13, NULL, false, NULL),
+  (85, 1, 49, NULL, false, NULL),
+  (90, 1, 3, 1, false, NULL),
+  (103, 30, 81, 1, true, NULL),
+  (104, 31, 81, 1, true, NULL),
+  (106, 34, 81, 1, true, NULL),
+  (131, 94, 81, 1, true, NULL),
+  (206, 3, 146, 1, true, 'First-line adjuvant ทั้ง pre/postmenopausal'),
+  (207, 3, 147, 1, false, 'Postmenopausal หรือ switch หลัง Tamoxifen 2-3 ปี'),
+  (208, 3, 148, 1, false, 'Postmenopausal ทางเลือก AI'),
+  (211, 4, 147, 1, true, 'First-line metastatic (postmenopausal)'),
+  (212, 4, 148, 1, false, 'First-line ทางเลือก AI'),
+  (213, 4, 146, 1, false, 'First-line (all menopausal status)'),
+  (215, 4, 152, 2, false, 'Second-line'),
+  (365, 846, 257, 1, false, NULL),
+  (366, 846, 258, 1, false, NULL),
+  (367, 846, 10, 1, false, NULL),
+  (368, 846, 8, 1, false, NULL),
+  (369, 42, 259, NULL, false, NULL),
+  (370, 42, 22, NULL, false, NULL),
+  (371, 42, 260, NULL, false, NULL),
+  (372, 42, 20, NULL, false, NULL),
+  (373, 43, 261, NULL, false, NULL),
+  (374, 43, 262, NULL, false, NULL),
+  (375, 43, 264, NULL, false, NULL),
+  (376, 43, 263, NULL, false, NULL),
+  (377, 43, 265, NULL, false, NULL),
+  (378, 43, 266, NULL, false, NULL),
+  (379, 47, 267, NULL, false, NULL),
+  (380, 10, 268, NULL, false, NULL),
+  (381, 10, 28, NULL, false, NULL),
+  (382, 10, 20, NULL, false, 'for neuroendocrine tumor และสามารถใช้ carboplatin แทน cisplatin ได้ในผู้ป่วยบางราย'),
+  (383, 11, 269, NULL, false, NULL),
+  (384, 11, 21, NULL, false, NULL),
+  (385, 11, 268, NULL, false, NULL),
+  (386, 11, 51, NULL, false, NULL)
 ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
 
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0111' AND r.regimen_code = 'CMF'
+INSERT INTO protocol_regimens (id, protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
+VALUES
+  (387, 11, 50, NULL, false, NULL),
+  (388, 11, 20, NULL, false, NULL),
+  (389, 12, 270, NULL, false, NULL),
+  (390, 12, 271, NULL, false, NULL),
+  (391, 12, 50, NULL, false, NULL),
+  (392, 12, 272, NULL, false, NULL),
+  (393, 16, 273, NULL, false, NULL),
+  (394, 16, 274, NULL, false, NULL),
+  (395, 16, 269, NULL, false, NULL),
+  (396, 16, 51, NULL, false, NULL),
+  (404, 2, 12, 1, false, 'HER2+ patients'),
+  (409, 9, 81, 1, true, 'Weekly cisplatin 40 mg/m2'),
+  (410, 11, 43, 1, true, NULL),
+  (418, 42, 21, 1, true, NULL),
+  (420, 42, 23, 1, false, NULL),
+  (460, 3, 150, 1, false, 'Premenopausal + ovarian suppression'),
+  (461, 3, 151, 1, false, 'Premenopausal + ovarian suppression (AI arm)'),
+  (465, 4, 149, 2, false, 'Second-line หลัง AI failure'),
+  (467, 4, 150, 1, false, 'Premenopausal + ovarian suppression'),
+  (468, 3, 45, NULL, false, 'Ovarian suppression สำหรับ premenopausal (ร่วมกับ Tamoxifen/AI)'),
+  (469, 4, 45, NULL, false, 'Ovarian suppression สำหรับ premenopausal'),
+  (689, 17, 51, 2, false, NULL),
+  (690, 17, 50, 2, false, NULL),
+  (691, 17, 372, 2, false, NULL),
+  (692, 17, 484, 2, false, NULL),
+  (693, 17, 485, 2, false, NULL),
+  (694, 19, 20, NULL, false, NULL),
+  (695, 19, 487, NULL, false, NULL),
+  (696, 19, 488, NULL, false, NULL),
+  (697, 19, 21, NULL, false, NULL),
+  (698, 19, 50, NULL, false, NULL)
 ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
 
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0111' AND r.regimen_code = 'FAC'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0111' AND r.regimen_code = 'TAC'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0111' AND r.regimen_code = 'TC'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0112' AND r.regimen_code = 'CAPE-MONO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, 'HER2+ patients'
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0112' AND r.regimen_code = 'PACLI-TRAS'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C011P' AND r.regimen_code = 'PALBO-FUL'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C011P' AND r.regimen_code = 'PALBO-LET'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C011P' AND r.regimen_code = 'RIBO-FUL'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C011P' AND r.regimen_code = 'RIBO-LET'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, 'Weekly cisplatin 40 mg/m2'
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0211' AND r.regimen_code = 'CIS-RT'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0213' AND r.regimen_code = 'CARBO-PACLI-GYN'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0213' AND r.regimen_code = 'CIS-5FU'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0311' AND r.regimen_code = 'CARBO-PACLI-GYN'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0313' AND r.regimen_code = 'BEP'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0511' AND r.regimen_code = 'CIS-RT'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0512' AND r.regimen_code = 'CIS-RT'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0513' AND r.regimen_code = 'TPF'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0515' AND r.regimen_code = 'CIS-RT'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0611' AND r.regimen_code = 'CARBO-PACLI'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0611' AND r.regimen_code = 'CIS-ETO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0611' AND r.regimen_code = 'GEM-CIS'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0614' AND r.regimen_code = 'CARBO-PACLI'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0614' AND r.regimen_code = 'GEM-CARBO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0614' AND r.regimen_code = 'GEM-CIS'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 2, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0615' AND r.regimen_code = 'DOCE-MONO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0618' AND r.regimen_code = 'CARBO-ETO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0618' AND r.regimen_code = 'CIS-ETO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0619' AND r.regimen_code = 'CARBO-ETO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0619' AND r.regimen_code = 'CIS-ETO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0711' AND r.regimen_code = '5FU-LV'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0711' AND r.regimen_code = 'CAPE-MONO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0711' AND r.regimen_code = 'mFOLFOX6'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0711' AND r.regimen_code = 'XELOX'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0714' AND r.regimen_code = 'FOLFIRI'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0714' AND r.regimen_code = 'FOLFOX4'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0714' AND r.regimen_code = 'mFOLFOX6'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0714' AND r.regimen_code = 'XELOX'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, 'With concurrent radiation'
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0715' AND r.regimen_code = 'CIS-5FU'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0717' AND r.regimen_code = 'HIPEC-MMC'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0915' AND r.regimen_code = 'CIS-5FU'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C0915' AND r.regimen_code = 'XELOX-GAST'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1013' AND r.regimen_code = 'GEM-CIS'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1113' AND r.regimen_code = 'CIS-RT'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1211' AND r.regimen_code = 'LHRH-AGONIST'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1214' AND r.regimen_code = 'DOCE-PRED'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1215' AND r.regimen_code = 'DOCE-PRED'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1311' AND r.regimen_code = 'HYPER-CVAD'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1412' AND r.regimen_code = '7-PLUS-3'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1511' AND r.regimen_code = 'ATRA'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, 'With TKI'
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1611' AND r.regimen_code = 'HYPER-CVAD'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, 'Hodgkin lymphoma'
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1711' AND r.regimen_code = 'ABVD'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, false, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1711' AND r.regimen_code = 'CHOP'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, 'CD20+ B-cell lymphoma'
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1711' AND r.regimen_code = 'R-CHOP'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1915' AND r.regimen_code = 'VDC-IE'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C1916' AND r.regimen_code = 'VDC-IE'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C2011' AND r.regimen_code = 'DOXO-MONO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
-INSERT INTO protocol_regimens (protocol_id, regimen_id, line_of_therapy, is_preferred, notes)
-SELECT pn.id, r.id, 1, true, NULL
-FROM protocol_names pn, regimens r WHERE pn.protocol_code = 'C2012' AND r.regimen_code = 'DOXO-MONO'
-ON CONFLICT (protocol_id, regimen_id) DO NOTHING;
-
+-- Reset sequence
+SELECT setval(pg_get_serial_sequence('protocol_regimens', 'id'), COALESCE((SELECT MAX(id) FROM protocol_regimens), 1));

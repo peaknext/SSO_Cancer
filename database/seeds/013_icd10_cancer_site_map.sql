@@ -1,117 +1,81 @@
--- 013: ICD-10 → CancerSite mapping (รหัส ICD-10 → ตำแหน่งมะเร็ง)
--- Maps ICD-10 prefixes to cancer_sites for automatic diagnosis resolution.
--- Matching logic: given ICD code "C509", try longest prefix first: C509 → C50 → C5 → C
+-- 013: ICD-10 → CancerSite mapping
+-- Exported from database: 68 rows
 
-INSERT INTO icd10_cancer_site_map (icd_prefix, cancer_site_id, description, is_active)
+INSERT INTO icd10_cancer_site_map (id, icd_prefix, cancer_site_id, description, is_active, created_at, updated_at)
 VALUES
-  -- 01: Breast Cancer (โรคมะเร็งเต้านม)
-  ('C50', (SELECT id FROM cancer_sites WHERE site_code = '01'), 'Malignant neoplasm of breast', true),
-  ('D05', (SELECT id FROM cancer_sites WHERE site_code = '01'), 'Carcinoma in situ of breast', true),
-
-  -- 02: Cervical Cancer (โรคมะเร็งปากมดลูก)
-  ('C53', (SELECT id FROM cancer_sites WHERE site_code = '02'), 'Malignant neoplasm of cervix uteri', true),
-
-  -- 03: Ovarian Cancer (โรคมะเร็งรังไข่)
-  ('C56', (SELECT id FROM cancer_sites WHERE site_code = '03'), 'Malignant neoplasm of ovary', true),
-  ('C570', (SELECT id FROM cancer_sites WHERE site_code = '03'), 'Malignant neoplasm of fallopian tube', true),
-  ('C48', (SELECT id FROM cancer_sites WHERE site_code = '03'), 'Malignant neoplasm of peritoneum (primary peritoneal)', true),
-
-  -- 04: Uterine/Endometrial Cancer (โรคมะเร็งมดลูก)
-  ('C54', (SELECT id FROM cancer_sites WHERE site_code = '04'), 'Malignant neoplasm of corpus uteri', true),
-  ('C55', (SELECT id FROM cancer_sites WHERE site_code = '04'), 'Malignant neoplasm of uterus, part unspecified', true),
-
-  -- 05: Head and Neck Cancer (โรคมะเร็งศีรษะและลำคอ)
-  ('C00', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of lip', true),
-  ('C01', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of base of tongue', true),
-  ('C02', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of other parts of tongue', true),
-  ('C03', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of gum', true),
-  ('C04', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of floor of mouth', true),
-  ('C05', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of palate', true),
-  ('C06', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of other parts of mouth', true),
-  ('C07', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of parotid gland', true),
-  ('C08', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of other major salivary glands', true),
-  ('C09', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of tonsil', true),
-  ('C10', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of oropharynx', true),
-  ('C11', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of nasopharynx', true),
-  ('C12', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of piriform sinus', true),
-  ('C13', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of hypopharynx', true),
-  ('C14', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of other sites lip, oral cavity, pharynx', true),
-  ('C30', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of nasal cavity and middle ear', true),
-  ('C31', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of accessory sinuses', true),
-  ('C32', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of larynx', true),
-  ('C73', (SELECT id FROM cancer_sites WHERE site_code = '05'), 'Malignant neoplasm of thyroid gland', true),
-
-  -- 06: Lung Cancer (โรคมะเร็งปอด)
-  ('C34', (SELECT id FROM cancer_sites WHERE site_code = '06'), 'Malignant neoplasm of bronchus and lung', true),
-  ('C33', (SELECT id FROM cancer_sites WHERE site_code = '06'), 'Malignant neoplasm of trachea', true),
-  ('C45', (SELECT id FROM cancer_sites WHERE site_code = '06'), 'Mesothelioma', true),
-
-  -- 07: Colorectal, Anal and Appendiceal Cancer (โรคมะเร็งลำไส้ใหญ่และลำไส้ตรง)
-  ('C18', (SELECT id FROM cancer_sites WHERE site_code = '07'), 'Malignant neoplasm of colon', true),
-  ('C19', (SELECT id FROM cancer_sites WHERE site_code = '07'), 'Malignant neoplasm of rectosigmoid junction', true),
-  ('C20', (SELECT id FROM cancer_sites WHERE site_code = '07'), 'Malignant neoplasm of rectum', true),
-  ('C21', (SELECT id FROM cancer_sites WHERE site_code = '07'), 'Malignant neoplasm of anus and anal canal', true),
-  ('C17', (SELECT id FROM cancer_sites WHERE site_code = '07'), 'Malignant neoplasm of small intestine', true),
-
-  -- 08: Esophageal Cancer (โรคมะเร็งหลอดอาหาร)
-  ('C15', (SELECT id FROM cancer_sites WHERE site_code = '08'), 'Malignant neoplasm of esophagus', true),
-
-  -- 09: Gastric Cancer (โรคมะเร็งกระเพาะอาหาร)
-  ('C16', (SELECT id FROM cancer_sites WHERE site_code = '09'), 'Malignant neoplasm of stomach', true),
-
-  -- 10: Hepatobiliary and Pancreatic Cancer (โรคมะเร็งตับ ท่อน้ำดี และมะเร็งตับอ่อน)
-  ('C22', (SELECT id FROM cancer_sites WHERE site_code = '10'), 'Malignant neoplasm of liver and intrahepatic bile ducts', true),
-  ('C23', (SELECT id FROM cancer_sites WHERE site_code = '10'), 'Malignant neoplasm of gallbladder', true),
-  ('C24', (SELECT id FROM cancer_sites WHERE site_code = '10'), 'Malignant neoplasm of other parts of biliary tract', true),
-  ('C25', (SELECT id FROM cancer_sites WHERE site_code = '10'), 'Malignant neoplasm of pancreas', true),
-
-  -- 11: Bladder and Kidney Cancer (โรคมะเร็งกระเพาะปัสสาวะ และมะเร็งไต)
-  ('C64', (SELECT id FROM cancer_sites WHERE site_code = '11'), 'Malignant neoplasm of kidney, except renal pelvis', true),
-  ('C65', (SELECT id FROM cancer_sites WHERE site_code = '11'), 'Malignant neoplasm of renal pelvis', true),
-  ('C66', (SELECT id FROM cancer_sites WHERE site_code = '11'), 'Malignant neoplasm of ureter', true),
-  ('C67', (SELECT id FROM cancer_sites WHERE site_code = '11'), 'Malignant neoplasm of bladder', true),
-  ('C68', (SELECT id FROM cancer_sites WHERE site_code = '11'), 'Malignant neoplasm of other urinary organs', true),
-
-  -- 12: Prostate Cancer (โรคมะเร็งต่อมลูกหมาก)
-  ('C61', (SELECT id FROM cancer_sites WHERE site_code = '12'), 'Malignant neoplasm of prostate', true),
-
-  -- 13: Adult ALL (โรคมะเร็งเม็ดเลือดขาวชนิดเฉียบพลันแบบลิมฟอยด์)
-  ('C910', (SELECT id FROM cancer_sites WHERE site_code = '13'), 'Acute lymphoblastic leukaemia (ALL)', true),
-
-  -- 14: Adult AML (โรคมะเร็งเม็ดเลือดขาวชนิดเฉียบพลันแบบมัยอิลอยด์)
-  ('C920', (SELECT id FROM cancer_sites WHERE site_code = '14'), 'Acute myeloblastic leukaemia (AML)', true),
-  ('C930', (SELECT id FROM cancer_sites WHERE site_code = '14'), 'Acute monocytic leukaemia', true),
-
-  -- 15: Adult Acute Leukemia / APL
-  ('C924', (SELECT id FROM cancer_sites WHERE site_code = '15'), 'Acute promyelocytic leukaemia (APL)', true),
-
-  -- 16: Adult CML (โรคมะเร็งเม็ดเลือดขาวเรื้อรังชนิดมัยอิลอยด์)
-  ('C921', (SELECT id FROM cancer_sites WHERE site_code = '16'), 'Chronic myeloid leukaemia (CML)', true),
-
-  -- 17: Adult Lymphoma (โรคมะเร็งต่อมน้ำเหลือง)
-  ('C81', (SELECT id FROM cancer_sites WHERE site_code = '17'), 'Hodgkin lymphoma', true),
-  ('C82', (SELECT id FROM cancer_sites WHERE site_code = '17'), 'Follicular lymphoma', true),
-  ('C83', (SELECT id FROM cancer_sites WHERE site_code = '17'), 'Non-follicular lymphoma (DLBCL, etc.)', true),
-  ('C84', (SELECT id FROM cancer_sites WHERE site_code = '17'), 'Mature T/NK-cell lymphomas', true),
-  ('C85', (SELECT id FROM cancer_sites WHERE site_code = '17'), 'Other and unspecified types of NHL', true),
-  ('C86', (SELECT id FROM cancer_sites WHERE site_code = '17'), 'Other specified types of T/NK-cell lymphoma', true),
-
-  -- 18: Multiple Myeloma and MDS
-  ('C90', (SELECT id FROM cancer_sites WHERE site_code = '18'), 'Multiple myeloma and malignant plasma cell neoplasms', true),
-  ('D46', (SELECT id FROM cancer_sites WHERE site_code = '18'), 'Myelodysplastic syndromes (MDS)', true),
-
-  -- 19: Bone Cancer (โรคมะเร็งกระดูก)
-  ('C40', (SELECT id FROM cancer_sites WHERE site_code = '19'), 'Malignant neoplasm of bone and articular cartilage of limbs', true),
-  ('C41', (SELECT id FROM cancer_sites WHERE site_code = '19'), 'Malignant neoplasm of bone and articular cartilage, other sites', true),
-
-  -- 20: Soft Tissue Sarcoma (โรคมะเร็งเนื้อเยื่ออ่อน)
-  ('C49', (SELECT id FROM cancer_sites WHERE site_code = '20'), 'Malignant neoplasm of other connective and soft tissue', true),
-  ('C46', (SELECT id FROM cancer_sites WHERE site_code = '20'), 'Kaposi sarcoma', true),
-
-  -- 21: Pediatric Cancer (โรคมะเร็งเด็ก)
-  ('C69', (SELECT id FROM cancer_sites WHERE site_code = '21'), 'Malignant neoplasm of eye (retinoblastoma)', true),
-  ('C71', (SELECT id FROM cancer_sites WHERE site_code = '21'), 'Malignant neoplasm of brain (pediatric)', true),
-  ('C74', (SELECT id FROM cancer_sites WHERE site_code = '21'), 'Malignant neoplasm of adrenal gland (neuroblastoma)', true),
-  ('C64P', (SELECT id FROM cancer_sites WHERE site_code = '21'), 'Wilms tumor (pediatric renal)', true)
-
+  (1, 'C50', 1, 'Malignant neoplasm of breast', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (2, 'D05', 1, 'Carcinoma in situ of breast', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (3, 'C53', 2, 'Malignant neoplasm of cervix uteri', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (4, 'C56', 3, 'Malignant neoplasm of ovary', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (5, 'C570', 3, 'Malignant neoplasm of fallopian tube', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (6, 'C48', 3, 'Malignant neoplasm of peritoneum (primary peritoneal)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (7, 'C54', 4, 'Malignant neoplasm of corpus uteri', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (8, 'C55', 4, 'Malignant neoplasm of uterus, part unspecified', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (9, 'C00', 5, 'Malignant neoplasm of lip', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (10, 'C01', 5, 'Malignant neoplasm of base of tongue', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (11, 'C02', 5, 'Malignant neoplasm of other parts of tongue', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (12, 'C03', 5, 'Malignant neoplasm of gum', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (13, 'C04', 5, 'Malignant neoplasm of floor of mouth', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (14, 'C05', 5, 'Malignant neoplasm of palate', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (15, 'C06', 5, 'Malignant neoplasm of other parts of mouth', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (16, 'C07', 5, 'Malignant neoplasm of parotid gland', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (17, 'C08', 5, 'Malignant neoplasm of other major salivary glands', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (18, 'C09', 5, 'Malignant neoplasm of tonsil', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (19, 'C10', 5, 'Malignant neoplasm of oropharynx', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (20, 'C11', 5, 'Malignant neoplasm of nasopharynx', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (21, 'C12', 5, 'Malignant neoplasm of piriform sinus', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (22, 'C13', 5, 'Malignant neoplasm of hypopharynx', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (23, 'C14', 5, 'Malignant neoplasm of other sites lip, oral cavity, pharynx', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (24, 'C30', 5, 'Malignant neoplasm of nasal cavity and middle ear', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (25, 'C31', 5, 'Malignant neoplasm of accessory sinuses', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (26, 'C32', 5, 'Malignant neoplasm of larynx', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (27, 'C73', 5, 'Malignant neoplasm of thyroid gland', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (28, 'C34', 6, 'Malignant neoplasm of bronchus and lung', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (29, 'C33', 6, 'Malignant neoplasm of trachea', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (30, 'C45', 6, 'Mesothelioma', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (31, 'C18', 7, 'Malignant neoplasm of colon', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (32, 'C19', 7, 'Malignant neoplasm of rectosigmoid junction', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (33, 'C20', 7, 'Malignant neoplasm of rectum', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (34, 'C21', 7, 'Malignant neoplasm of anus and anal canal', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (35, 'C17', 7, 'Malignant neoplasm of small intestine', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (36, 'C15', 8, 'Malignant neoplasm of esophagus', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (37, 'C16', 9, 'Malignant neoplasm of stomach', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (38, 'C22', 10, 'Malignant neoplasm of liver and intrahepatic bile ducts', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (39, 'C23', 10, 'Malignant neoplasm of gallbladder', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (40, 'C24', 10, 'Malignant neoplasm of other parts of biliary tract', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (41, 'C25', 10, 'Malignant neoplasm of pancreas', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (42, 'C64', 11, 'Malignant neoplasm of kidney, except renal pelvis', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (43, 'C65', 11, 'Malignant neoplasm of renal pelvis', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (44, 'C66', 11, 'Malignant neoplasm of ureter', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (45, 'C67', 11, 'Malignant neoplasm of bladder', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (46, 'C68', 11, 'Malignant neoplasm of other urinary organs', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (47, 'C61', 12, 'Malignant neoplasm of prostate', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (48, 'C910', 13, 'Acute lymphoblastic leukaemia (ALL)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (49, 'C920', 14, 'Acute myeloblastic leukaemia (AML)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (50, 'C930', 14, 'Acute monocytic leukaemia', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z')
 ON CONFLICT (icd_prefix) DO NOTHING;
+
+INSERT INTO icd10_cancer_site_map (id, icd_prefix, cancer_site_id, description, is_active, created_at, updated_at)
+VALUES
+  (51, 'C924', 15, 'Acute promyelocytic leukaemia (APL)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (52, 'C921', 16, 'Chronic myeloid leukaemia (CML)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (53, 'C81', 17, 'Hodgkin lymphoma', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (54, 'C82', 17, 'Follicular lymphoma', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (55, 'C83', 17, 'Non-follicular lymphoma (DLBCL, etc.)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (56, 'C84', 17, 'Mature T/NK-cell lymphomas', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (57, 'C85', 17, 'Other and unspecified types of NHL', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (58, 'C86', 17, 'Other specified types of T/NK-cell lymphoma', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (59, 'C90', 18, 'Multiple myeloma and malignant plasma cell neoplasms', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (60, 'D46', 18, 'Myelodysplastic syndromes (MDS)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (61, 'C40', 19, 'Malignant neoplasm of bone and articular cartilage of limbs', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (62, 'C41', 19, 'Malignant neoplasm of bone and articular cartilage, other sites', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (63, 'C49', 20, 'Malignant neoplasm of other connective and soft tissue', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (64, 'C46', 20, 'Kaposi sarcoma', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (65, 'C69', 21, 'Malignant neoplasm of eye (retinoblastoma)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (66, 'C71', 21, 'Malignant neoplasm of brain (pediatric)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (67, 'C74', 21, 'Malignant neoplasm of adrenal gland (neuroblastoma)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z'),
+  (68, 'C64P', 21, 'Wilms tumor (pediatric renal)', true, '2026-02-22T06:35:23.912Z', '2026-02-22T06:35:23.912Z')
+ON CONFLICT (icd_prefix) DO NOTHING;
+
+-- Reset sequence
+SELECT setval(pg_get_serial_sequence('icd10_cancer_site_map', 'id'), COALESCE((SELECT MAX(id) FROM icd10_cancer_site_map), 1));

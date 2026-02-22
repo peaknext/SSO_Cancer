@@ -1,362 +1,92 @@
--- 009: Protocol Stages — protocol to stage applicability
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0111' AND cs.stage_code = 'ADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0111' AND cs.stage_code = 'EARLY'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0112' AND cs.stage_code = 'METASTATIC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0113' AND cs.stage_code = 'EARLY'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0114' AND cs.stage_code = 'METASTATIC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C011P' AND cs.stage_code = 'METASTATIC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0211' AND cs.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0211' AND cs.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0212' AND cs.stage_code = 'NEOADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0213' AND cs.stage_code = 'ADVANCED'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0213' AND cs.stage_code = 'RECURRENT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0214' AND cs.stage_code = 'ADVANCED'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0214' AND cs.stage_code = 'RECURRENT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0311' AND cs.stage_code = 'ADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0311' AND cs.stage_code = 'NEOADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0315' AND cs.stage_code = 'PALLIATIVE'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0511' AND cs.stage_code = 'ADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0512' AND cs.stage_code = 'DEFINITIVE'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0512' AND cs.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0513' AND cs.stage_code = 'NEOADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0514' AND cs.stage_code = 'METASTATIC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0514' AND cs.stage_code = 'RECURRENT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0515' AND cs.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0518' AND cs.stage_code = 'METASTATIC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0518' AND cs.stage_code = 'RECURRENT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0611' AND cs.stage_code = 'ADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0612' AND cs.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0612' AND cs.stage_code = 'STAGE_III'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0613' AND cs.stage_code = 'NEOADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0613' AND cs.stage_code = 'STAGE_IIIA'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0614' AND cs.stage_code = 'STAGE_IIIB_C'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0614' AND cs.stage_code = 'STAGE_IV'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0615' AND cs.stage_code = 'STAGE_IIIB_C'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0615' AND cs.stage_code = 'STAGE_IV'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0618' AND cs.stage_code = 'LIMITED_STAGE'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0619' AND cs.stage_code = 'EXTENSIVE_STAGE'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0620' AND cs.stage_code = 'EXTENSIVE_STAGE'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0711' AND cs.stage_code = 'ADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0711' AND cs.stage_code = 'EARLY'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0714' AND cs.stage_code = 'STAGE_IV'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0715' AND cs.stage_code = 'LOCOREGIONAL'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0716' AND cs.stage_code = 'PALLIATIVE'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0719' AND cs.stage_code = 'STAGE_IV'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0911' AND cs.stage_code = 'ADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0914' AND cs.stage_code = 'PERIOPERATIVE'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0915' AND cs.stage_code = 'METASTATIC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C0916' AND cs.stage_code = 'METASTATIC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1011' AND cs.stage_code = 'ADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1013' AND cs.stage_code = 'ADVANCED'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1013' AND cs.stage_code = 'METASTATIC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1016' AND cs.stage_code = 'ADVANCED'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1017' AND cs.stage_code = 'PALLIATIVE'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1111' AND cs.stage_code = 'NEOADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1112' AND cs.stage_code = 'ADJUVANT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1114' AND cs.stage_code = 'METASTATIC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1114' AND cs.stage_code = 'RECURRENT'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1214' AND cs.stage_code = 'M1CSPC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1215' AND cs.stage_code = 'M1CRPC'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1311' AND cs.stage_code = 'INDUCTION'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1412' AND cs.stage_code = 'INDUCTION'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1413' AND cs.stage_code = 'CONSOLIDATION'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1414' AND cs.stage_code = 'RELAPSED'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1511' AND cs.stage_code = 'INDUCTION'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1513' AND cs.stage_code = 'CONSOLIDATION'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1515' AND cs.stage_code = 'MAINTENANCE'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1516' AND cs.stage_code = 'RELAPSED'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1611' AND cs.stage_code = 'BLAST_CRISIS'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1612' AND cs.stage_code = 'BLAST_CRISIS'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1812' AND cs.stage_code = 'INDUCTION'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1813' AND cs.stage_code = 'INDUCTION'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1814' AND cs.stage_code = 'REFRACTORY'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
-INSERT INTO protocol_stages (protocol_id, stage_id, notes)
-SELECT pn.id, cs.id, NULL
-FROM protocol_names pn, cancer_stages cs WHERE pn.protocol_code = 'C1814' AND cs.stage_code = 'RELAPSED'
-ON CONFLICT (protocol_id, stage_id) DO NOTHING;
-
+-- 009: Protocol Stages — โปรโตคอล ↔ ระยะโรค
+-- Exported from database: 79 rows
+
+INSERT INTO protocol_stages (id, protocol_id, stage_id, notes)
+VALUES
+  (1, 1, 23, NULL),
+  (2, 1, 1, NULL),
+  (3, 2, 4, NULL),
+  (4, 3, 1, NULL),
+  (5, 4, 4, NULL),
+  (6, 5, 4, NULL),
+  (7, 9, 27, NULL),
+  (8, 9, 2, NULL),
+  (9, 10, 24, NULL),
+  (10, 11, 3, NULL),
+  (11, 11, 5, NULL),
+  (12, 12, 3, NULL),
+  (13, 12, 5, NULL),
+  (14, 16, 23, NULL),
+  (15, 16, 24, NULL),
+  (16, 20, 26, NULL),
+  (17, 30, 23, NULL),
+  (18, 31, 28, NULL),
+  (19, 31, 2, NULL),
+  (20, 32, 24, NULL),
+  (21, 33, 4, NULL),
+  (22, 33, 5, NULL),
+  (23, 34, 27, NULL),
+  (24, 37, 4, NULL),
+  (25, 37, 5, NULL),
+  (26, 42, 23, NULL),
+  (27, 43, 2, NULL),
+  (28, 43, 9, NULL),
+  (29, 44, 24, NULL),
+  (30, 44, 10, NULL),
+  (31, 45, 11, NULL),
+  (32, 45, 12, NULL),
+  (33, 46, 11, NULL),
+  (34, 46, 12, NULL),
+  (35, 48, 13, NULL),
+  (36, 49, 14, NULL),
+  (37, 50, 14, NULL),
+  (38, 54, 23, NULL),
+  (39, 54, 1, NULL),
+  (40, 57, 12, NULL),
+  (41, 58, 6, NULL),
+  (42, 59, 26, NULL),
+  (43, 62, 12, NULL),
+  (44, 73, 23, NULL),
+  (45, 76, 25, NULL),
+  (46, 77, 4, NULL),
+  (47, 78, 4, NULL),
+  (48, 82, 23, NULL),
+  (49, 84, 3, NULL),
+  (50, 84, 4, NULL)
+ON CONFLICT (protocol_id, stage_id) DO NOTHING;
+
+INSERT INTO protocol_stages (id, protocol_id, stage_id, notes)
+VALUES
+  (51, 87, 3, NULL),
+  (52, 88, 26, NULL),
+  (53, 92, 24, NULL),
+  (54, 93, 23, NULL),
+  (55, 95, 4, NULL),
+  (56, 95, 5, NULL),
+  (57, 103, 15, NULL),
+  (58, 104, 16, NULL),
+  (59, 108, 17, NULL),
+  (60, 115, 17, NULL),
+  (61, 116, 18, NULL),
+  (62, 117, 20, NULL),
+  (63, 120, 17, NULL),
+  (64, 121, 18, NULL),
+  (65, 123, 19, NULL),
+  (66, 124, 20, NULL),
+  (67, 127, 22, NULL),
+  (68, 128, 22, NULL),
+  (69, 135, 17, NULL),
+  (70, 136, 17, NULL),
+  (71, 137, 21, NULL),
+  (72, 137, 20, NULL),
+  (361, 9, 1, NULL),
+  (362, 9, 3, NULL),
+  (363, 846, 4, NULL),
+  (364, 43, 27, NULL),
+  (365, 43, 8, NULL),
+  (366, 43, 10, NULL),
+  (367, 43, 11, NULL)
+ON CONFLICT (protocol_id, stage_id) DO NOTHING;
+
+-- Reset sequence
+SELECT setval(pg_get_serial_sequence('protocol_stages', 'id'), COALESCE((SELECT MAX(id) FROM protocol_stages), 1));

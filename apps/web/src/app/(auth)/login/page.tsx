@@ -60,37 +60,66 @@ export default function LoginPage() {
             <div className="flex flex-col gap-3 text-sm text-teal-200">
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4"
+                  >
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
                   </svg>
                 </div>
-                <span>จัดการข้อมูลโปรโตคอลรักษามะเร็งตามมาตรฐาน สปส.</span>
+                <span>จัดการข้อมูลโปรโตคอลรักษามะเร็งตามแนวทางปี 2566</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4"
+                  >
                     <path d="m9 12 2 2 4-4" />
                     <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z" />
                   </svg>
                 </div>
-                <span>ครอบคลุม 23 ตำแหน่งมะเร็ง และสูตรยาเคมีบำบัด</span>
+                <span>ครอบคลุม 23 ตำแหน่งมะเร็ง และสูตรยาเคมีบำบัดมาตรฐาน</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4"
+                  >
                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                     <circle cx="9" cy="7" r="4" />
                     <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                   </svg>
                 </div>
-                <span>รองรับการจัดการสิทธิ์ผู้ใช้งานหลายระดับ</span>
+                <span>วิเคราะห์โปรโตคอลด้วยวิธี Rule-based matching และ AI Suggestion</span>
               </div>
             </div>
           </div>
 
           <div className="text-xs text-teal-300/60">
-            สำนักงานประกันสังคม — Social Security Office
+            พัฒนาโดย นพ.เกียรติศักดิ์ พรหมเสนสา
+            <br />
+            สงวนลิขสิทธิ์ ©2026 โรงพยาบาลสกลนคร
           </div>
         </div>
       </div>
@@ -121,9 +150,7 @@ export default function LoginPage() {
             <h2 className="font-heading text-2xl font-bold tracking-tight text-foreground">
               เข้าสู่ระบบ
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Sign in to your account
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">Sign in to your account</p>
           </div>
 
           <Suspense fallback={<div className="h-[260px]" />}>

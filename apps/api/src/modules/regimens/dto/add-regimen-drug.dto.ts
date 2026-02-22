@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, IsBoolean } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsBoolean, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -11,16 +11,19 @@ export class AddRegimenDrugDto {
   @ApiPropertyOptional({ example: '175 mg/m²' })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   dosePerCycle?: string;
 
   @ApiPropertyOptional({ example: 'IV' })
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   route?: string;
 
   @ApiPropertyOptional({ example: 'D1' })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   daySchedule?: string;
 
   @ApiPropertyOptional()
@@ -31,5 +34,6 @@ export class AddRegimenDrugDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   notes?: string;
 }

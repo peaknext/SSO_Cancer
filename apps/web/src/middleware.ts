@@ -19,12 +19,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for auth cookie or header — client-side store handles the actual token
-  // We use a lightweight check: if no auth storage exists, redirect to login
-  // The actual JWT validation happens on the API side
-  // For SSR, we check a cookie that the client sets after login
+  // UX redirect only — not a security boundary. Real auth is JWT on the API.
+  // This cookie is a lightweight hint; forging it only shows the shell UI,
+  // all data fetches will fail with 401 without a valid JWT.
   const authCookie = request.cookies.get('sso-cancer-auth-flag');
-  if (!authCookie) {
+  if (!authCookie || authCookie.value !== '1') {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);

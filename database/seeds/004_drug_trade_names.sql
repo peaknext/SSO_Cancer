@@ -1,1537 +1,419 @@
--- 004: Drug Trade Names (รหัสยา SSO) — SSO drug codes with pricing
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '234092', 'Zyloric', 'tablet', '100 mg', 'tablet', '1.75', true
-FROM drugs d WHERE d.generic_name = 'allopurinol'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '235275', 'Zyloric', 'film coated tab', '100 mg', 'tablet', '1.75', true
-FROM drugs d WHERE d.generic_name = 'allopurinol'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '200443', 'Arimidex', 'film-coated tablet', '1 mg', 'tablet', '19.5', true
-FROM drugs d WHERE d.generic_name = 'anastrozole'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '750327', 'Trisenox', 'solution for injection', '100 mg/100 mL', 'mL', NULL, true
-FROM drugs d WHERE d.generic_name = 'arsenic trioxide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '520397', 'Elspar', 'powder for solution for injection', '10000 iu', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'asparaginase'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '520402', 'Elspar', 'powder for solution for injection', '10000 iu', 'vial', '4769', true
-FROM drugs d WHERE d.generic_name = 'asparaginase'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '149185', 'Thymoglobulin', 'powder for solution for injection', '25 mg', 'vial', '6535', true
-FROM drugs d WHERE d.generic_name = 'ATG'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '200644', 'ImmuCyst', 'powder for solution for injection', '81 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'BCG vaccine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201601', 'ImmuCyst', 'powder and solvent for suspension for injection', '81 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'BCG vaccine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '210972', 'ImmuCyst', 'powder and solvent for suspension for injection', '81 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'BCG vaccine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '210986', 'ImmuCyst', 'powder for solution for injection', '81 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'BCG vaccine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '200721', 'Casodex', 'film-coated tablet', '50 mg', 'tablet', '70', true
-FROM drugs d WHERE d.generic_name = 'bicalutamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '200732', 'Casodex', 'tablet', '50 mg', 'tablet', NULL, true
-FROM drugs d WHERE d.generic_name = 'bicalutamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '200778', 'Bleocin', 'powder for solution for injection', '15 mg', 'vial', '45.5', true
-FROM drugs d WHERE d.generic_name = 'bleomycin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '211107', 'Bleocin', 'powder for solution for injection', '15 mg', 'vial', '45.5', true
-FROM drugs d WHERE d.generic_name = 'bleomycin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '200784', 'Blenoxane', 'powder for solution for injection', '15 unit', 'vial', '1046', true
-FROM drugs d WHERE d.generic_name = 'bleomycin sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '211111', 'Blenoxane', 'powder for solution for injection', '15 unit', 'vial', '1046', true
-FROM drugs d WHERE d.generic_name = 'bleomycin sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '200869', 'Myleran', 'film-coated tablet', '2 mg', 'tablet', '10', true
-FROM drugs d WHERE d.generic_name = 'busulfan'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '200876', 'Myleran', 'tablet', '2 mg', 'tablet', '10', true
-FROM drugs d WHERE d.generic_name = 'busulfan'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201087', 'Xeloda', 'film-coated tablet', '150 mg', 'tablet', '40.5', true
-FROM drugs d WHERE d.generic_name = 'capecitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201104', 'Xeloda', 'film-coated tablet', '500 mg', 'tablet', '36', true
-FROM drugs d WHERE d.generic_name = 'capecitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201191', 'Paraplatin', 'powder for solution for infusion', '150 mg', 'vial', '442', true
-FROM drugs d WHERE d.generic_name = 'carboplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201232', 'Paraplatin', 'concentrate for solution for infusion', '450 mg/45 mL', 'vial', '872', true
-FROM drugs d WHERE d.generic_name = 'carboplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '211520', 'Paraplatin', 'powder for solution for infusion', '150 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'carboplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '211565', 'Paraplatin', 'concentrate for solution for infusion', '600 mg/60 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'carboplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '211577', 'Paraplatin', 'powder for solution for infusion', '50 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'carboplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '213484', 'Paraplatin', 'concentrate for solution for infusion', '450 mg/45 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'carboplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '904947', 'Paraplatin', 'concentrate for solution for infusion', '50 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'carboplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '952216', 'Paraplatin', 'concentrate for solution for infusion', '150 mg/15 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'carboplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '952228', 'Paraplatin', 'concentrate for solution for infusion', '150 mg/15 mL', 'vial', '442', true
-FROM drugs d WHERE d.generic_name = 'carboplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201266', 'BiCNU', 'powder for solution for injection', '100 mg', 'vial', '33959', true
-FROM drugs d WHERE d.generic_name = 'carmustine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '211596', 'BiCNU', 'powder for solution for injection', '100 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'carmustine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '965074', 'BiCNU', 'powder and solvent for solution for injection', '100 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'carmustine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '965088', 'BiCNU', 'powder and solvent for solution for injection', '100 mg', 'vial', '33959', true
-FROM drugs d WHERE d.generic_name = 'carmustine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201330', 'Leukeran', 'film-coated tablet', '2 mg', 'tablet', '17', true
-FROM drugs d WHERE d.generic_name = 'chlorambucil'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201348', 'Leukeran', 'tablet', '2 mg', 'tablet', '17', true
-FROM drugs d WHERE d.generic_name = 'chlorambucil'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201714', 'Platinol', 'solution for infusion', '100 mg/100 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201722', 'Platinol', 'concentrate for solution for infusion', '50 mg/100 mL', 'vial', '288', true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201746', 'Platinol', 'powder for solution for infusion', '10 mg', 'vial', '109', true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201779', 'Platinol', 'powder for solution for infusion', '50 mg', 'vial', '303', true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212039', 'Platinol', 'solution for infusion', '100 mg/100 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212056', 'Platinol', 'powder for solution for infusion', '10 mg', 'vial', '298', true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212087', 'Platinol', 'powder for solution for infusion', '50 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '213575', 'Platinol', 'concentrate for solution for infusion', '50 mg/100 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '947686', 'Platinol', 'concentrate for solution for infusion', '10 mg/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '947693', 'Platinol', 'concentrate for solution for infusion', '10 mg/10 mL', 'vial', '104', true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '947733', 'Platinol', 'concentrate for solution for infusion', '50 mg/50 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '947746', 'Platinol', 'concentrate for solution for infusion', '50 mg/50 mL', 'vial', '380', true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '948151', 'Platinol', 'concentrate for solution for infusion', '10 mg/20 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '948167', 'Platinol', 'concentrate for solution for infusion', '10 mg/20 mL', 'vial', '109', true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '948200', 'Platinol', 'concentrate for solution for infusion', '25 mg/50 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cisplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201820', 'Endoxan', 'powder for solution for injection', '1 g', 'vial', '497', true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201831', 'Endoxan', 'powder for solution for injection', '100 mg', 'vial', '241', true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201849', 'Endoxan', 'powder for solution for injection', '200 mg', 'vial', '105', true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201854', 'Endoxan', 'film-coated tablet', '50 mg', 'tablet', '6', true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201865', 'Endoxan', 'coated tablet', '50 mg', 'tablet', '6', true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201877', 'Endoxan', 'tablet', '50 mg', 'tablet', '6', true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201883', 'Endoxan', 'powder for solution for injection', '500 mg', 'vial', '274', true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212136', 'Endoxan', 'powder for solution for injection', '1 g', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212143', 'Endoxan', 'powder for solution for injection', '100 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212158', 'Endoxan', 'powder for solution for injection', '200 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212191', 'Endoxan', 'powder for solution for injection', '500 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cyclophosphamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202032', 'Cytosar', 'powder for solution for injection/infusion', '100 mg', 'vial', '133', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202045', 'Cytosar', 'solution for injection/infusion', '1 g/10 mL', 'vial', '794', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202066', 'Cytosar', 'solution for injection/infusion', '2 g/20 mL', 'vial', '1931', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202078', 'Cytosar', 'powder for solution for injection/infusion', '500 mg', 'vial', '565', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202084', 'Cytosar', 'solution for injection/infusion', '500 mg/10 mL', 'vial', '565', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '203210', 'Cytosar', 'solution for injection/infusion', '100 mg/1 mL', 'vial', '133', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212311', 'Cytosar', 'solution for injection/infusion', '100 mg/1 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212348', 'Cytosar', 'powder for solution for injection/infusion', '100 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212376', 'Cytosar', 'solution for injection/infusion', '2 g/20 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212382', 'Cytosar', 'powder for solution for injection/infusion', '500 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212395', 'Cytosar', 'solution for injection/infusion', '500 mg/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '213510', 'Cytosar', 'solution for injection/infusion', '1 g/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '652929', 'Cytosar', 'solution for injection/infusion', '500 mg/25 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '652938', 'Cytosar', 'solution for injection/infusion', '500 mg/25 mL', 'vial', '159', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '653248', 'Cytosar', 'solution for injection/infusion', '1 g/20 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '653253', 'Cytosar', 'solution for injection/infusion', '1 g/20 mL', 'vial', '794', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '667225', 'Cytosar', 'solution for injection/infusion', '100 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '667239', 'Cytosar', 'solution for injection/infusion', '100 mg/5 mL', 'vial', '159', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '688457', 'Cytosar', 'powder for solution for injection/infusion', '2 g', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '688461', 'Cytosar', 'powder for solution for injection/infusion', '2 g', 'vial', '1931', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '948114', 'Cytosar', 'solution for injection/infusion', '500 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '948122', 'Cytosar', 'solution for injection/infusion', '500 mg/5 mL', 'vial', '595', true
-FROM drugs d WHERE d.generic_name = 'cytarabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '1000473', 'DTIC-Dome', 'powder for solution for injection/infusion', '200 mg', 'vial', '2669', true
-FROM drugs d WHERE d.generic_name = 'dacarbazine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202130', 'DTIC-Dome', 'powder for solution for infusion', '500 mg', 'vial', '6909', true
-FROM drugs d WHERE d.generic_name = 'dacarbazine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212416', 'DTIC-Dome', 'powder for solution for infusion', '1 g', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'dacarbazine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212437', 'DTIC-Dome', 'powder for solution for injection/infusion', '200 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'dacarbazine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '656467', 'DTIC-Dome', 'powder for solution for injection/infusion', '100 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'dacarbazine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '656479', 'DTIC-Dome', 'powder for solution for injection/infusion', '100 mg', 'vial', '1430', true
-FROM drugs d WHERE d.generic_name = 'dacarbazine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '656507', 'DTIC-Dome', 'powder for solution for infusion', '500 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'dacarbazine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212471', 'Cosmegen', 'powder for solution for injection', '500 mcg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'dactinomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '824027', 'Cosmegen', 'powder for solution for injection', '500 mcg', 'vial', '4097', true
-FROM drugs d WHERE d.generic_name = 'dactinomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202239', 'Sprycel', 'film-coated tablet', '50 mg', 'tablet', NULL, true
-FROM drugs d WHERE d.generic_name = 'dasatinib'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202241', 'Sprycel', 'film-coated tablet', '70 mg', 'tablet', NULL, true
-FROM drugs d WHERE d.generic_name = 'dasatinib'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '667633', 'Taxotere', 'concentrate for solution for infusion', '20 mg/1 mL', 'vial', '606', true
-FROM drugs d WHERE d.generic_name = 'docetaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '947808', 'Taxotere', 'concentrate for solution for infusion', '80 mg/4 mL', 'vial', '2320', true
-FROM drugs d WHERE d.generic_name = 'docetaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '201981', 'Adriamycin', 'concentrate for solution for infusion', '10 mg/5 mL', 'vial', '127', true
-FROM drugs d WHERE d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202009', 'Adriamycin', 'powder for solution for infusion', '10 mg', 'vial', '127', true
-FROM drugs d WHERE d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202944', 'Adriamycin', 'concentrate for solution for infusion', '50 mg/25 mL', 'vial', '319', true
-FROM drugs d WHERE d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '202971', 'Adriamycin', 'powder for solution for infusion', '50 mg', 'vial', '319', true
-FROM drugs d WHERE d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '212798', 'Adriamycin', 'concentrate for solution for infusion', '10 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '213095', 'Adriamycin', 'powder for solution for infusion', '10 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '213259', 'Adriamycin', 'concentrate for solution for infusion', '50 mg/25 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '213263', 'Adriamycin', 'concentrate for solution for infusion', '20 mg/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '213285', 'Adriamycin', 'powder for solution for infusion', '50 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '203473', 'VePesid', 'capsule soft', '25 mg', 'capsule', '149', true
-FROM drugs d WHERE d.generic_name = 'etoposide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '203487', 'VePesid', 'capsule soft', '50 mg', 'capsule', '319', true
-FROM drugs d WHERE d.generic_name = 'etoposide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '203494', 'VePesid', 'concentrate for solution for infusion', '100 mg/5 mL', 'vial', '209', true
-FROM drugs d WHERE d.generic_name = 'etoposide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '213762', 'VePesid', 'concentrate for solution for infusion', '200 mg/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'etoposide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '213791', 'VePesid', 'concentrate for solution for infusion', '100 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'etoposide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '213801', 'VePesid', 'concentrate for solution for infusion', '50 mg/2.5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'etoposide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '1020884', 'Neupogen', 'solution for injection/infusion', '480 mcg/1.6 mL', 'prefilled syringe', '720', true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '203965', 'Neupogen', 'solution for injection/infusion', '480 mcg/1.6 mL', 'vial', '824', true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '214283', 'Neupogen', 'solution for injection/infusion', '480 mcg/1.6 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '214296', 'Neupogen', 'solution for injection/infusion', '75 mcg/0.3 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '668089', 'Neupogen', 'solution for injection/infusion', '300 mcg/1 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '668091', 'Neupogen', 'solution for injection/infusion', '300 mcg/1 mL', 'vial', '442', true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '878402', 'Neupogen', 'solution for injection/infusion', '300 mcg/1.2 mL', 'ampoule', NULL, true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '878418', 'Neupogen', 'solution for injection/infusion', '300 mcg/1.2 mL', 'ampoule', '442', true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '959320', 'Neupogen', 'solution for injection/infusion', '300 mcg/1 mL', 'prefilled syringe', '500', true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '959331', 'Neupogen', 'solution for injection/infusion', '300 mcg/0.5 mL', 'prefilled syringe', NULL, true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '959349', 'Neupogen', 'solution for injection/infusion', '300 mcg/0.5 mL', 'prefilled syringe', '500', true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '959354', 'Neupogen', 'solution for injection/infusion', '480 mcg/0.5 mL', 'prefilled syringe', NULL, true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '959365', 'Neupogen', 'solution for injection/infusion', '480 mcg/0.5 mL', 'prefilled syringe', '720', true
-FROM drugs d WHERE d.generic_name = 'filgrastim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '204033', 'Fludara', 'powder for solution for injection/infusion', '50 mg', 'vial', '5093', true
-FROM drugs d WHERE d.generic_name = 'fludarabine phosphate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '214334', 'Fludara', 'powder for solution for injection/infusion', '50 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'fludarabine phosphate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '199724', 'Adrucil', 'solution for injection/infusion', '1 g/20 mL', 'vial', '145', true
-FROM drugs d WHERE d.generic_name = 'fluorouracil'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '210051', 'Adrucil', 'solution for injection/infusion', '1 g/20 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'fluorouracil'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '210108', 'Adrucil', 'solution for injection/infusion', '5 g/100 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'fluorouracil'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216544', 'Adrucil', 'solution for injection/infusion', '250 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'fluorouracil'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '562682', 'Adrucil', 'solution for injection/infusion', '250 mg/5 mL', 'vial', '61', true
-FROM drugs d WHERE d.generic_name = 'fluorouracil'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '965438', 'Adrucil', 'solution for injection/infusion', '500 mg/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'fluorouracil'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '965440', 'Adrucil', 'solution for injection/infusion', '500 mg/10 mL', 'vial', '73', true
-FROM drugs d WHERE d.generic_name = 'fluorouracil'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '204080', 'Eulexin', 'tablet', '250 mg', 'tablet', '60', true
-FROM drugs d WHERE d.generic_name = 'flutamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '564341', 'Leucovorin', 'solution for injection', '50 mg/5 mL', 'vial', '131', true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '564387', 'Leucovorin', 'solution for injection', '50 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '564445', 'Leucovorin', 'solution for injection', '100 mg/10 mL', 'vial', '528', true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '564506', 'Leucovorin', 'solution for injection', '50 mg/4 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '564510', 'Leucovorin', 'solution for injection', '50 mg/4 mL', 'vial', '131', true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '684464', 'Leucovorin', 'tablet', '15 mg', 'tablet', '12.5', true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '720142', 'Leucovorin', 'powder for solution for injection', '15 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '842009', 'Leucovorin', 'solution for injection', '25 mg/1 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '904865', 'Leucovorin', 'capsule hard', '15 mg', 'capsule', '12.5', true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '904906', 'Leucovorin', 'solution for injection', '100 mg/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '905072', 'Leucovorin', 'solution for injection', '300 mg/30 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '905086', 'Leucovorin', 'solution for injection', '300 mg/30 mL', 'vial', '322', true
-FROM drugs d WHERE d.generic_name = 'folinic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '1011727', 'Gemzar', 'powder for solution for infusion', '2 g', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '1265042', 'Gemzar', 'concentrate for solution for infusion', '1.4 g/36.8 mL', 'vial', '1827', true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '1265171', 'Gemzar', 'concentrate for solution for infusion', '200 mg/5.26 mL', 'vial', '362', true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '1265440', 'Gemzar', 'concentrate for solution for infusion', '1.4 g/36.8 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '1265455', 'Gemzar', 'concentrate for solution for infusion', '1 g/26.3 mL', 'vial', '664', true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '204226', 'Gemzar', 'powder for solution for infusion', '1.4 g', 'vial', '1827', true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '204235', 'Gemzar', 'concentrate for solution for infusion', '1 g/100 mL', 'vial', '664', true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '214525', 'Gemzar', 'powder for solution for infusion', '1.4 g', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '214539', 'Gemzar', 'concentrate for solution for infusion', '1 g/100 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '824846', 'Gemzar', 'powder for solution for infusion', '200 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '824851', 'Gemzar', 'powder for solution for infusion', '200 mg', 'vial', '362', true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '824880', 'Gemzar', 'powder for solution for infusion', '1 g', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '824898', 'Gemzar', 'powder for solution for infusion', '1 g', 'vial', '664', true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '872100', 'Gemzar', 'concentrate for solution for infusion', '200 mg/20 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '872144', 'Gemzar', 'concentrate for solution for infusion', '200 mg/20 mL', 'vial', '303', true
-FROM drugs d WHERE d.generic_name = 'gemcitabine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '849295', 'Solu-Cortef', 'powder for solution for infusion', '100 mg', 'vial', '90', true
-FROM drugs d WHERE d.generic_name = 'hydrocortisone'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '204773', 'Hydrea', 'capsule hard', '500 mg', 'capsule', '18', true
-FROM drugs d WHERE d.generic_name = 'hydroxycarbamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '205113', 'Zavedos', 'solution for injection', '10 mg/10 mL', 'vial', '5807', true
-FROM drugs d WHERE d.generic_name = 'idarubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '205132', 'Zavedos', 'powder for solution for injection', '10 mg', 'vial', '5807', true
-FROM drugs d WHERE d.generic_name = 'idarubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '205166', 'Zavedos', 'powder for solution for injection', '5 mg', 'vial', '3526', true
-FROM drugs d WHERE d.generic_name = 'idarubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '215379', 'Zavedos', 'solution for injection', '10 mg/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'idarubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '215398', 'Zavedos', 'powder for solution for injection', '10 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'idarubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '215426', 'Zavedos', 'powder for solution for injection', '5 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'idarubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '653731', 'Zavedos', 'solution for injection', '5 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'idarubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '667327', 'Zavedos', 'solution for injection', '5 mg/5 mL', 'vial', '3526', true
-FROM drugs d WHERE d.generic_name = 'idarubicin hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '205178', 'Holoxan', 'concentrate for solution for infusion', '1 g/25 mL', 'vial', '1415', true
-FROM drugs d WHERE d.generic_name = 'ifosfamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '205184', 'Holoxan', 'powder for concentrate for solution for infusion', '1 g', 'vial', '1415', true
-FROM drugs d WHERE d.generic_name = 'ifosfamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '205197', 'Holoxan', 'powder for concentrate for solution for infusion', '500 mg', 'vial', '718', true
-FROM drugs d WHERE d.generic_name = 'ifosfamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '215435', 'Holoxan', 'concentrate for solution for infusion', '1 g/25 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'ifosfamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '215442', 'Holoxan', 'powder for concentrate for solution for infusion', '1 g', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'ifosfamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '215457', 'Holoxan', 'powder for concentrate for solution for infusion', '500 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'ifosfamide'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '868245', 'Gleevec', 'film-coated tablet', '100 mg', 'tablet', NULL, true
-FROM drugs d WHERE d.generic_name = 'imatinib'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '868284', 'Gleevec', 'tablet', '400 mg', 'tablet', NULL, true
-FROM drugs d WHERE d.generic_name = 'imatinib'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '205761', 'Campto', 'concentrate for solution for infusion', '40 mg/2 mL', 'vial', '872', true
-FROM drugs d WHERE d.generic_name = 'irinotecan hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '211928', 'Campto', 'concentrate for solution for infusion', '40 mg/2 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'irinotecan hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216027', 'Campto', 'concentrate for solution for infusion', '100 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'irinotecan hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '667304', 'Campto', 'concentrate for solution for infusion', '300 mg/15 mL', 'vial', '9745', true
-FROM drugs d WHERE d.generic_name = 'irinotecan hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '804354', 'Campto', 'concentrate for solution for infusion', '100 mg/5 mL', 'vial', '1591', true
-FROM drugs d WHERE d.generic_name = 'irinotecan hydrochloride'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '262631', 'Nizoral', 'tablet', '200 mg', 'tablet', '16', true
-FROM drugs d WHERE d.generic_name = 'ketoconazole'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '353110', 'Nizoral', 'film-coated tablet', '200 mg', 'tablet', '16', true
-FROM drugs d WHERE d.generic_name = 'ketoconazole'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206030', 'Granocyte', 'powder and solvent for solution for injection/infusion', '100 mcg', 'vial', '816', true
-FROM drugs d WHERE d.generic_name = 'lenograstim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206048', 'Granocyte', 'powder and solvent for solution for injection/infusion', '250 mcg', 'vial', '1085', true
-FROM drugs d WHERE d.generic_name = 'lenograstim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216299', 'Granocyte', 'powder and solvent for solution for injection/infusion', '100 mcg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'lenograstim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216309', 'Granocyte', 'powder and solvent for solution for injection/infusion', '250 mcg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'lenograstim'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206076', 'Femara', 'film-coated tablet', '2.5 mg', 'tablet', '22.75', true
-FROM drugs d WHERE d.generic_name = 'letrozole'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '721820', 'Lucrin', 'powder and solvent for solution for injection', '22.5 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'leuprorelin acetate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '721831', 'Lucrin', 'powder and solvent for solution for injection', '22.5 mg', 'vial', '8112', true
-FROM drugs d WHERE d.generic_name = 'leuprorelin acetate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '863023', 'Lucrin', 'powder and solvent for prolonged-release suspension for injection', '11.25 mg', 'prefilled syringe', NULL, true
-FROM drugs d WHERE d.generic_name = 'leuprorelin acetate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '961497', 'Lucrin', 'powder and solvent for prolonged-release suspension for injection', '11.25 mg', 'prefilled syringe', '8182', true
-FROM drugs d WHERE d.generic_name = 'leuprorelin acetate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206421', 'Megace', 'tablet', '160 mg', 'tablet', '97', true
-FROM drugs d WHERE d.generic_name = 'megestrol acetate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206484', 'Alkeran', 'film-coated tablet', '2 mg', 'tablet', '20', true
-FROM drugs d WHERE d.generic_name = 'melphalan'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206510', 'Puri-Nethol', 'tablet', '50 mg', 'tablet', NULL, true
-FROM drugs d WHERE d.generic_name = 'mercaptopurine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '569041', 'Uromitexan', 'solution for injection', '400 mg/4 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'mesna'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '569056', 'Uromitexan', 'solution for injection', '400 mg/4 mL', 'ampoule', '116', true
-FROM drugs d WHERE d.generic_name = 'mesna'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '203500', 'Emthexate', 'solution for injection', '50 mg/2 mL', 'vial', '138', true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206523', 'Emthexate', 'solution for injection', '500 mg/5 mL', 'vial', '5004', true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206568', 'Emthexate', 'tablet', '2.5 mg', 'tablet', '4', true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206581', 'Emthexate', 'solution for injection', '1 g/10 mL', 'vial', '1096', true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206612', 'Emthexate', 'solution for injection', '5 g/50 mL', 'vial', '4288', true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206620', 'Emthexate', 'solution for injection', '50 mg/5 mL', 'vial', '109', true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206631', 'Emthexate', 'solution for injection', '500 mg/20 mL', 'vial', '98', true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216782', 'Emthexate', 'solution for injection', '1 g/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216846', 'Emthexate', 'solution for injection', '5 g/50 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216879', 'Emthexate', 'solution for injection', '50 mg/2 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216880', 'Emthexate', 'solution for injection', '50 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216898', 'Emthexate', 'solution for injection', '500 mg/20 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216908', 'Emthexate', 'solution for injection', '500 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '862352', 'Emthexate', 'film-coated tablet', '2.5 mg', 'tablet', '4', true
-FROM drugs d WHERE d.generic_name = 'methotrexate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '1181160', 'Mutamycin', 'solution for injection', '100 mcg/1 mL', 'prefilled syringe', NULL, true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206665', 'Mutamycin', 'powder for solution for injection/infusion', '10 mg', 'vial', '759', true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206677', 'Mutamycin', 'powder for solution for injection/infusion', '2 mg', 'vial', '264', true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206704', 'Mutamycin', 'powder for solution for injection/infusion', '20 mg', 'vial', '1903', true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216931', 'Mutamycin', 'powder for solution for injection/infusion', '2 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216965', 'Mutamycin', 'powder for solution for injection/infusion', '20 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '972638', 'Mutamycin', 'powder for solution for injection/infusion', '10 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '983653', 'Mutamycin', 'solution for injection', '20 mg/100 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '983669', 'Mutamycin', 'solution for injection', '20 mg/100 mL', 'vial', '85', true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '983703', 'Mutamycin', 'solution for injection', '40 mg/100 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '987801', 'Mutamycin', 'solution for injection', '28.6 mg/100 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'mitomycin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '203805', 'Novantrone', 'concentrate for solution for infusion', '20 mg/10 mL', 'vial', '7062', true
-FROM drugs d WHERE d.generic_name = 'mitoxantrone'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '206715', 'Novantrone', 'concentrate for solution for infusion', '10 mg/5 mL', 'vial', '4329', true
-FROM drugs d WHERE d.generic_name = 'mitoxantrone'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216977', 'Novantrone', 'concentrate for solution for infusion', '10 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'mitoxantrone'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '216996', 'Novantrone', 'concentrate for solution for infusion', '20 mg/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'mitoxantrone'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '148243', 'Tasigna', 'capsule hard', '200 mg', 'capsule', NULL, true
-FROM drugs d WHERE d.generic_name = 'nilotinib'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '207602', 'Eloxatin', 'concentrate for solution for infusion', '50 mg/25 mL', 'vial', '811', true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '207625', 'Eloxatin', 'concentrate for solution for infusion', '50 mg/10 mL', 'vial', '811', true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '207639', 'Eloxatin', 'powder for solution for infusion', '50 mg', 'vial', '811', true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '217856', 'Eloxatin', 'concentrate for solution for infusion', '150 mg/30 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '217887', 'Eloxatin', 'concentrate for solution for infusion', '50 mg/25 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '217894', 'Eloxatin', 'powder for solution for infusion', '50 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '217904', 'Eloxatin', 'concentrate for solution for infusion', '50 mg/10 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '653282', 'Eloxatin', 'concentrate for solution for infusion', '100 mg/50 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '653295', 'Eloxatin', 'concentrate for solution for infusion', '200 mg/40 mL', 'vial', '4753', true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '665980', 'Eloxatin', 'concentrate for solution for infusion', '150 mg/30 mL', 'vial', '3368', true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '667772', 'Eloxatin', 'concentrate for solution for infusion', '100 mg/50 mL', 'vial', '1387', true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '868311', 'Eloxatin', 'concentrate for solution for infusion', '100 mg/20 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '878494', 'Eloxatin', 'powder for solution for infusion', '150 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '878500', 'Eloxatin', 'powder for solution for infusion', '150 mg', 'vial', '3298', true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '917252', 'Eloxatin', 'concentrate for solution for infusion', '100 mg/20 mL', 'vial', '1387', true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '962419', 'Eloxatin', 'powder for solution for infusion', '100 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '962426', 'Eloxatin', 'powder for solution for infusion', '100 mg', 'vial', '1387', true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '965660', 'Eloxatin', 'concentrate for solution for infusion', '200 mg/40 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'oxaliplatin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '207660', 'Taxol', 'concentrate for solution for infusion', '150 mg/25 mL', 'vial', '1923', true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '217915', 'Taxol', 'concentrate for solution for infusion', '180 mg/30 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '217927', 'Taxol', 'concentrate for solution for infusion', '210 mg/35 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '217936', 'Taxol', 'concentrate for solution for infusion', '150 mg/25 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '217943', 'Taxol', 'concentrate for solution for infusion', '250 mg/41.7 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '217958', 'Taxol', 'concentrate for solution for infusion', '260 mg/43.4 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '217962', 'Taxol', 'concentrate for solution for infusion', '30 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '653071', 'Taxol', 'concentrate for solution for infusion', '600 mg/100 mL', 'vial', '1473', true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '689020', 'Taxol', 'concentrate for solution for infusion', '300 mg/50 mL', 'vial', '1473', true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '775498', 'Taxol', 'concentrate for solution for infusion', '600 mg/100 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '775507', 'Taxol', 'concentrate for solution for infusion', '260 mg/43.4 mL', 'vial', '1320', true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '844108', 'Taxol', 'powder for solution for infusion', '100 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '844112', 'Taxol', 'powder for solution for infusion', '100 mg', 'vial', '11007', true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '844149', 'Taxol', 'powder for solution for infusion', '30 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '844154', 'Taxol', 'powder for solution for infusion', '30 mg', 'vial', '1194', true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '850346', 'Taxol', 'concentrate for solution for infusion', '300 mg/50 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '862254', 'Taxol', 'concentrate for solution for infusion', '100 mg/16.7 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '878559', 'Taxol', 'concentrate for solution for infusion', '30 mg/5 mL', 'vial', '1194', true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '917206', 'Taxol', 'concentrate for solution for infusion', '100 mg/16.7 mL', 'vial', '1373', true
-FROM drugs d WHERE d.generic_name = 'paclitaxel'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '237007', 'Prednisolone', 'tablet', '5 mg', 'tablet', '1', true
-FROM drugs d WHERE d.generic_name = 'prednisolone'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '371231', 'Prednisolone', 'capsule hard', '5 mg', 'capsule', '1', true
-FROM drugs d WHERE d.generic_name = 'prednisolone'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '415767', 'Prednisolone', 'coated tablet', '5 mg', 'tablet', '1', true
-FROM drugs d WHERE d.generic_name = 'prednisolone'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '416040', 'Prednisolone', 'film-coated tablet', '5 mg', 'tablet', '1', true
-FROM drugs d WHERE d.generic_name = 'prednisolone'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '653160', 'MabThera', 'powder for solution for infusion', '500 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'rituximab'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '667928', 'MabThera', 'powder for solution for infusion', '100 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'rituximab'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209092', 'Nolvadex', 'film-coated tablet', '10 mg', 'tablet', '2.75', true
-FROM drugs d WHERE d.generic_name = 'tamoxifen'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209102', 'Nolvadex', 'tablet', '10 mg', 'tablet', '2.75', true
-FROM drugs d WHERE d.generic_name = 'tamoxifen'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209118', 'Nolvadex', 'film-coated tablet', '20 mg', 'tablet', '4.75', true
-FROM drugs d WHERE d.generic_name = 'tamoxifen'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209125', 'Nolvadex', 'tablet', '20 mg', 'tablet', '4.75', true
-FROM drugs d WHERE d.generic_name = 'tamoxifen'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '867478', 'Lanvis', 'tablet', '40 mg', 'tablet', '102', true
-FROM drugs d WHERE d.generic_name = 'tioguanine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209564', 'Hycamtin', 'powder for solution for injection', '4 mg', 'vial', '15214', true
-FROM drugs d WHERE d.generic_name = 'topotecan'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '219800', 'Hycamtin', 'powder for solution for injection', '4 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'topotecan'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209627', 'Herceptin', 'powder for concentrate for solution for infusion', '150 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'trastuzumab'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209636', 'Herceptin', 'powder and solvent for concentrate for solution for infusion', '440 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'trastuzumab'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '651504', 'Vesanoid', 'capsule soft', '10 mg', 'capsule', '107', true
-FROM drugs d WHERE d.generic_name = 'tretinoin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209662', 'Diphereline', 'powder for solution for injection', '11.25 mg', 'vial', '8182', true
-FROM drugs d WHERE d.generic_name = 'triptorelin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '219902', 'Diphereline', 'powder for solution for injection', '11.25 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'triptorelin'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209160', 'UFT', 'capsule hard', '100 mg', 'capsule', '98', true
-FROM drugs d WHERE d.generic_name = 'UFT (tegafur-uracil)'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209875', 'Velbe', 'solution for injection', '10 mg', 'vial', '465', true
-FROM drugs d WHERE d.generic_name = 'vinblastine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209881', 'Velbe', 'powder for solution for injection', '10 mg', 'vial', '465', true
-FROM drugs d WHERE d.generic_name = 'vinblastine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '220118', 'Velbe', 'solution for injection', '10 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'vinblastine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '220125', 'Velbe', 'powder for solution for injection', '10 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'vinblastine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '1012085', 'Oncovin', 'solution for injection', '2 mg/2 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'vincristine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209899', 'Oncovin', 'solution for injection', '1 mg/1 mL', 'vial', '172', true
-FROM drugs d WHERE d.generic_name = 'vincristine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209909', 'Oncovin', 'powder and solvent for solution for injection', '1 mg', 'vial', '172', true
-FROM drugs d WHERE d.generic_name = 'vincristine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '209913', 'Oncovin', 'powder for solution for injection', '1 mg', 'vial', '172', true
-FROM drugs d WHERE d.generic_name = 'vincristine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '220141', 'Oncovin', 'powder and solvent for solution for injection', '1 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'vincristine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '220156', 'Oncovin', 'powder for solution for injection', '1 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'vincristine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '220160', 'Oncovin', 'solution for injection', '10 mg', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'vincristine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '653194', 'Oncovin', 'solution for injection', '1 mg/1 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'vincristine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '653207', 'Oncovin', 'solution for injection', '2 mg/2 mL', 'vial', '243', true
-FROM drugs d WHERE d.generic_name = 'vincristine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '670792', 'Oncovin', 'solution for injection', '1 mg/1 mL', 'vial', '172', true
-FROM drugs d WHERE d.generic_name = 'vincristine sulfate'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '689096', 'Navelbine', 'concentrate for solution for infusion', '50 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'vinorelbine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '689106', 'Navelbine', 'concentrate for solution for infusion', '50 mg/5 mL', 'vial', '8800', true
-FROM drugs d WHERE d.generic_name = 'vinorelbine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '791761', 'Navelbine', 'concentrate for solution for infusion', '10 mg/1 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'vinorelbine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '791774', 'Navelbine', 'concentrate for solution for infusion', '10 mg/1 mL', 'vial', '2239', true
-FROM drugs d WHERE d.generic_name = 'vinorelbine'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '210033', 'Zometa', 'concentrate for solution for infusion', '4 mg/5 mL', 'vial', '1473', true
-FROM drugs d WHERE d.generic_name = 'zoledronic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
-INSERT INTO drug_trade_names (drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active)
-SELECT d.id, '862368', 'Zometa', 'concentrate for solution for infusion', '4 mg/5 mL', 'vial', NULL, true
-FROM drugs d WHERE d.generic_name = 'zoledronic acid'
-ON CONFLICT (drug_code) DO NOTHING;
-
+-- 004: Drug Trade Names — รหัสยา SSO + ชื่อทางการค้า
+-- Exported from database: 382 rows
+
+INSERT INTO drug_trade_names (id, drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active, created_at, updated_at)
+VALUES
+  (1, 61, '234092', 'Zyloric', 'tablet', '100 mg', 'tablet', '1.75', true, '2026-02-21T19:20:06.099Z', '2026-02-21T19:20:06.099Z'),
+  (2, 61, '235275', 'Zyloric', 'film coated tab', '100 mg', 'tablet', '1.75', true, '2026-02-21T19:20:06.108Z', '2026-02-21T19:20:06.108Z'),
+  (3, 37, '200443', 'Arimidex', 'film-coated tablet', '1 mg', 'tablet', '19.50', true, '2026-02-21T19:20:06.109Z', '2026-02-21T19:20:06.109Z'),
+  (4, 56, '750327', 'Trisenox', 'solution for injection', '100 mg/100 mL', 'mL', NULL, true, '2026-02-21T19:20:06.110Z', '2026-02-21T19:20:06.110Z'),
+  (5, 69, '520397', 'Elspar', 'powder for solution for injection', '10000 iu', 'vial', NULL, true, '2026-02-21T19:20:06.111Z', '2026-02-21T19:20:06.111Z'),
+  (6, 69, '520402', 'Elspar', 'powder for solution for injection', '10000 iu', 'vial', '4769.00', true, '2026-02-21T19:20:06.112Z', '2026-02-21T19:20:06.112Z'),
+  (7, 68, '149185', 'Thymoglobulin', 'powder for solution for injection', '25 mg', 'vial', '6535.00', true, '2026-02-21T19:20:06.114Z', '2026-02-21T19:20:06.114Z'),
+  (8, 67, '200644', 'ImmuCyst', 'powder for solution for injection', '81 mg', 'vial', NULL, true, '2026-02-21T19:20:06.114Z', '2026-02-21T19:20:06.114Z'),
+  (9, 67, '201601', 'ImmuCyst', 'powder and solvent for suspension for injection', '81 mg', 'vial', NULL, true, '2026-02-21T19:20:06.115Z', '2026-02-21T19:20:06.115Z'),
+  (10, 67, '210972', 'ImmuCyst', 'powder and solvent for suspension for injection', '81 mg', 'vial', NULL, true, '2026-02-21T19:20:06.116Z', '2026-02-21T19:20:06.116Z'),
+  (11, 67, '210986', 'ImmuCyst', 'powder for solution for injection', '81 mg', 'vial', NULL, true, '2026-02-21T19:20:06.117Z', '2026-02-21T19:20:06.117Z'),
+  (12, 38, '200721', 'Casodex', 'film-coated tablet', '50 mg', 'tablet', '70.00', true, '2026-02-21T19:20:06.117Z', '2026-02-21T19:20:06.117Z'),
+  (13, 38, '200732', 'Casodex', 'tablet', '50 mg', 'tablet', NULL, true, '2026-02-21T19:20:06.118Z', '2026-02-21T19:20:06.118Z'),
+  (14, 30, '200778', 'Bleocin', 'powder for solution for injection', '15 mg', 'vial', '45.50', true, '2026-02-21T19:20:06.119Z', '2026-02-21T19:20:06.119Z'),
+  (15, 30, '211107', 'Bleocin', 'powder for solution for injection', '15 mg', 'vial', '45.50', true, '2026-02-21T19:20:06.120Z', '2026-02-21T19:20:06.120Z'),
+  (16, 31, '200784', 'Blenoxane', 'powder for solution for injection', '15 unit', 'vial', '1046.00', true, '2026-02-21T19:20:06.121Z', '2026-02-21T19:20:06.121Z'),
+  (17, 31, '211111', 'Blenoxane', 'powder for solution for injection', '15 unit', 'vial', '1046.00', true, '2026-02-21T19:20:06.121Z', '2026-02-21T19:20:06.121Z'),
+  (18, 4, '200869', 'Myleran', 'film-coated tablet', '2 mg', 'tablet', '10.00', true, '2026-02-21T19:20:06.122Z', '2026-02-21T19:20:06.122Z'),
+  (19, 4, '200876', 'Myleran', 'tablet', '2 mg', 'tablet', '10.00', true, '2026-02-21T19:20:06.123Z', '2026-02-21T19:20:06.123Z'),
+  (20, 12, '201087', 'Xeloda', 'film-coated tablet', '150 mg', 'tablet', '40.50', true, '2026-02-21T19:20:06.124Z', '2026-02-21T19:20:06.124Z'),
+  (21, 12, '201104', 'Xeloda', 'film-coated tablet', '500 mg', 'tablet', '36.00', true, '2026-02-21T19:20:06.124Z', '2026-02-21T19:20:06.124Z'),
+  (22, 9, '201191', 'Paraplatin', 'powder for solution for infusion', '150 mg', 'vial', '442.00', true, '2026-02-21T19:20:06.125Z', '2026-02-21T19:20:06.125Z'),
+  (23, 9, '201232', 'Paraplatin', 'concentrate for solution for infusion', '450 mg/45 mL', 'vial', '872.00', true, '2026-02-21T19:20:06.126Z', '2026-02-21T19:20:06.126Z'),
+  (24, 9, '211520', 'Paraplatin', 'powder for solution for infusion', '150 mg', 'vial', NULL, true, '2026-02-21T19:20:06.126Z', '2026-02-21T19:20:06.126Z'),
+  (25, 9, '211565', 'Paraplatin', 'concentrate for solution for infusion', '600 mg/60 mL', 'vial', NULL, true, '2026-02-21T19:20:06.127Z', '2026-02-21T19:20:06.127Z'),
+  (26, 9, '211577', 'Paraplatin', 'powder for solution for infusion', '50 mg', 'vial', NULL, true, '2026-02-21T19:20:06.128Z', '2026-02-21T19:20:06.128Z'),
+  (27, 9, '213484', 'Paraplatin', 'concentrate for solution for infusion', '450 mg/45 mL', 'vial', NULL, true, '2026-02-21T19:20:06.128Z', '2026-02-21T19:20:06.128Z'),
+  (28, 9, '904947', 'Paraplatin', 'concentrate for solution for infusion', '50 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.129Z', '2026-02-21T19:20:06.129Z'),
+  (29, 9, '952216', 'Paraplatin', 'concentrate for solution for infusion', '150 mg/15 mL', 'vial', NULL, true, '2026-02-21T19:20:06.130Z', '2026-02-21T19:20:06.130Z'),
+  (30, 9, '952228', 'Paraplatin', 'concentrate for solution for infusion', '150 mg/15 mL', 'vial', '442.00', true, '2026-02-21T19:20:06.130Z', '2026-02-21T19:20:06.130Z'),
+  (31, 3, '201266', 'BiCNU', 'powder for solution for injection', '100 mg', 'vial', '33959.00', true, '2026-02-21T19:20:06.131Z', '2026-02-21T19:20:06.131Z'),
+  (32, 3, '211596', 'BiCNU', 'powder for solution for injection', '100 mg', 'vial', NULL, true, '2026-02-21T19:20:06.132Z', '2026-02-21T19:20:06.132Z'),
+  (33, 3, '965074', 'BiCNU', 'powder and solvent for solution for injection', '100 mg', 'vial', NULL, true, '2026-02-21T19:20:06.132Z', '2026-02-21T19:20:06.132Z'),
+  (34, 3, '965088', 'BiCNU', 'powder and solvent for solution for injection', '100 mg', 'vial', '33959.00', true, '2026-02-21T19:20:06.133Z', '2026-02-21T19:20:06.133Z'),
+  (35, 5, '201330', 'Leukeran', 'film-coated tablet', '2 mg', 'tablet', '17.00', true, '2026-02-21T19:20:06.134Z', '2026-02-21T19:20:06.134Z'),
+  (36, 5, '201348', 'Leukeran', 'tablet', '2 mg', 'tablet', '17.00', true, '2026-02-21T19:20:06.134Z', '2026-02-21T19:20:06.134Z'),
+  (37, 8, '201714', 'Platinol', 'solution for infusion', '100 mg/100 mL', 'vial', NULL, true, '2026-02-21T19:20:06.135Z', '2026-02-21T19:20:06.135Z'),
+  (38, 8, '201722', 'Platinol', 'concentrate for solution for infusion', '50 mg/100 mL', 'vial', '288.00', true, '2026-02-21T19:20:06.136Z', '2026-02-21T19:20:06.136Z'),
+  (39, 8, '201746', 'Platinol', 'powder for solution for infusion', '10 mg', 'vial', '109.00', true, '2026-02-21T19:20:06.136Z', '2026-02-21T19:20:06.136Z'),
+  (40, 8, '201779', 'Platinol', 'powder for solution for infusion', '50 mg', 'vial', '303.00', true, '2026-02-21T19:20:06.137Z', '2026-02-21T19:20:06.137Z'),
+  (41, 8, '212039', 'Platinol', 'solution for infusion', '100 mg/100 mL', 'vial', NULL, true, '2026-02-21T19:20:06.138Z', '2026-02-21T19:20:06.138Z'),
+  (42, 8, '212056', 'Platinol', 'powder for solution for infusion', '10 mg', 'vial', '298.00', true, '2026-02-21T19:20:06.138Z', '2026-02-21T19:20:06.138Z'),
+  (43, 8, '212087', 'Platinol', 'powder for solution for infusion', '50 mg', 'vial', NULL, true, '2026-02-21T19:20:06.139Z', '2026-02-21T19:20:06.139Z'),
+  (44, 8, '213575', 'Platinol', 'concentrate for solution for infusion', '50 mg/100 mL', 'vial', NULL, true, '2026-02-21T19:20:06.140Z', '2026-02-21T19:20:06.140Z'),
+  (45, 8, '947686', 'Platinol', 'concentrate for solution for infusion', '10 mg/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.140Z', '2026-02-21T19:20:06.140Z'),
+  (46, 8, '947693', 'Platinol', 'concentrate for solution for infusion', '10 mg/10 mL', 'vial', '104.00', true, '2026-02-21T19:20:06.141Z', '2026-02-21T19:20:06.141Z'),
+  (47, 8, '947733', 'Platinol', 'concentrate for solution for infusion', '50 mg/50 mL', 'vial', NULL, true, '2026-02-21T19:20:06.142Z', '2026-02-21T19:20:06.142Z'),
+  (48, 8, '947746', 'Platinol', 'concentrate for solution for infusion', '50 mg/50 mL', 'vial', '380.00', true, '2026-02-21T19:20:06.142Z', '2026-02-21T19:20:06.142Z'),
+  (49, 8, '948151', 'Platinol', 'concentrate for solution for infusion', '10 mg/20 mL', 'vial', NULL, true, '2026-02-21T19:20:06.143Z', '2026-02-21T19:20:06.143Z'),
+  (50, 8, '948167', 'Platinol', 'concentrate for solution for infusion', '10 mg/20 mL', 'vial', '109.00', true, '2026-02-21T19:20:06.144Z', '2026-02-21T19:20:06.144Z')
+ON CONFLICT (drug_code) DO NOTHING;
+
+INSERT INTO drug_trade_names (id, drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active, created_at, updated_at)
+VALUES
+  (51, 8, '948200', 'Platinol', 'concentrate for solution for infusion', '25 mg/50 mL', 'vial', NULL, true, '2026-02-21T19:20:06.144Z', '2026-02-21T19:20:06.144Z'),
+  (52, 1, '201820', 'Endoxan', 'powder for solution for injection', '1 g', 'vial', '497.00', true, '2026-02-21T19:20:06.145Z', '2026-02-21T19:20:06.145Z'),
+  (53, 1, '201831', 'Endoxan', 'powder for solution for injection', '100 mg', 'vial', '241.00', true, '2026-02-21T19:20:06.146Z', '2026-02-21T19:20:06.146Z'),
+  (54, 1, '201849', 'Endoxan', 'powder for solution for injection', '200 mg', 'vial', '105.00', true, '2026-02-21T19:20:06.146Z', '2026-02-21T19:20:06.146Z'),
+  (55, 1, '201854', 'Endoxan', 'film-coated tablet', '50 mg', 'tablet', '6.00', true, '2026-02-21T19:20:06.147Z', '2026-02-21T19:20:06.147Z'),
+  (56, 1, '201865', 'Endoxan', 'coated tablet', '50 mg', 'tablet', '6.00', true, '2026-02-21T19:20:06.148Z', '2026-02-21T19:20:06.148Z'),
+  (57, 1, '201877', 'Endoxan', 'tablet', '50 mg', 'tablet', '6.00', true, '2026-02-21T19:20:06.148Z', '2026-02-21T19:20:06.148Z'),
+  (58, 1, '201883', 'Endoxan', 'powder for solution for injection', '500 mg', 'vial', '274.00', true, '2026-02-21T19:20:06.149Z', '2026-02-21T19:20:06.149Z'),
+  (59, 1, '212136', 'Endoxan', 'powder for solution for injection', '1 g', 'vial', NULL, true, '2026-02-21T19:20:06.150Z', '2026-02-21T19:20:06.150Z'),
+  (60, 1, '212143', 'Endoxan', 'powder for solution for injection', '100 mg', 'vial', NULL, true, '2026-02-21T19:20:06.150Z', '2026-02-21T19:20:06.150Z'),
+  (61, 1, '212158', 'Endoxan', 'powder for solution for injection', '200 mg', 'vial', NULL, true, '2026-02-21T19:20:06.151Z', '2026-02-21T19:20:06.151Z'),
+  (62, 1, '212191', 'Endoxan', 'powder for solution for injection', '500 mg', 'vial', NULL, true, '2026-02-21T19:20:06.151Z', '2026-02-21T19:20:06.151Z'),
+  (63, 14, '202032', 'Cytosar', 'powder for solution for injection/infusion', '100 mg', 'vial', '133.00', true, '2026-02-21T19:20:06.152Z', '2026-02-21T19:20:06.152Z'),
+  (64, 14, '202045', 'Cytosar', 'solution for injection/infusion', '1 g/10 mL', 'vial', '794.00', true, '2026-02-21T19:20:06.153Z', '2026-02-21T19:20:06.153Z'),
+  (65, 14, '202066', 'Cytosar', 'solution for injection/infusion', '2 g/20 mL', 'vial', '1931.00', true, '2026-02-21T19:20:06.153Z', '2026-02-21T19:20:06.153Z'),
+  (66, 14, '202078', 'Cytosar', 'powder for solution for injection/infusion', '500 mg', 'vial', '565.00', true, '2026-02-21T19:20:06.154Z', '2026-02-21T19:20:06.154Z'),
+  (67, 14, '202084', 'Cytosar', 'solution for injection/infusion', '500 mg/10 mL', 'vial', '565.00', true, '2026-02-21T19:20:06.155Z', '2026-02-21T19:20:06.155Z'),
+  (68, 14, '203210', 'Cytosar', 'solution for injection/infusion', '100 mg/1 mL', 'vial', '133.00', true, '2026-02-21T19:20:06.156Z', '2026-02-21T19:20:06.156Z'),
+  (69, 14, '212311', 'Cytosar', 'solution for injection/infusion', '100 mg/1 mL', 'vial', NULL, true, '2026-02-21T19:20:06.157Z', '2026-02-21T19:20:06.157Z'),
+  (70, 14, '212348', 'Cytosar', 'powder for solution for injection/infusion', '100 mg', 'vial', NULL, true, '2026-02-21T19:20:06.158Z', '2026-02-21T19:20:06.158Z'),
+  (71, 14, '212376', 'Cytosar', 'solution for injection/infusion', '2 g/20 mL', 'vial', NULL, true, '2026-02-21T19:20:06.158Z', '2026-02-21T19:20:06.158Z'),
+  (72, 14, '212382', 'Cytosar', 'powder for solution for injection/infusion', '500 mg', 'vial', NULL, true, '2026-02-21T19:20:06.159Z', '2026-02-21T19:20:06.159Z'),
+  (73, 14, '212395', 'Cytosar', 'solution for injection/infusion', '500 mg/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.160Z', '2026-02-21T19:20:06.160Z'),
+  (74, 14, '213510', 'Cytosar', 'solution for injection/infusion', '1 g/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.160Z', '2026-02-21T19:20:06.160Z'),
+  (75, 14, '652929', 'Cytosar', 'solution for injection/infusion', '500 mg/25 mL', 'vial', NULL, true, '2026-02-21T19:20:06.161Z', '2026-02-21T19:20:06.161Z'),
+  (76, 14, '652938', 'Cytosar', 'solution for injection/infusion', '500 mg/25 mL', 'vial', '159.00', true, '2026-02-21T19:20:06.162Z', '2026-02-21T19:20:06.162Z'),
+  (77, 14, '653248', 'Cytosar', 'solution for injection/infusion', '1 g/20 mL', 'vial', NULL, true, '2026-02-21T19:20:06.163Z', '2026-02-21T19:20:06.163Z'),
+  (78, 14, '653253', 'Cytosar', 'solution for injection/infusion', '1 g/20 mL', 'vial', '794.00', true, '2026-02-21T19:20:06.163Z', '2026-02-21T19:20:06.163Z'),
+  (79, 14, '667225', 'Cytosar', 'solution for injection/infusion', '100 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.164Z', '2026-02-21T19:20:06.164Z'),
+  (80, 14, '667239', 'Cytosar', 'solution for injection/infusion', '100 mg/5 mL', 'vial', '159.00', true, '2026-02-21T19:20:06.165Z', '2026-02-21T19:20:06.165Z'),
+  (81, 14, '688457', 'Cytosar', 'powder for solution for injection/infusion', '2 g', 'vial', NULL, true, '2026-02-21T19:20:06.165Z', '2026-02-21T19:20:06.165Z'),
+  (82, 14, '688461', 'Cytosar', 'powder for solution for injection/infusion', '2 g', 'vial', '1931.00', true, '2026-02-21T19:20:06.166Z', '2026-02-21T19:20:06.166Z'),
+  (83, 14, '948114', 'Cytosar', 'solution for injection/infusion', '500 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.167Z', '2026-02-21T19:20:06.167Z'),
+  (84, 14, '948122', 'Cytosar', 'solution for injection/infusion', '500 mg/5 mL', 'vial', '595.00', true, '2026-02-21T19:20:06.167Z', '2026-02-21T19:20:06.167Z'),
+  (85, 7, '1000473', 'DTIC-Dome', 'powder for solution for injection/infusion', '200 mg', 'vial', '2669.00', true, '2026-02-21T19:20:06.168Z', '2026-02-21T19:20:06.168Z'),
+  (86, 7, '202130', 'DTIC-Dome', 'powder for solution for infusion', '500 mg', 'vial', '6909.00', true, '2026-02-21T19:20:06.169Z', '2026-02-21T19:20:06.169Z'),
+  (87, 7, '212416', 'DTIC-Dome', 'powder for solution for infusion', '1 g', 'vial', NULL, true, '2026-02-21T19:20:06.169Z', '2026-02-21T19:20:06.169Z'),
+  (88, 7, '212437', 'DTIC-Dome', 'powder for solution for injection/infusion', '200 mg', 'vial', NULL, true, '2026-02-21T19:20:06.170Z', '2026-02-21T19:20:06.170Z'),
+  (89, 7, '656467', 'DTIC-Dome', 'powder for solution for injection/infusion', '100 mg', 'vial', NULL, true, '2026-02-21T19:20:06.170Z', '2026-02-21T19:20:06.170Z'),
+  (90, 7, '656479', 'DTIC-Dome', 'powder for solution for injection/infusion', '100 mg', 'vial', '1430.00', true, '2026-02-21T19:20:06.171Z', '2026-02-21T19:20:06.171Z'),
+  (91, 7, '656507', 'DTIC-Dome', 'powder for solution for infusion', '500 mg', 'vial', NULL, true, '2026-02-21T19:20:06.172Z', '2026-02-21T19:20:06.172Z'),
+  (92, 32, '212471', 'Cosmegen', 'powder for solution for injection', '500 mcg', 'vial', NULL, true, '2026-02-21T19:20:06.172Z', '2026-02-21T19:20:06.172Z'),
+  (93, 32, '824027', 'Cosmegen', 'powder for solution for injection', '500 mcg', 'vial', '4097.00', true, '2026-02-21T19:20:06.173Z', '2026-02-21T19:20:06.173Z'),
+  (94, 45, '202239', 'Sprycel', 'film-coated tablet', '50 mg', 'tablet', NULL, true, '2026-02-21T19:20:06.174Z', '2026-02-21T19:20:06.174Z'),
+  (95, 45, '202241', 'Sprycel', 'film-coated tablet', '70 mg', 'tablet', NULL, true, '2026-02-21T19:20:06.174Z', '2026-02-21T19:20:06.174Z'),
+  (96, 26, '667633', 'Taxotere', 'concentrate for solution for infusion', '20 mg/1 mL', 'vial', '606.00', true, '2026-02-21T19:20:06.175Z', '2026-02-21T19:20:06.175Z'),
+  (97, 26, '947808', 'Taxotere', 'concentrate for solution for infusion', '80 mg/4 mL', 'vial', '2320.00', true, '2026-02-21T19:20:06.176Z', '2026-02-21T19:20:06.176Z'),
+  (98, 20, '201981', 'Adriamycin', 'concentrate for solution for infusion', '10 mg/5 mL', 'vial', '127.00', true, '2026-02-21T19:20:06.176Z', '2026-02-21T19:20:06.176Z'),
+  (99, 20, '202009', 'Adriamycin', 'powder for solution for infusion', '10 mg', 'vial', '127.00', true, '2026-02-21T19:20:06.177Z', '2026-02-21T19:20:06.177Z'),
+  (100, 20, '202944', 'Adriamycin', 'concentrate for solution for infusion', '50 mg/25 mL', 'vial', '319.00', true, '2026-02-21T19:20:06.178Z', '2026-02-21T19:20:06.178Z')
+ON CONFLICT (drug_code) DO NOTHING;
+
+INSERT INTO drug_trade_names (id, drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active, created_at, updated_at)
+VALUES
+  (101, 20, '202971', 'Adriamycin', 'powder for solution for infusion', '50 mg', 'vial', '319.00', true, '2026-02-21T19:20:06.178Z', '2026-02-21T19:20:06.178Z'),
+  (102, 20, '212798', 'Adriamycin', 'concentrate for solution for infusion', '10 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.179Z', '2026-02-21T19:20:06.179Z'),
+  (103, 20, '213095', 'Adriamycin', 'powder for solution for infusion', '10 mg', 'vial', NULL, true, '2026-02-21T19:20:06.179Z', '2026-02-21T19:20:06.179Z'),
+  (104, 20, '213259', 'Adriamycin', 'concentrate for solution for infusion', '50 mg/25 mL', 'vial', NULL, true, '2026-02-21T19:20:06.180Z', '2026-02-21T19:20:06.180Z'),
+  (105, 20, '213263', 'Adriamycin', 'concentrate for solution for infusion', '20 mg/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.181Z', '2026-02-21T19:20:06.181Z'),
+  (106, 20, '213285', 'Adriamycin', 'powder for solution for infusion', '50 mg', 'vial', NULL, true, '2026-02-21T19:20:06.181Z', '2026-02-21T19:20:06.181Z'),
+  (107, 22, '203473', 'VePesid', 'capsule soft', '25 mg', 'capsule', '149.00', true, '2026-02-21T19:20:06.182Z', '2026-02-21T19:20:06.182Z'),
+  (108, 22, '203487', 'VePesid', 'capsule soft', '50 mg', 'capsule', '319.00', true, '2026-02-21T19:20:06.182Z', '2026-02-21T19:20:06.182Z'),
+  (109, 22, '203494', 'VePesid', 'concentrate for solution for infusion', '100 mg/5 mL', 'vial', '209.00', true, '2026-02-21T19:20:06.183Z', '2026-02-21T19:20:06.183Z'),
+  (110, 22, '213762', 'VePesid', 'concentrate for solution for infusion', '200 mg/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.184Z', '2026-02-21T19:20:06.184Z'),
+  (111, 22, '213791', 'VePesid', 'concentrate for solution for infusion', '100 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.185Z', '2026-02-21T19:20:06.185Z'),
+  (112, 22, '213801', 'VePesid', 'concentrate for solution for infusion', '50 mg/2.5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.185Z', '2026-02-21T19:20:06.185Z'),
+  (113, 57, '1020884', 'Neupogen', 'solution for injection/infusion', '480 mcg/1.6 mL', 'prefilled syringe', '720.00', true, '2026-02-21T19:20:06.186Z', '2026-02-21T19:20:06.186Z'),
+  (114, 57, '203965', 'Neupogen', 'solution for injection/infusion', '480 mcg/1.6 mL', 'vial', '824.00', true, '2026-02-21T19:20:06.186Z', '2026-02-21T19:20:06.186Z'),
+  (115, 57, '214283', 'Neupogen', 'solution for injection/infusion', '480 mcg/1.6 mL', 'vial', NULL, true, '2026-02-21T19:20:06.187Z', '2026-02-21T19:20:06.187Z'),
+  (116, 57, '214296', 'Neupogen', 'solution for injection/infusion', '75 mcg/0.3 mL', 'vial', NULL, true, '2026-02-21T19:20:06.187Z', '2026-02-21T19:20:06.187Z'),
+  (117, 57, '668089', 'Neupogen', 'solution for injection/infusion', '300 mcg/1 mL', 'vial', NULL, true, '2026-02-21T19:20:06.188Z', '2026-02-21T19:20:06.188Z'),
+  (118, 57, '668091', 'Neupogen', 'solution for injection/infusion', '300 mcg/1 mL', 'vial', '442.00', true, '2026-02-21T19:20:06.189Z', '2026-02-21T19:20:06.189Z'),
+  (119, 57, '878402', 'Neupogen', 'solution for injection/infusion', '300 mcg/1.2 mL', 'ampoule', NULL, true, '2026-02-21T19:20:06.189Z', '2026-02-21T19:20:06.189Z'),
+  (120, 57, '878418', 'Neupogen', 'solution for injection/infusion', '300 mcg/1.2 mL', 'ampoule', '442.00', true, '2026-02-21T19:20:06.190Z', '2026-02-21T19:20:06.190Z'),
+  (121, 57, '959320', 'Neupogen', 'solution for injection/infusion', '300 mcg/1 mL', 'prefilled syringe', '500.00', true, '2026-02-21T19:20:06.190Z', '2026-02-21T19:20:06.190Z'),
+  (122, 57, '959331', 'Neupogen', 'solution for injection/infusion', '300 mcg/0.5 mL', 'prefilled syringe', NULL, true, '2026-02-21T19:20:06.191Z', '2026-02-21T19:20:06.191Z'),
+  (123, 57, '959349', 'Neupogen', 'solution for injection/infusion', '300 mcg/0.5 mL', 'prefilled syringe', '500.00', true, '2026-02-21T19:20:06.191Z', '2026-02-21T19:20:06.191Z'),
+  (124, 57, '959354', 'Neupogen', 'solution for injection/infusion', '480 mcg/0.5 mL', 'prefilled syringe', NULL, true, '2026-02-21T19:20:06.192Z', '2026-02-21T19:20:06.192Z'),
+  (125, 57, '959365', 'Neupogen', 'solution for injection/infusion', '480 mcg/0.5 mL', 'prefilled syringe', '720.00', true, '2026-02-21T19:20:06.192Z', '2026-02-21T19:20:06.192Z'),
+  (126, 16, '204033', 'Fludara', 'powder for solution for injection/infusion', '50 mg', 'vial', '5093.00', true, '2026-02-21T19:20:06.193Z', '2026-02-21T19:20:06.193Z'),
+  (127, 16, '214334', 'Fludara', 'powder for solution for injection/infusion', '50 mg', 'vial', NULL, true, '2026-02-21T19:20:06.194Z', '2026-02-21T19:20:06.194Z'),
+  (128, 11, '199724', 'Adrucil', 'solution for injection/infusion', '1 g/20 mL', 'vial', '145.00', true, '2026-02-21T19:20:06.194Z', '2026-02-21T19:20:06.194Z'),
+  (129, 11, '210051', 'Adrucil', 'solution for injection/infusion', '1 g/20 mL', 'vial', NULL, true, '2026-02-21T19:20:06.195Z', '2026-02-21T19:20:06.195Z'),
+  (130, 11, '210108', 'Adrucil', 'solution for injection/infusion', '5 g/100 mL', 'vial', NULL, true, '2026-02-21T19:20:06.195Z', '2026-02-21T19:20:06.195Z'),
+  (131, 11, '216544', 'Adrucil', 'solution for injection/infusion', '250 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.196Z', '2026-02-21T19:20:06.196Z'),
+  (132, 11, '562682', 'Adrucil', 'solution for injection/infusion', '250 mg/5 mL', 'vial', '61.00', true, '2026-02-21T19:20:06.196Z', '2026-02-21T19:20:06.196Z'),
+  (133, 11, '965438', 'Adrucil', 'solution for injection/infusion', '500 mg/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.197Z', '2026-02-21T19:20:06.197Z'),
+  (134, 11, '965440', 'Adrucil', 'solution for injection/infusion', '500 mg/10 mL', 'vial', '73.00', true, '2026-02-21T19:20:06.197Z', '2026-02-21T19:20:06.197Z'),
+  (135, 39, '204080', 'Eulexin', 'tablet', '250 mg', 'tablet', '60.00', true, '2026-02-21T19:20:06.198Z', '2026-02-21T19:20:06.198Z'),
+  (136, 60, '564341', 'Leucovorin', 'solution for injection', '50 mg/5 mL', 'vial', '131.00', true, '2026-02-21T19:20:06.199Z', '2026-02-21T19:20:06.199Z'),
+  (137, 60, '564387', 'Leucovorin', 'solution for injection', '50 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.199Z', '2026-02-21T19:20:06.199Z'),
+  (138, 60, '564445', 'Leucovorin', 'solution for injection', '100 mg/10 mL', 'vial', '528.00', true, '2026-02-21T19:20:06.200Z', '2026-02-21T19:20:06.200Z'),
+  (139, 60, '564506', 'Leucovorin', 'solution for injection', '50 mg/4 mL', 'vial', NULL, true, '2026-02-21T19:20:06.200Z', '2026-02-21T19:20:06.200Z'),
+  (140, 60, '564510', 'Leucovorin', 'solution for injection', '50 mg/4 mL', 'vial', '131.00', true, '2026-02-21T19:20:06.201Z', '2026-02-21T19:20:06.201Z'),
+  (141, 60, '684464', 'Leucovorin', 'tablet', '15 mg', 'tablet', '12.50', true, '2026-02-21T19:20:06.201Z', '2026-02-21T19:20:06.201Z'),
+  (142, 60, '720142', 'Leucovorin', 'powder for solution for injection', '15 mg', 'vial', NULL, true, '2026-02-21T19:20:06.202Z', '2026-02-21T19:20:06.202Z'),
+  (143, 60, '842009', 'Leucovorin', 'solution for injection', '25 mg/1 mL', 'vial', NULL, true, '2026-02-21T19:20:06.202Z', '2026-02-21T19:20:06.202Z'),
+  (144, 60, '904865', 'Leucovorin', 'capsule hard', '15 mg', 'capsule', '12.50', true, '2026-02-21T19:20:06.203Z', '2026-02-21T19:20:06.203Z'),
+  (145, 60, '904906', 'Leucovorin', 'solution for injection', '100 mg/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.203Z', '2026-02-21T19:20:06.203Z'),
+  (146, 60, '905072', 'Leucovorin', 'solution for injection', '300 mg/30 mL', 'vial', NULL, true, '2026-02-21T19:20:06.204Z', '2026-02-21T19:20:06.204Z'),
+  (147, 60, '905086', 'Leucovorin', 'solution for injection', '300 mg/30 mL', 'vial', '322.00', true, '2026-02-21T19:20:06.205Z', '2026-02-21T19:20:06.205Z'),
+  (148, 15, '1011727', 'Gemzar', 'powder for solution for infusion', '2 g', 'vial', NULL, true, '2026-02-21T19:20:06.205Z', '2026-02-21T19:20:06.205Z'),
+  (149, 15, '1265042', 'Gemzar', 'concentrate for solution for infusion', '1.4 g/36.8 mL', 'vial', '1827.00', true, '2026-02-21T19:20:06.206Z', '2026-02-21T19:20:06.206Z'),
+  (150, 15, '1265171', 'Gemzar', 'concentrate for solution for infusion', '200 mg/5.26 mL', 'vial', '362.00', true, '2026-02-21T19:20:06.206Z', '2026-02-21T19:20:06.206Z')
+ON CONFLICT (drug_code) DO NOTHING;
+
+INSERT INTO drug_trade_names (id, drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active, created_at, updated_at)
+VALUES
+  (151, 15, '1265440', 'Gemzar', 'concentrate for solution for infusion', '1.4 g/36.8 mL', 'vial', NULL, true, '2026-02-21T19:20:06.207Z', '2026-02-21T19:20:06.207Z'),
+  (152, 15, '1265455', 'Gemzar', 'concentrate for solution for infusion', '1 g/26.3 mL', 'vial', '664.00', true, '2026-02-21T19:20:06.207Z', '2026-02-21T19:20:06.207Z'),
+  (153, 15, '204226', 'Gemzar', 'powder for solution for infusion', '1.4 g', 'vial', '1827.00', true, '2026-02-21T19:20:06.208Z', '2026-02-21T19:20:06.208Z'),
+  (154, 15, '204235', 'Gemzar', 'concentrate for solution for infusion', '1 g/100 mL', 'vial', '664.00', true, '2026-02-21T19:20:06.209Z', '2026-02-21T19:20:06.209Z'),
+  (155, 15, '214525', 'Gemzar', 'powder for solution for infusion', '1.4 g', 'vial', NULL, true, '2026-02-21T19:20:06.209Z', '2026-02-21T19:20:06.209Z'),
+  (156, 15, '214539', 'Gemzar', 'concentrate for solution for infusion', '1 g/100 mL', 'vial', NULL, true, '2026-02-21T19:20:06.210Z', '2026-02-21T19:20:06.210Z'),
+  (157, 15, '824846', 'Gemzar', 'powder for solution for infusion', '200 mg', 'vial', NULL, true, '2026-02-21T19:20:06.210Z', '2026-02-21T19:20:06.210Z'),
+  (158, 15, '824851', 'Gemzar', 'powder for solution for infusion', '200 mg', 'vial', '362.00', true, '2026-02-21T19:20:06.211Z', '2026-02-21T19:20:06.211Z'),
+  (159, 15, '824880', 'Gemzar', 'powder for solution for infusion', '1 g', 'vial', NULL, true, '2026-02-21T19:20:06.211Z', '2026-02-21T19:20:06.211Z'),
+  (160, 15, '824898', 'Gemzar', 'powder for solution for infusion', '1 g', 'vial', '664.00', true, '2026-02-21T19:20:06.212Z', '2026-02-21T19:20:06.212Z'),
+  (161, 15, '872100', 'Gemzar', 'concentrate for solution for infusion', '200 mg/20 mL', 'vial', NULL, true, '2026-02-21T19:20:06.212Z', '2026-02-21T19:20:06.212Z'),
+  (162, 15, '872144', 'Gemzar', 'concentrate for solution for infusion', '200 mg/20 mL', 'vial', '303.00', true, '2026-02-21T19:20:06.213Z', '2026-02-21T19:20:06.213Z'),
+  (163, 64, '849295', 'Solu-Cortef', 'powder for solution for infusion', '100 mg', 'vial', '90.00', true, '2026-02-21T19:20:06.213Z', '2026-02-21T19:20:06.213Z'),
+  (164, 65, '204773', 'Hydrea', 'capsule hard', '500 mg', 'capsule', '18.00', true, '2026-02-21T19:20:06.214Z', '2026-02-21T19:20:06.214Z'),
+  (165, 21, '205113', 'Zavedos', 'solution for injection', '10 mg/10 mL', 'vial', '5807.00', true, '2026-02-21T19:20:06.215Z', '2026-02-21T19:20:06.215Z'),
+  (166, 21, '205132', 'Zavedos', 'powder for solution for injection', '10 mg', 'vial', '5807.00', true, '2026-02-21T19:20:06.215Z', '2026-02-21T19:20:06.215Z'),
+  (167, 21, '205166', 'Zavedos', 'powder for solution for injection', '5 mg', 'vial', '3526.00', true, '2026-02-21T19:20:06.216Z', '2026-02-21T19:20:06.216Z'),
+  (168, 21, '215379', 'Zavedos', 'solution for injection', '10 mg/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.216Z', '2026-02-21T19:20:06.216Z'),
+  (169, 21, '215398', 'Zavedos', 'powder for solution for injection', '10 mg', 'vial', NULL, true, '2026-02-21T19:20:06.217Z', '2026-02-21T19:20:06.217Z'),
+  (170, 21, '215426', 'Zavedos', 'powder for solution for injection', '5 mg', 'vial', NULL, true, '2026-02-21T19:20:06.217Z', '2026-02-21T19:20:06.217Z'),
+  (171, 21, '653731', 'Zavedos', 'solution for injection', '5 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.218Z', '2026-02-21T19:20:06.218Z'),
+  (172, 21, '667327', 'Zavedos', 'solution for injection', '5 mg/5 mL', 'vial', '3526.00', true, '2026-02-21T19:20:06.219Z', '2026-02-21T19:20:06.219Z'),
+  (173, 2, '205178', 'Holoxan', 'concentrate for solution for infusion', '1 g/25 mL', 'vial', '1415.00', true, '2026-02-21T19:20:06.219Z', '2026-02-21T19:20:06.219Z'),
+  (174, 2, '205184', 'Holoxan', 'powder for concentrate for solution for infusion', '1 g', 'vial', '1415.00', true, '2026-02-21T19:20:06.220Z', '2026-02-21T19:20:06.220Z'),
+  (175, 2, '205197', 'Holoxan', 'powder for concentrate for solution for infusion', '500 mg', 'vial', '718.00', true, '2026-02-21T19:20:06.220Z', '2026-02-21T19:20:06.220Z'),
+  (176, 2, '215435', 'Holoxan', 'concentrate for solution for infusion', '1 g/25 mL', 'vial', NULL, true, '2026-02-21T19:20:06.221Z', '2026-02-21T19:20:06.221Z'),
+  (177, 2, '215442', 'Holoxan', 'powder for concentrate for solution for infusion', '1 g', 'vial', NULL, true, '2026-02-21T19:20:06.222Z', '2026-02-21T19:20:06.222Z'),
+  (178, 2, '215457', 'Holoxan', 'powder for concentrate for solution for infusion', '500 mg', 'vial', NULL, true, '2026-02-21T19:20:06.222Z', '2026-02-21T19:20:06.222Z'),
+  (179, 44, '868245', 'Gleevec', 'film-coated tablet', '100 mg', 'tablet', NULL, true, '2026-02-21T19:20:06.223Z', '2026-02-21T19:20:06.223Z'),
+  (180, 44, '868284', 'Gleevec', 'tablet', '400 mg', 'tablet', NULL, true, '2026-02-21T19:20:06.223Z', '2026-02-21T19:20:06.223Z'),
+  (181, 23, '205761', 'Campto', 'concentrate for solution for infusion', '40 mg/2 mL', 'vial', '872.00', true, '2026-02-21T19:20:06.224Z', '2026-02-21T19:20:06.224Z'),
+  (182, 23, '211928', 'Campto', 'concentrate for solution for infusion', '40 mg/2 mL', 'vial', NULL, true, '2026-02-21T19:20:06.224Z', '2026-02-21T19:20:06.224Z'),
+  (183, 23, '216027', 'Campto', 'concentrate for solution for infusion', '100 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.225Z', '2026-02-21T19:20:06.225Z'),
+  (184, 23, '667304', 'Campto', 'concentrate for solution for infusion', '300 mg/15 mL', 'vial', '9745.00', true, '2026-02-21T19:20:06.225Z', '2026-02-21T19:20:06.225Z'),
+  (185, 23, '804354', 'Campto', 'concentrate for solution for infusion', '100 mg/5 mL', 'vial', '1591.00', true, '2026-02-21T19:20:06.226Z', '2026-02-21T19:20:06.226Z'),
+  (186, 66, '262631', 'Nizoral', 'tablet', '200 mg', 'tablet', '16.00', true, '2026-02-21T19:20:06.226Z', '2026-02-21T19:20:06.226Z'),
+  (187, 66, '353110', 'Nizoral', 'film-coated tablet', '200 mg', 'tablet', '16.00', true, '2026-02-21T19:20:06.227Z', '2026-02-21T19:20:06.227Z'),
+  (188, 58, '206030', 'Granocyte', 'powder and solvent for solution for injection/infusion', '100 mcg', 'vial', '816.00', true, '2026-02-21T19:20:06.228Z', '2026-02-21T19:20:06.228Z'),
+  (189, 58, '206048', 'Granocyte', 'powder and solvent for solution for injection/infusion', '250 mcg', 'vial', '1085.00', true, '2026-02-21T19:20:06.228Z', '2026-02-21T19:20:06.228Z'),
+  (190, 58, '216299', 'Granocyte', 'powder and solvent for solution for injection/infusion', '100 mcg', 'vial', NULL, true, '2026-02-21T19:20:06.229Z', '2026-02-21T19:20:06.229Z'),
+  (191, 58, '216309', 'Granocyte', 'powder and solvent for solution for injection/infusion', '250 mcg', 'vial', NULL, true, '2026-02-21T19:20:06.229Z', '2026-02-21T19:20:06.229Z'),
+  (192, 36, '206076', 'Femara', 'film-coated tablet', '2.5 mg', 'tablet', '22.75', true, '2026-02-21T19:20:06.230Z', '2026-02-21T19:20:06.230Z'),
+  (193, 41, '721820', 'Lucrin', 'powder and solvent for solution for injection', '22.5 mg', 'vial', NULL, true, '2026-02-21T19:20:06.230Z', '2026-02-21T19:20:06.230Z'),
+  (194, 41, '721831', 'Lucrin', 'powder and solvent for solution for injection', '22.5 mg', 'vial', '8112.00', true, '2026-02-21T19:20:06.231Z', '2026-02-21T19:20:06.231Z'),
+  (195, 41, '863023', 'Lucrin', 'powder and solvent for prolonged-release suspension for injection', '11.25 mg', 'prefilled syringe', NULL, true, '2026-02-21T19:20:06.232Z', '2026-02-21T19:20:06.232Z'),
+  (196, 41, '961497', 'Lucrin', 'powder and solvent for prolonged-release suspension for injection', '11.25 mg', 'prefilled syringe', '8182.00', true, '2026-02-21T19:20:06.232Z', '2026-02-21T19:20:06.232Z'),
+  (197, 40, '206421', 'Megace', 'tablet', '160 mg', 'tablet', '97.00', true, '2026-02-21T19:20:06.233Z', '2026-02-21T19:20:06.233Z'),
+  (198, 6, '206484', 'Alkeran', 'film-coated tablet', '2 mg', 'tablet', '20.00', true, '2026-02-21T19:20:06.233Z', '2026-02-21T19:20:06.233Z'),
+  (199, 17, '206510', 'Puri-Nethol', 'tablet', '50 mg', 'tablet', NULL, true, '2026-02-21T19:20:06.234Z', '2026-02-21T19:20:06.234Z'),
+  (200, 59, '569041', 'Uromitexan', 'solution for injection', '400 mg/4 mL', 'vial', NULL, true, '2026-02-21T19:20:06.234Z', '2026-02-21T19:20:06.234Z')
+ON CONFLICT (drug_code) DO NOTHING;
+
+INSERT INTO drug_trade_names (id, drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active, created_at, updated_at)
+VALUES
+  (201, 59, '569056', 'Uromitexan', 'solution for injection', '400 mg/4 mL', 'ampoule', '116.00', true, '2026-02-21T19:20:06.235Z', '2026-02-21T19:20:06.235Z'),
+  (202, 13, '203500', 'Emthexate', 'solution for injection', '50 mg/2 mL', 'vial', '138.00', true, '2026-02-21T19:20:06.235Z', '2026-02-21T19:20:06.235Z'),
+  (203, 13, '206523', 'Emthexate', 'solution for injection', '500 mg/5 mL', 'vial', '5004.00', true, '2026-02-21T19:20:06.236Z', '2026-02-21T19:20:06.236Z'),
+  (204, 13, '206568', 'Emthexate', 'tablet', '2.5 mg', 'tablet', '4.00', true, '2026-02-21T19:20:06.237Z', '2026-02-21T19:20:06.237Z'),
+  (205, 13, '206581', 'Emthexate', 'solution for injection', '1 g/10 mL', 'vial', '1096.00', true, '2026-02-21T19:20:06.237Z', '2026-02-21T19:20:06.237Z'),
+  (206, 13, '206612', 'Emthexate', 'solution for injection', '5 g/50 mL', 'vial', '4288.00', true, '2026-02-21T19:20:06.238Z', '2026-02-21T19:20:06.238Z'),
+  (207, 13, '206620', 'Emthexate', 'solution for injection', '50 mg/5 mL', 'vial', '109.00', true, '2026-02-21T19:20:06.238Z', '2026-02-21T19:20:06.238Z'),
+  (208, 13, '206631', 'Emthexate', 'solution for injection', '500 mg/20 mL', 'vial', '98.00', true, '2026-02-21T19:20:06.239Z', '2026-02-21T19:20:06.239Z'),
+  (209, 13, '216782', 'Emthexate', 'solution for injection', '1 g/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.239Z', '2026-02-21T19:20:06.239Z'),
+  (210, 13, '216846', 'Emthexate', 'solution for injection', '5 g/50 mL', 'vial', NULL, true, '2026-02-21T19:20:06.240Z', '2026-02-21T19:20:06.240Z'),
+  (211, 13, '216879', 'Emthexate', 'solution for injection', '50 mg/2 mL', 'vial', NULL, true, '2026-02-21T19:20:06.240Z', '2026-02-21T19:20:06.240Z'),
+  (212, 13, '216880', 'Emthexate', 'solution for injection', '50 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.241Z', '2026-02-21T19:20:06.241Z'),
+  (213, 13, '216898', 'Emthexate', 'solution for injection', '500 mg/20 mL', 'vial', NULL, true, '2026-02-21T19:20:06.242Z', '2026-02-21T19:20:06.242Z'),
+  (214, 13, '216908', 'Emthexate', 'solution for injection', '500 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.242Z', '2026-02-21T19:20:06.242Z'),
+  (215, 13, '862352', 'Emthexate', 'film-coated tablet', '2.5 mg', 'tablet', '4.00', true, '2026-02-21T19:20:06.243Z', '2026-02-21T19:20:06.243Z'),
+  (216, 33, '1181160', 'Mutamycin', 'solution for injection', '100 mcg/1 mL', 'prefilled syringe', NULL, true, '2026-02-21T19:20:06.243Z', '2026-02-21T19:20:06.243Z'),
+  (217, 33, '206665', 'Mutamycin', 'powder for solution for injection/infusion', '10 mg', 'vial', '759.00', true, '2026-02-21T19:20:06.244Z', '2026-02-21T19:20:06.244Z'),
+  (218, 33, '206677', 'Mutamycin', 'powder for solution for injection/infusion', '2 mg', 'vial', '264.00', true, '2026-02-21T19:20:06.244Z', '2026-02-21T19:20:06.244Z'),
+  (219, 33, '206704', 'Mutamycin', 'powder for solution for injection/infusion', '20 mg', 'vial', '1903.00', true, '2026-02-21T19:20:06.245Z', '2026-02-21T19:20:06.245Z'),
+  (220, 33, '216931', 'Mutamycin', 'powder for solution for injection/infusion', '2 mg', 'vial', NULL, true, '2026-02-21T19:20:06.245Z', '2026-02-21T19:20:06.245Z'),
+  (221, 33, '216965', 'Mutamycin', 'powder for solution for injection/infusion', '20 mg', 'vial', NULL, true, '2026-02-21T19:20:06.246Z', '2026-02-21T19:20:06.246Z'),
+  (222, 33, '972638', 'Mutamycin', 'powder for solution for injection/infusion', '10 mg', 'vial', NULL, true, '2026-02-21T19:20:06.246Z', '2026-02-21T19:20:06.246Z'),
+  (223, 33, '983653', 'Mutamycin', 'solution for injection', '20 mg/100 mL', 'vial', NULL, true, '2026-02-21T19:20:06.247Z', '2026-02-21T19:20:06.247Z'),
+  (224, 33, '983669', 'Mutamycin', 'solution for injection', '20 mg/100 mL', 'vial', '85.00', true, '2026-02-21T19:20:06.248Z', '2026-02-21T19:20:06.248Z'),
+  (225, 33, '983703', 'Mutamycin', 'solution for injection', '40 mg/100 mL', 'vial', NULL, true, '2026-02-21T19:20:06.248Z', '2026-02-21T19:20:06.248Z'),
+  (226, 33, '987801', 'Mutamycin', 'solution for injection', '28.6 mg/100 mL', 'vial', NULL, true, '2026-02-21T19:20:06.249Z', '2026-02-21T19:20:06.249Z'),
+  (227, 34, '203805', 'Novantrone', 'concentrate for solution for infusion', '20 mg/10 mL', 'vial', '7062.00', true, '2026-02-21T19:20:06.249Z', '2026-02-21T19:20:06.249Z'),
+  (228, 34, '206715', 'Novantrone', 'concentrate for solution for infusion', '10 mg/5 mL', 'vial', '4329.00', true, '2026-02-21T19:20:06.250Z', '2026-02-21T19:20:06.250Z'),
+  (229, 34, '216977', 'Novantrone', 'concentrate for solution for infusion', '10 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.250Z', '2026-02-21T19:20:06.250Z'),
+  (230, 34, '216996', 'Novantrone', 'concentrate for solution for infusion', '20 mg/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.251Z', '2026-02-21T19:20:06.251Z'),
+  (231, 46, '148243', 'Tasigna', 'capsule hard', '200 mg', 'capsule', NULL, true, '2026-02-21T19:20:06.252Z', '2026-02-21T19:20:06.252Z'),
+  (232, 10, '207602', 'Eloxatin', 'concentrate for solution for infusion', '50 mg/25 mL', 'vial', '811.00', true, '2026-02-21T19:20:06.252Z', '2026-02-21T19:20:06.252Z'),
+  (233, 10, '207625', 'Eloxatin', 'concentrate for solution for infusion', '50 mg/10 mL', 'vial', '811.00', true, '2026-02-21T19:20:06.253Z', '2026-02-21T19:20:06.253Z'),
+  (234, 10, '207639', 'Eloxatin', 'powder for solution for infusion', '50 mg', 'vial', '811.00', true, '2026-02-21T19:20:06.253Z', '2026-02-21T19:20:06.253Z'),
+  (235, 10, '217856', 'Eloxatin', 'concentrate for solution for infusion', '150 mg/30 mL', 'vial', NULL, true, '2026-02-21T19:20:06.254Z', '2026-02-21T19:20:06.254Z'),
+  (236, 10, '217887', 'Eloxatin', 'concentrate for solution for infusion', '50 mg/25 mL', 'vial', NULL, true, '2026-02-21T19:20:06.254Z', '2026-02-21T19:20:06.254Z'),
+  (237, 10, '217894', 'Eloxatin', 'powder for solution for infusion', '50 mg', 'vial', NULL, true, '2026-02-21T19:20:06.255Z', '2026-02-21T19:20:06.255Z'),
+  (238, 10, '217904', 'Eloxatin', 'concentrate for solution for infusion', '50 mg/10 mL', 'vial', NULL, true, '2026-02-21T19:20:06.256Z', '2026-02-21T19:20:06.256Z'),
+  (239, 10, '653282', 'Eloxatin', 'concentrate for solution for infusion', '100 mg/50 mL', 'vial', NULL, true, '2026-02-21T19:20:06.256Z', '2026-02-21T19:20:06.256Z'),
+  (240, 10, '653295', 'Eloxatin', 'concentrate for solution for infusion', '200 mg/40 mL', 'vial', '4753.00', true, '2026-02-21T19:20:06.257Z', '2026-02-21T19:20:06.257Z'),
+  (241, 10, '665980', 'Eloxatin', 'concentrate for solution for infusion', '150 mg/30 mL', 'vial', '3368.00', true, '2026-02-21T19:20:06.257Z', '2026-02-21T19:20:06.257Z'),
+  (242, 10, '667772', 'Eloxatin', 'concentrate for solution for infusion', '100 mg/50 mL', 'vial', '1387.00', true, '2026-02-21T19:20:06.258Z', '2026-02-21T19:20:06.258Z'),
+  (243, 10, '868311', 'Eloxatin', 'concentrate for solution for infusion', '100 mg/20 mL', 'vial', NULL, true, '2026-02-21T19:20:06.259Z', '2026-02-21T19:20:06.259Z'),
+  (244, 10, '878494', 'Eloxatin', 'powder for solution for infusion', '150 mg', 'vial', NULL, true, '2026-02-21T19:20:06.259Z', '2026-02-21T19:20:06.259Z'),
+  (245, 10, '878500', 'Eloxatin', 'powder for solution for infusion', '150 mg', 'vial', '3298.00', true, '2026-02-21T19:20:06.260Z', '2026-02-21T19:20:06.260Z'),
+  (246, 10, '917252', 'Eloxatin', 'concentrate for solution for infusion', '100 mg/20 mL', 'vial', '1387.00', true, '2026-02-21T19:20:06.260Z', '2026-02-21T19:20:06.260Z'),
+  (247, 10, '962419', 'Eloxatin', 'powder for solution for infusion', '100 mg', 'vial', NULL, true, '2026-02-21T19:20:06.261Z', '2026-02-21T19:20:06.261Z'),
+  (248, 10, '962426', 'Eloxatin', 'powder for solution for infusion', '100 mg', 'vial', '1387.00', true, '2026-02-21T19:20:06.261Z', '2026-02-21T19:20:06.261Z'),
+  (249, 10, '965660', 'Eloxatin', 'concentrate for solution for infusion', '200 mg/40 mL', 'vial', NULL, true, '2026-02-21T19:20:06.262Z', '2026-02-21T19:20:06.262Z'),
+  (250, 25, '207660', 'Taxol', 'concentrate for solution for infusion', '150 mg/25 mL', 'vial', '1923.00', true, '2026-02-21T19:20:06.263Z', '2026-02-21T19:20:06.263Z')
+ON CONFLICT (drug_code) DO NOTHING;
+
+INSERT INTO drug_trade_names (id, drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active, created_at, updated_at)
+VALUES
+  (251, 25, '217915', 'Taxol', 'concentrate for solution for infusion', '180 mg/30 mL', 'vial', NULL, true, '2026-02-21T19:20:06.263Z', '2026-02-21T19:20:06.263Z'),
+  (252, 25, '217927', 'Taxol', 'concentrate for solution for infusion', '210 mg/35 mL', 'vial', NULL, true, '2026-02-21T19:20:06.264Z', '2026-02-21T19:20:06.264Z'),
+  (253, 25, '217936', 'Taxol', 'concentrate for solution for infusion', '150 mg/25 mL', 'vial', NULL, true, '2026-02-21T19:20:06.264Z', '2026-02-21T19:20:06.264Z'),
+  (254, 25, '217943', 'Taxol', 'concentrate for solution for infusion', '250 mg/41.7 mL', 'vial', NULL, true, '2026-02-21T19:20:06.265Z', '2026-02-21T19:20:06.265Z'),
+  (255, 25, '217958', 'Taxol', 'concentrate for solution for infusion', '260 mg/43.4 mL', 'vial', NULL, true, '2026-02-21T19:20:06.265Z', '2026-02-21T19:20:06.265Z'),
+  (256, 25, '217962', 'Taxol', 'concentrate for solution for infusion', '30 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.266Z', '2026-02-21T19:20:06.266Z'),
+  (257, 25, '653071', 'Taxol', 'concentrate for solution for infusion', '600 mg/100 mL', 'vial', '1473.00', true, '2026-02-21T19:20:06.267Z', '2026-02-21T19:20:06.267Z'),
+  (258, 25, '689020', 'Taxol', 'concentrate for solution for infusion', '300 mg/50 mL', 'vial', '1473.00', true, '2026-02-21T19:20:06.267Z', '2026-02-21T19:20:06.267Z'),
+  (259, 25, '775498', 'Taxol', 'concentrate for solution for infusion', '600 mg/100 mL', 'vial', NULL, true, '2026-02-21T19:20:06.268Z', '2026-02-21T19:20:06.268Z'),
+  (260, 25, '775507', 'Taxol', 'concentrate for solution for infusion', '260 mg/43.4 mL', 'vial', '1320.00', true, '2026-02-21T19:20:06.268Z', '2026-02-21T19:20:06.268Z'),
+  (261, 25, '844108', 'Taxol', 'powder for solution for infusion', '100 mg', 'vial', NULL, true, '2026-02-21T19:20:06.269Z', '2026-02-21T19:20:06.269Z'),
+  (262, 25, '844112', 'Taxol', 'powder for solution for infusion', '100 mg', 'vial', '11007.00', true, '2026-02-21T19:20:06.270Z', '2026-02-21T19:20:06.270Z'),
+  (263, 25, '844149', 'Taxol', 'powder for solution for infusion', '30 mg', 'vial', NULL, true, '2026-02-21T19:20:06.270Z', '2026-02-21T19:20:06.270Z'),
+  (264, 25, '844154', 'Taxol', 'powder for solution for infusion', '30 mg', 'vial', '1194.00', true, '2026-02-21T19:20:06.271Z', '2026-02-21T19:20:06.271Z'),
+  (265, 25, '850346', 'Taxol', 'concentrate for solution for infusion', '300 mg/50 mL', 'vial', NULL, true, '2026-02-21T19:20:06.271Z', '2026-02-21T19:20:06.271Z'),
+  (266, 25, '862254', 'Taxol', 'concentrate for solution for infusion', '100 mg/16.7 mL', 'vial', NULL, true, '2026-02-21T19:20:06.272Z', '2026-02-21T19:20:06.272Z'),
+  (267, 25, '878559', 'Taxol', 'concentrate for solution for infusion', '30 mg/5 mL', 'vial', '1194.00', true, '2026-02-21T19:20:06.272Z', '2026-02-21T19:20:06.272Z'),
+  (268, 25, '917206', 'Taxol', 'concentrate for solution for infusion', '100 mg/16.7 mL', 'vial', '1373.00', true, '2026-02-21T19:20:06.273Z', '2026-02-21T19:20:06.273Z'),
+  (269, 63, '237007', 'Prednisolone', 'tablet', '5 mg', 'tablet', '1.00', true, '2026-02-21T19:20:06.274Z', '2026-02-21T19:20:06.274Z'),
+  (270, 63, '371231', 'Prednisolone', 'capsule hard', '5 mg', 'capsule', '1.00', true, '2026-02-21T19:20:06.274Z', '2026-02-21T19:20:06.274Z'),
+  (271, 63, '415767', 'Prednisolone', 'coated tablet', '5 mg', 'tablet', '1.00', true, '2026-02-21T19:20:06.275Z', '2026-02-21T19:20:06.275Z'),
+  (272, 63, '416040', 'Prednisolone', 'film-coated tablet', '5 mg', 'tablet', '1.00', true, '2026-02-21T19:20:06.275Z', '2026-02-21T19:20:06.275Z'),
+  (273, 48, '653160', 'MabThera', 'powder for solution for infusion', '500 mg', 'vial', NULL, true, '2026-02-21T19:20:06.276Z', '2026-02-21T19:20:06.276Z'),
+  (274, 48, '667928', 'MabThera', 'powder for solution for infusion', '100 mg', 'vial', NULL, true, '2026-02-21T19:20:06.277Z', '2026-02-21T19:20:06.277Z'),
+  (275, 35, '209092', 'Nolvadex', 'film-coated tablet', '10 mg', 'tablet', '2.75', true, '2026-02-21T19:20:06.277Z', '2026-02-21T19:20:06.277Z'),
+  (276, 35, '209102', 'Nolvadex', 'tablet', '10 mg', 'tablet', '2.75', true, '2026-02-21T19:20:06.278Z', '2026-02-21T19:20:06.278Z'),
+  (277, 35, '209118', 'Nolvadex', 'film-coated tablet', '20 mg', 'tablet', '4.75', true, '2026-02-21T19:20:06.278Z', '2026-02-21T19:20:06.278Z'),
+  (278, 35, '209125', 'Mamofen', 'tablet', '20 mg', 'tablet', '4.75', true, '2026-02-21T19:20:06.279Z', '2026-02-22T00:35:21.941Z'),
+  (279, 18, '867478', 'Lanvis', 'tablet', '40 mg', 'tablet', '102.00', true, '2026-02-21T19:20:06.279Z', '2026-02-21T19:20:06.279Z'),
+  (280, 24, '209564', 'Hycamtin', 'powder for solution for injection', '4 mg', 'vial', '15214.00', true, '2026-02-21T19:20:06.280Z', '2026-02-21T19:20:06.280Z'),
+  (281, 24, '219800', 'Hycamtin', 'powder for solution for injection', '4 mg', 'vial', NULL, true, '2026-02-21T19:20:06.281Z', '2026-02-21T19:20:06.281Z'),
+  (282, 47, '209627', 'Herceptin', 'powder for concentrate for solution for infusion', '150 mg', 'vial', NULL, true, '2026-02-21T19:20:06.281Z', '2026-02-21T19:20:06.281Z'),
+  (283, 47, '209636', 'Herceptin', 'powder and solvent for concentrate for solution for infusion', '440 mg', 'vial', NULL, true, '2026-02-21T19:20:06.282Z', '2026-02-21T19:20:06.282Z'),
+  (284, 55, '651504', 'Vesanoid', 'capsule soft', '10 mg', 'capsule', '107.00', true, '2026-02-21T19:20:06.282Z', '2026-02-21T19:20:06.282Z'),
+  (285, 42, '209662', 'Diphereline', 'powder for solution for injection', '11.25 mg', 'vial', '8182.00', true, '2026-02-21T19:20:06.283Z', '2026-02-21T19:20:06.283Z'),
+  (286, 42, '219902', 'Diphereline', 'powder for solution for injection', '11.25 mg', 'vial', NULL, true, '2026-02-21T19:20:06.284Z', '2026-02-21T19:20:06.284Z'),
+  (287, 19, '209160', 'UFT', 'capsule hard', '100 mg', 'capsule', '98.00', true, '2026-02-21T19:20:06.284Z', '2026-02-21T19:20:06.284Z'),
+  (288, 28, '209875', 'Velbe', 'solution for injection', '10 mg', 'vial', '465.00', true, '2026-02-21T19:20:06.285Z', '2026-02-21T19:20:06.285Z'),
+  (289, 28, '209881', 'Velbe', 'powder for solution for injection', '10 mg', 'vial', '465.00', true, '2026-02-21T19:20:06.285Z', '2026-02-21T19:20:06.285Z'),
+  (290, 28, '220118', 'Velbe', 'solution for injection', '10 mg', 'vial', NULL, true, '2026-02-21T19:20:06.286Z', '2026-02-21T19:20:06.286Z'),
+  (291, 28, '220125', 'Velbe', 'powder for solution for injection', '10 mg', 'vial', NULL, true, '2026-02-21T19:20:06.287Z', '2026-02-21T19:20:06.287Z'),
+  (292, 27, '1012085', 'Oncovin', 'solution for injection', '2 mg/2 mL', 'vial', NULL, true, '2026-02-21T19:20:06.287Z', '2026-02-21T19:20:06.287Z'),
+  (293, 27, '209899', 'Oncovin', 'solution for injection', '1 mg/1 mL', 'vial', '172.00', true, '2026-02-21T19:20:06.288Z', '2026-02-21T19:20:06.288Z'),
+  (294, 27, '209909', 'Oncovin', 'powder and solvent for solution for injection', '1 mg', 'vial', '172.00', true, '2026-02-21T19:20:06.288Z', '2026-02-21T19:20:06.288Z'),
+  (295, 27, '209913', 'Oncovin', 'powder for solution for injection', '1 mg', 'vial', '172.00', true, '2026-02-21T19:20:06.289Z', '2026-02-21T19:20:06.289Z'),
+  (296, 27, '220141', 'Oncovin', 'powder and solvent for solution for injection', '1 mg', 'vial', NULL, true, '2026-02-21T19:20:06.290Z', '2026-02-21T19:20:06.290Z'),
+  (297, 27, '220156', 'Oncovin', 'powder for solution for injection', '1 mg', 'vial', NULL, true, '2026-02-21T19:20:06.290Z', '2026-02-21T19:20:06.290Z'),
+  (298, 27, '220160', 'Oncovin', 'solution for injection', '10 mg', 'vial', NULL, true, '2026-02-21T19:20:06.291Z', '2026-02-21T19:20:06.291Z'),
+  (299, 27, '653194', 'Oncovin', 'solution for injection', '1 mg/1 mL', 'vial', NULL, true, '2026-02-21T19:20:06.291Z', '2026-02-21T19:20:06.291Z'),
+  (300, 27, '653207', 'Oncovin', 'solution for injection', '2 mg/2 mL', 'vial', '243.00', true, '2026-02-21T19:20:06.292Z', '2026-02-21T19:20:06.292Z')
+ON CONFLICT (drug_code) DO NOTHING;
+
+INSERT INTO drug_trade_names (id, drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active, created_at, updated_at)
+VALUES
+  (301, 27, '670792', 'Oncovin', 'solution for injection', '1 mg/1 mL', 'vial', '172.00', true, '2026-02-21T19:20:06.292Z', '2026-02-21T19:20:06.292Z'),
+  (302, 29, '689096', 'Navelbine', 'concentrate for solution for infusion', '50 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.293Z', '2026-02-21T19:20:06.293Z'),
+  (303, 29, '689106', 'Navelbine', 'concentrate for solution for infusion', '50 mg/5 mL', 'vial', '8800.00', true, '2026-02-21T19:20:06.294Z', '2026-02-21T19:20:06.294Z'),
+  (304, 29, '791761', 'Navelbine', 'concentrate for solution for infusion', '10 mg/1 mL', 'vial', NULL, true, '2026-02-21T19:20:06.294Z', '2026-02-21T19:20:06.294Z'),
+  (305, 29, '791774', 'Navelbine', 'concentrate for solution for infusion', '10 mg/1 mL', 'vial', '2239.00', true, '2026-02-21T19:20:06.295Z', '2026-02-21T19:20:06.295Z'),
+  (306, 62, '210033', 'Zometa', 'concentrate for solution for infusion', '4 mg/5 mL', 'vial', '1473.00', true, '2026-02-21T19:20:06.295Z', '2026-02-21T19:20:06.295Z'),
+  (307, 62, '862368', 'Zometa', 'concentrate for solution for infusion', '4 mg/5 mL', 'vial', NULL, true, '2026-02-21T19:20:06.296Z', '2026-02-21T19:20:06.296Z'),
+  (925, 35, 'TAM-GEN-10', 'MAMOFEN', 'film-coated tablet', '10 mg', 'tablet', '2.75', true, '2026-02-22T08:25:16.403Z', '2026-02-22T08:25:16.403Z'),
+  (926, 35, 'TAM-GEN-20', 'MAMOFEN', 'film-coated tablet', '20 mg', 'tablet', '4.75', true, '2026-02-22T08:25:16.405Z', '2026-02-22T08:25:16.405Z'),
+  (927, 36, 'LET-GEN-25', 'LETROLE', 'film-coated tablet', '2.5 mg', 'tablet', '22.75', true, '2026-02-22T08:25:16.535Z', '2026-02-22T08:25:16.535Z'),
+  (928, 37, 'ANA-GEN-1', 'ANASTROL', 'film-coated tablet', '1 mg', 'tablet', '19.50', true, '2026-02-22T08:25:16.588Z', '2026-02-22T08:25:16.588Z'),
+  (929, 43, 'FUL-250-1', 'Faslodex', 'solution for injection', '250 mg/5 mL', 'prefilled syringe', NULL, true, '2026-02-22T08:25:16.743Z', '2026-02-22T08:25:16.743Z'),
+  (930, 43, 'FUL-250-2', 'Faslodex', 'solution for injection', '250 mg/5 mL', 'prefilled syringe', NULL, true, '2026-02-22T08:25:16.747Z', '2026-02-22T08:25:16.747Z'),
+  (1240, 35, 'TAMPLX10', 'TAMOPLEX', 'film-coated tablet', '10 mg', 'tablet', '2.75', true, '2026-02-22T08:26:12.739Z', '2026-02-22T08:26:12.739Z'),
+  (1241, 35, 'TAMPLX20', 'TAMOPLEX', 'film-coated tablet', '20 mg', 'tablet', '4.75', true, '2026-02-22T08:26:12.741Z', '2026-02-22T08:26:12.741Z'),
+  (1243, 36, 'LETRZL25', 'LETROZOL', 'film-coated tablet', '2.5 mg', 'tablet', '22.75', true, '2026-02-22T08:26:12.742Z', '2026-02-22T08:26:12.742Z'),
+  (1245, 12, 'CAPTE150', 'CAPETERO', 'film-coated tablet', '150 mg', 'tablet', NULL, true, '2026-02-22T08:26:12.743Z', '2026-02-22T08:26:12.743Z'),
+  (1246, 12, 'CAPTE500', 'CAPETERO', 'film-coated tablet', '500 mg', 'tablet', NULL, true, '2026-02-22T08:26:12.744Z', '2026-02-22T08:26:12.744Z'),
+  (1247, 12, 'CAPBI500', 'CAPEBINE', 'film-coated tablet', '500 mg', 'tablet', NULL, true, '2026-02-22T08:26:12.744Z', '2026-02-22T08:26:12.744Z'),
+  (1250, 26, 'DOCTE20', 'DOCETERO', 'concentrate for solution for infusion', '20 mg/1 mL', 'vial', NULL, true, '2026-02-22T08:26:12.746Z', '2026-02-22T08:26:12.746Z'),
+  (1251, 26, 'DOCTE80', 'DOCETERO', 'concentrate for solution for infusion', '80 mg/4 mL', 'vial', NULL, true, '2026-02-22T08:26:12.747Z', '2026-02-22T08:26:12.747Z'),
+  (1252, 15, 'GEMTE200', 'GEMTERO', 'powder for solution for infusion', '200 mg', 'vial', NULL, true, '2026-02-22T08:26:12.747Z', '2026-02-22T08:26:12.747Z'),
+  (1253, 15, 'GEMTE1G', 'GEMTERO', 'powder for solution for infusion', '1 g', 'vial', NULL, true, '2026-02-22T08:26:12.748Z', '2026-02-22T08:26:12.748Z'),
+  (1254, 50, '1502986', 'ERLONIB', 'tablet', '150 mg', 'tablet', NULL, true, '2026-02-22T01:37:23.224Z', '2026-02-22T01:37:23.224Z'),
+  (1578, 25, 'INTAXEL', 'INTAXEL', 'injection', '300mg/50ml vial', NULL, NULL, true, '2026-02-22T08:44:23.471Z', '2026-02-22T08:44:23.471Z'),
+  (1579, 25, 'INTAXL30', 'INTAXEL 30', 'injection', '30mg/5ml vial', NULL, NULL, true, '2026-02-22T08:44:23.471Z', '2026-02-22T08:44:23.471Z'),
+  (1580, 9, 'KEMOCARB', 'KEMOCARB', 'injection', '450mg/45ml vial', NULL, NULL, true, '2026-02-22T08:44:23.473Z', '2026-02-22T08:44:23.473Z'),
+  (1581, 9, 'KEMCRB15', 'KEMOCARB 150', 'injection', '150mg/15ml vial', NULL, NULL, true, '2026-02-22T08:44:23.473Z', '2026-02-22T08:44:23.473Z'),
+  (1582, 8, 'KEMOPLAT', 'KEMOPLAT', 'injection', '50mg/50ml vial', NULL, NULL, true, '2026-02-22T08:44:23.474Z', '2026-02-22T08:44:23.474Z'),
+  (1583, 8, 'KEMOP10', 'KEMOPLAT 10', 'injection', '10mg/10ml vial', NULL, NULL, true, '2026-02-22T08:44:23.474Z', '2026-02-22T08:44:23.474Z'),
+  (1584, 15, 'GEMITA', 'GEMITA', 'injection', '1000mg vial', NULL, NULL, true, '2026-02-22T08:44:23.474Z', '2026-02-22T08:44:23.474Z'),
+  (1585, 15, 'GEMIT200', 'GEMITA200', 'injection', '200mg vial', NULL, NULL, true, '2026-02-22T08:44:23.474Z', '2026-02-22T08:44:23.474Z'),
+  (1586, 26, 'DOXATEL', 'DOXATEL', 'injection', '80mg/2ml vial', NULL, NULL, true, '2026-02-22T08:44:23.475Z', '2026-02-22T08:44:23.475Z'),
+  (1587, 26, 'DOXATL20', 'DOXATEL 20', 'injection', '20mg/0.5ml vial', NULL, NULL, true, '2026-02-22T08:44:23.475Z', '2026-02-22T08:44:23.475Z'),
+  (1588, 20, 'ADRIM', 'ADRIM', 'injection', '50mg vial', NULL, NULL, true, '2026-02-22T08:44:23.475Z', '2026-02-22T08:44:23.475Z'),
+  (1589, 20, 'ADRIM10', 'ADRIM 10', 'injection', '10mg vial', NULL, NULL, true, '2026-02-22T08:44:23.475Z', '2026-02-22T08:44:23.475Z'),
+  (1590, 1, 'CYCLOXAN', 'CYCLOXAN', 'injection', '500mg vial', NULL, NULL, true, '2026-02-22T08:44:23.476Z', '2026-02-22T08:44:23.476Z'),
+  (1591, 1, 'ENDOXAN', 'ENDOXAN', 'injection', '500mg vial', NULL, NULL, true, '2026-02-22T08:44:23.476Z', '2026-02-22T08:44:23.476Z'),
+  (1592, 27, 'VCS', 'V.C.S.', 'injection', '1mg/ml vial', NULL, NULL, true, '2026-02-22T08:44:23.477Z', '2026-02-22T08:44:23.477Z'),
+  (1593, 27, 'VCSINJ', 'V.C.S. INJECTION', 'injection', '1mg/ml vial', NULL, NULL, true, '2026-02-22T08:44:23.477Z', '2026-02-22T08:44:23.477Z'),
+  (1594, 48, 'ACELLBIA', 'ACELLBIA', 'injection', '500mg/50ml vial', NULL, NULL, true, '2026-02-22T08:44:23.477Z', '2026-02-22T08:44:23.477Z'),
+  (1595, 48, 'TRUXIMA', 'TRUXIMA', 'injection', '500mg/50ml vial', NULL, NULL, true, '2026-02-22T08:44:23.477Z', '2026-02-22T08:44:23.477Z'),
+  (1596, 47, 'HERZUMA', 'HERZUMA', 'injection', '420mg vial', NULL, NULL, true, '2026-02-22T08:44:23.478Z', '2026-02-22T08:44:23.478Z'),
+  (1597, 47, 'TRAZIMRA', 'TRAZIMERA', 'injection', '420mg vial', NULL, NULL, true, '2026-02-22T08:44:23.478Z', '2026-02-22T08:44:23.478Z'),
+  (1598, 47, 'TRAST44', 'TRASTUZUMAB 440MG INJ', 'injection', '440mg vial', NULL, NULL, true, '2026-02-22T08:44:23.478Z', '2026-02-22T08:44:23.478Z'),
+  (1599, 11, '5FU', '5-FLUOROURACIL', 'injection', '500mg/10ml vial', NULL, NULL, true, '2026-02-22T08:44:23.478Z', '2026-02-22T08:44:23.478Z'),
+  (1600, 13, 'BIOTREX', 'BIOTREXATE', 'injection', '50mg vial', NULL, NULL, true, '2026-02-22T08:44:23.479Z', '2026-02-22T08:44:23.479Z'),
+  (1601, 13, 'ZEXATE50', 'ZEXATE-50', 'injection', '50mg vial', NULL, NULL, true, '2026-02-22T08:44:23.479Z', '2026-02-22T08:44:23.479Z'),
+  (1602, 60, 'RESCUVLN', 'RESCUVOLIN', 'injection', '50mg vial', NULL, NULL, true, '2026-02-22T08:44:23.480Z', '2026-02-22T08:44:23.480Z'),
+  (1603, 10, 'OXALIP', 'OXALIP INJECTION', 'injection', '100mg vial', NULL, NULL, true, '2026-02-22T08:44:23.480Z', '2026-02-22T08:44:23.480Z')
+ON CONFLICT (drug_code) DO NOTHING;
+
+INSERT INTO drug_trade_names (id, drug_id, drug_code, trade_name, dosage_form, strength, unit, unit_price, is_active, created_at, updated_at)
+VALUES
+  (1604, 87, 'ONSIA', 'ONSIA', 'injection', '4mg/2ml amp', NULL, NULL, true, '2026-02-22T08:44:23.481Z', '2026-02-22T08:44:23.481Z'),
+  (1605, 87, 'ONSIA8', 'ONSIA 8', 'tablet', '8mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.481Z', '2026-02-22T08:44:23.481Z'),
+  (1606, 81, 'DEXASONE', 'DEXASONE', 'tablet', '4mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.481Z', '2026-02-22T08:44:23.481Z'),
+  (1607, 81, 'DEXAINJ', 'DEXAMETHASONE SODIUM PHOSPHATE INJECTION 4 mg/ml', 'injection', '4mg/ml amp', NULL, NULL, true, '2026-02-22T08:44:23.481Z', '2026-02-22T08:44:23.481Z'),
+  (1608, 77, 'BORTERO', 'BORTERO', 'injection', '3.5mg vial', NULL, NULL, true, '2026-02-22T08:44:23.482Z', '2026-02-22T08:44:23.482Z'),
+  (1609, 77, 'TEVAZOM', 'TEVAZOMIB', 'injection', '3.5mg vial', NULL, NULL, true, '2026-02-22T08:44:23.482Z', '2026-02-22T08:44:23.482Z'),
+  (1610, 38, 'BICAL50', 'BICAL-50', 'tablet', '50mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.482Z', '2026-02-22T08:44:23.482Z'),
+  (1611, 44, 'GLIVEC', 'GLIVEC 100 MG', 'tablet', '100mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.483Z', '2026-02-22T08:44:23.483Z'),
+  (1612, 44, 'IMAT100', 'IMATINIB TEVA 100', 'tablet', '100mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.483Z', '2026-02-22T08:44:23.483Z'),
+  (1613, 54, 'IBRANCE', 'IBRANCE', 'capsule', '125mg capsule', NULL, NULL, true, '2026-02-22T08:44:23.483Z', '2026-02-22T08:44:23.483Z'),
+  (1614, 53, 'KISQALI', 'KISQALI', 'tablet', '200mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.484Z', '2026-02-22T08:44:23.484Z'),
+  (1615, 74, 'TECNTRQ', 'TECENTRIQ', 'injection', '1200mg vial', NULL, NULL, true, '2026-02-22T08:44:23.485Z', '2026-02-22T08:44:23.485Z'),
+  (1616, 88, 'TAGRISS', 'TAGRISSO', 'tablet', '80mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.485Z', '2026-02-22T08:44:23.485Z'),
+  (1617, 89, 'VOTRIENT', 'VOTRIENT', 'tablet', '400mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.486Z', '2026-02-22T08:44:23.486Z'),
+  (1618, 22, 'ETOPOSD', 'ETOPOSIDE', 'injection', '100mg/5ml vial', NULL, NULL, true, '2026-02-22T08:44:23.486Z', '2026-02-22T08:44:23.486Z'),
+  (1619, 2, 'IFOSFA', 'IFOSFAMIDE', 'injection', '1000mg vial', NULL, NULL, true, '2026-02-22T08:44:23.487Z', '2026-02-22T08:44:23.487Z'),
+  (1620, 57, 'NEUTMAX', 'NEUTROMAX', 'injection', '300mcg syringe', NULL, NULL, true, '2026-02-22T08:44:23.487Z', '2026-02-22T08:44:23.487Z'),
+  (1621, 62, 'ZOLENNI', 'ZOLENNIC', 'injection', '4mg/5ml vial', NULL, NULL, true, '2026-02-22T08:44:23.488Z', '2026-02-22T08:44:23.488Z'),
+  (1622, 70, 'ABIRSND', 'ABIRATERONE SANDOZ', 'tablet', '500mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.488Z', '2026-02-22T08:44:23.488Z'),
+  (1623, 63, 'PREDTAB', 'PREDNISOLONE TABLETS 5 mg 500', 'tablet', '5mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.489Z', '2026-02-22T08:44:23.489Z'),
+  (1624, 41, 'ENANTON', 'ENANTONE L.P. 11.25 MG 1 prefilled syr', 'injection', '11.25mg syringe', NULL, NULL, true, '2026-02-22T08:44:23.489Z', '2026-02-22T08:44:23.489Z'),
+  (1625, 67, 'BCGMED', 'BCG-MEDAC', 'injection', 'vial', NULL, NULL, true, '2026-02-22T08:44:23.490Z', '2026-02-22T08:44:23.490Z'),
+  (1626, 59, 'MESNAINJ', 'MESNA', 'injection', '400mg/4ml amp', NULL, NULL, true, '2026-02-22T08:44:23.490Z', '2026-02-22T08:44:23.490Z'),
+  (1627, 29, 'VERSAVO', 'VERSAVO', 'injection', '50mg/5ml vial', NULL, NULL, true, '2026-02-22T08:44:23.491Z', '2026-02-22T08:44:23.491Z'),
+  (1628, 71, 'VILERM', 'VILERM', 'tablet', '400mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.491Z', '2026-02-22T08:44:23.491Z'),
+  (1629, 64, 'HCINJ', 'HYDROCORTISONE SODIUM SUCCINATE FOR INJECTION B.P. 100 MG.', 'injection', '100mg vial', NULL, NULL, true, '2026-02-22T08:44:23.492Z', '2026-02-22T08:44:23.492Z'),
+  (1630, 61, 'UXORIC', 'UXORIC', 'tablet', '300mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.493Z', '2026-02-22T08:44:23.493Z'),
+  (1631, 61, 'ALLO100', 'ALLOPURINOL TABLETS 100 mg 500', 'tablet', '100mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.493Z', '2026-02-22T08:44:23.493Z'),
+  (1632, 65, 'HIDIL', 'HIDIL', 'capsule', '500mg capsule', NULL, NULL, true, '2026-02-22T08:44:23.493Z', '2026-02-22T08:44:23.493Z'),
+  (1633, 96, 'SORAF', 'SORAFENIB', 'tablet', '200mg tablet', NULL, NULL, true, '2026-02-22T08:44:23.494Z', '2026-02-22T08:44:23.494Z'),
+  (1634, 97, 'SUNITNB', 'SUNITINIB', 'capsule', '50mg capsule', NULL, NULL, true, '2026-02-22T08:44:23.494Z', '2026-02-22T08:44:23.494Z'),
+  (3155, 883, 'EPIRUBICIN', 'Epirubicin-Ebewe', 'Injection', '2 mg', 'vial', NULL, true, '2026-02-22T09:02:32.979Z', '2026-02-22T09:02:32.979Z')
+ON CONFLICT (drug_code) DO NOTHING;
+
+-- Reset sequence
+SELECT setval(pg_get_serial_sequence('drug_trade_names', 'id'), COALESCE((SELECT MAX(id) FROM drug_trade_names), 1));

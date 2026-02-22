@@ -1,427 +1,193 @@
--- 007: Regimen Drugs (ยาในสูตร) — drug compositions of regimens
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '100-200 mg/m2', 'IV CI', 'Day 1-7', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = '7-PLUS-3' AND d.generic_name = 'cytarabine'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '12 mg/m2', 'IV', 'Day 1-3', false, 'Or Daunorubicin 60-90 mg/m2'
-FROM regimens r, drugs d WHERE r.regimen_code = '7-PLUS-3' AND d.generic_name = 'idarubicin hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '10 U/m2', 'IV', 'Day 1, 15', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'ABVD' AND d.generic_name = 'bleomycin sulfate'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '375 mg/m2', 'IV', 'Day 1, 15', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'ABVD' AND d.generic_name = 'dacarbazine'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '25 mg/m2', 'IV', 'Day 1, 15', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'ABVD' AND d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '6 mg/m2', 'IV', 'Day 1, 15', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'ABVD' AND d.generic_name = 'vinblastine sulfate'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '600 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'AC' AND d.generic_name = 'cyclophosphamide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '60 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'AC' AND d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '45 mg/m2/day', 'PO', 'Daily until CR', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'ATRA' AND d.generic_name = 'tretinoin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '30 U', 'IV', 'Day 1, 8, 15', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'BEP' AND d.generic_name = 'bleomycin sulfate'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '20 mg/m2', 'IV', 'Day 1-5', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'BEP' AND d.generic_name = 'cisplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '100 mg/m2', 'IV', 'Day 1-5', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'BEP' AND d.generic_name = 'etoposide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1000-1250 mg/m2 BID', 'PO', 'Day 1-14', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CAPE-MONO' AND d.generic_name = 'capecitabine'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, 'AUC 5', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CARBO-ETO' AND d.generic_name = 'carboplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '100 mg/m2', 'IV', 'Day 1-3', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CARBO-ETO' AND d.generic_name = 'etoposide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, 'AUC 5-6', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CARBO-PACLI' AND d.generic_name = 'carboplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '175-200 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CARBO-PACLI' AND d.generic_name = 'paclitaxel'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, 'AUC 5-6', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CARBO-PACLI-GYN' AND d.generic_name = 'carboplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '175 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CARBO-PACLI-GYN' AND d.generic_name = 'paclitaxel'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '750 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CHOP' AND d.generic_name = 'cyclophosphamide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '50 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CHOP' AND d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '100 mg', 'PO', 'Day 1-5', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CHOP' AND d.generic_name = 'prednisolone'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1.4 mg/m2 (max 2 mg)', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CHOP' AND d.generic_name = 'vincristine sulfate'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '100 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CIS-5FU' AND d.generic_name = 'cisplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1000 mg/m2', 'IV CI', 'Day 1-4', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CIS-5FU' AND d.generic_name = 'fluorouracil'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '75-80 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CIS-ETO' AND d.generic_name = 'cisplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '100 mg/m2', 'IV', 'Day 1-3', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CIS-ETO' AND d.generic_name = 'etoposide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '40 mg/m2 weekly or 100 mg/m2 q3w', 'IV', 'Weekly', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CIS-RT' AND d.generic_name = 'cisplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '100 mg/m2', 'PO', 'Day 1-14', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CMF' AND d.generic_name = 'cyclophosphamide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '600 mg/m2', 'IV', 'Day 1, 8', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CMF' AND d.generic_name = 'fluorouracil'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '40 mg/m2', 'IV', 'Day 1, 8', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'CMF' AND d.generic_name = 'methotrexate'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '75 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'DOCE-MONO' AND d.generic_name = 'docetaxel'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '75 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'DOCE-PRED' AND d.generic_name = 'docetaxel'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '5 mg BID', 'PO', 'Daily', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'DOCE-PRED' AND d.generic_name = 'prednisolone'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '75 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'DOXO-MONO' AND d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '500 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'FAC' AND d.generic_name = 'cyclophosphamide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '50 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'FAC' AND d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '500 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'FAC' AND d.generic_name = 'fluorouracil'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '400 mg/m2 bolus + 2400 mg/m2 CI 46h', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'FOLFIRI' AND d.generic_name = 'fluorouracil'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '400 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'FOLFIRI' AND d.generic_name = 'folinic acid'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '180 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'FOLFIRI' AND d.generic_name = 'irinotecan hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '400 mg/m2 bolus + 600 mg/m2 CI', 'IV', 'Day 1, 2', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'FOLFOX4' AND d.generic_name = 'fluorouracil'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '200 mg/m2', 'IV', 'Day 1, 2', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'FOLFOX4' AND d.generic_name = 'folinic acid'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '85 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'FOLFOX4' AND d.generic_name = 'oxaliplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, 'AUC 5', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'GEM-CARBO' AND d.generic_name = 'carboplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1000 mg/m2', 'IV', 'Day 1, 8', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'GEM-CARBO' AND d.generic_name = 'gemcitabine'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '75 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'GEM-CIS' AND d.generic_name = 'cisplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1000-1250 mg/m2', 'IV', 'Day 1, 8', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'GEM-CIS' AND d.generic_name = 'gemcitabine'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, 'Per protocol', 'IP', 'Intraop', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'HIPEC-MMC' AND d.generic_name = 'mitomycin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '300 mg/m2', 'IV', 'Day 1-3 (q12h)', false, 'Courses 1,3,5,7'
-FROM regimens r, drugs d WHERE r.regimen_code = 'HYPER-CVAD' AND d.generic_name = 'cyclophosphamide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '3 g/m2', 'IV', 'Day 2-3 (q12h)', false, 'Courses 2,4,6,8 - high dose Ara-C'
-FROM regimens r, drugs d WHERE r.regimen_code = 'HYPER-CVAD' AND d.generic_name = 'cytarabine'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '50 mg/m2', 'IV CI', 'Day 4', false, 'Courses 1,3,5,7'
-FROM regimens r, drugs d WHERE r.regimen_code = 'HYPER-CVAD' AND d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1 g/m2', 'IV', 'Day 1', false, 'Courses 2,4,6,8 - high dose'
-FROM regimens r, drugs d WHERE r.regimen_code = 'HYPER-CVAD' AND d.generic_name = 'methotrexate'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '2 mg', 'IV', 'Day 4, 11', false, 'Courses 1,3,5,7'
-FROM regimens r, drugs d WHERE r.regimen_code = 'HYPER-CVAD' AND d.generic_name = 'vincristine sulfate'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '400-600 mg', 'PO', 'Daily', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'IMATINIB-CML' AND d.generic_name = 'imatinib'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '11.25-22.5 mg', 'SC/IM', 'q3m or q6m', false, 'Or Triptorelin'
-FROM regimens r, drugs d WHERE r.regimen_code = 'LHRH-AGONIST' AND d.generic_name = 'leuprorelin acetate'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '400 mg/m2 bolus + 2400 mg/m2 CI 46h', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'mFOLFOX6' AND d.generic_name = 'fluorouracil'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '400 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'mFOLFOX6' AND d.generic_name = 'folinic acid'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '85 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'mFOLFOX6' AND d.generic_name = 'oxaliplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '500 mg', 'IM', 'Day 1, 15 (C1), Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'PALBO-FUL' AND d.generic_name = 'fulvestrant'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '125 mg', 'PO', 'Day 1-21', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'PALBO-FUL' AND d.generic_name = 'palbociclib'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '2.5 mg', 'PO', 'Daily', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'PALBO-LET' AND d.generic_name = 'letrozole'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '125 mg', 'PO', 'Day 1-21', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'PALBO-LET' AND d.generic_name = 'palbociclib'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '750 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'R-CHOP' AND d.generic_name = 'cyclophosphamide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '50 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'R-CHOP' AND d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '100 mg', 'PO', 'Day 1-5', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'R-CHOP' AND d.generic_name = 'prednisolone'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '375 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'R-CHOP' AND d.generic_name = 'rituximab'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1.4 mg/m2 (max 2 mg)', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'R-CHOP' AND d.generic_name = 'vincristine sulfate'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '2.5 mg', 'PO', 'Daily', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'RIBO-LET' AND d.generic_name = 'letrozole'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '600 mg', 'PO', 'Day 1-21', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'RIBO-LET' AND d.generic_name = 'ribociclib'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '500 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'TAC' AND d.generic_name = 'cyclophosphamide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '75 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'TAC' AND d.generic_name = 'docetaxel'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '50 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'TAC' AND d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '600 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'TC' AND d.generic_name = 'cyclophosphamide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '75 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'TC' AND d.generic_name = 'docetaxel'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '75 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'TPF' AND d.generic_name = 'cisplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '75 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'TPF' AND d.generic_name = 'docetaxel'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '750 mg/m2', 'IV CI', 'Day 1-5', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'TPF' AND d.generic_name = 'fluorouracil'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1200 mg/m2', 'IV', 'Day 1 (VDC)', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'VDC-IE' AND d.generic_name = 'cyclophosphamide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '75 mg/m2', 'IV', 'Day 1 (VDC)', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'VDC-IE' AND d.generic_name = 'doxorubicin hydrochloride'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '100 mg/m2', 'IV', 'Day 1-5 (IE)', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'VDC-IE' AND d.generic_name = 'etoposide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1800 mg/m2', 'IV', 'Day 1-5 (IE)', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'VDC-IE' AND d.generic_name = 'ifosfamide'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1.5 mg/m2 (max 2 mg)', 'IV', 'Day 1 (VDC)', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'VDC-IE' AND d.generic_name = 'vincristine sulfate'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '1000 mg/m2 BID', 'PO', 'Day 1-14', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'XELOX' AND d.generic_name = 'capecitabine'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
-INSERT INTO regimen_drugs (regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
-SELECT r.id, d.id, '130 mg/m2', 'IV', 'Day 1', false, NULL
-FROM regimens r, drugs d WHERE r.regimen_code = 'XELOX' AND d.generic_name = 'oxaliplatin'
-ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
-
+-- 007: Regimen Drugs — สูตรยา ↔ ยา (พร้อม dose/route/schedule)
+-- Exported from database: 172 rows
+
+INSERT INTO regimen_drugs (id, regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
+VALUES
+  (1, 37, 14, '100-200 mg/m2', 'IV CI', 'Day 1-7', false, NULL),
+  (2, 37, 21, '12 mg/m2', 'IV', 'Day 1-3', false, 'Or Daunorubicin 60-90 mg/m2'),
+  (3, 35, 31, '10 U/m2', 'IV', 'Day 1, 15', false, NULL),
+  (4, 35, 7, '375 mg/m2', 'IV', 'Day 1, 15', false, NULL),
+  (5, 35, 20, '25 mg/m2', 'IV', 'Day 1, 15', false, NULL),
+  (6, 35, 28, '6 mg/m2', 'IV', 'Day 1, 15', false, NULL),
+  (7, 1, 1, '600 mg/m2', 'IV', 'Day 1', false, '���ͺ: ����Ҫ��� ����Թ 60 �ҷ�'),
+  (8, 1, 20, '60 mg/m2', 'IV', 'Day 1', false, NULL),
+  (9, 38, 55, '45 mg/m2/day', 'PO', 'Daily until CR', false, NULL),
+  (10, 40, 31, '30 U', 'IV', 'Day 1, 8, 15', false, NULL),
+  (11, 40, 8, '20 mg/m2', 'IV', 'Day 1-5', false, NULL),
+  (12, 40, 22, '100 mg/m2', 'IV', 'Day 1-5', false, NULL),
+  (13, 13, 12, '1000-1250 mg/m2 BID', 'PO', 'Day 1-14', false, NULL),
+  (14, 22, 9, 'AUC 5', 'IV', 'Day 1', false, NULL),
+  (15, 22, 22, '100 mg/m2', 'IV', 'Day 1-3', false, NULL),
+  (16, 21, 9, 'AUC 5-6', 'IV', 'Day 1', false, NULL),
+  (17, 21, 25, '175-200 mg/m2', 'IV', 'Day 1', false, NULL),
+  (18, 43, 9, 'AUC 5-6', 'IV', 'Day 1', false, NULL),
+  (19, 43, 25, '175 mg/m2', 'IV', 'Day 1', false, NULL),
+  (20, 31, 1, '750 mg/m2', 'IV', 'Day 1', false, NULL),
+  (21, 31, 20, '50 mg/m2', 'IV', 'Day 1', false, NULL),
+  (22, 31, 63, '100 mg', 'PO', 'Day 1-5', false, NULL),
+  (23, 31, 27, '1.4 mg/m2 (max 2 mg)', 'IV', 'Day 1', false, NULL),
+  (24, 28, 8, '100 mg/m2', 'IV', 'Day 1', false, NULL),
+  (25, 28, 11, '1000 mg/m2', 'IV CI', 'Day 1-4', false, NULL),
+  (26, 20, 8, '60-80 mg/m2', 'IV', 'Day 1', false, NULL),
+  (27, 20, 22, '100 mg/m2', 'IV', 'Day 1-3', false, NULL),
+  (28, 26, 8, '40 mg/m2', 'IV', 'Weekly', false, NULL),
+  (29, 6, 1, '100 mg/m2', 'PO', 'Day 1-14', false, NULL),
+  (30, 6, 11, '600 mg/m2', 'IV', 'Day 1, 8', false, NULL),
+  (31, 6, 13, '40 mg/m2', 'IV', 'Day 1, 8', false, NULL),
+  (32, 25, 26, '75 mg/m2', 'IV', 'Day 1', false, NULL),
+  (33, 44, 26, '75 mg/m2', 'IV', 'Day 1', false, NULL),
+  (34, 44, 63, '5 mg BID', 'PO', 'Daily', false, NULL),
+  (35, 42, 20, '75 mg/m2', 'IV', 'Day 1', false, NULL),
+  (36, 4, 1, '500 mg/m2', 'IV', 'Day 1', false, NULL),
+  (37, 4, 20, '50 mg/m2', 'IV', 'Day 1', false, NULL),
+  (38, 4, 11, '500 mg/m2', 'IV', 'Day 1', false, NULL),
+  (39, 16, 11, '400 mg/m2 bolus + 2400 mg/m2 CI 46h', 'IV', 'Day 1', false, NULL),
+  (40, 16, 60, '400 mg/m2', 'IV', 'Day 1', false, NULL),
+  (41, 16, 23, '180 mg/m2', 'IV', 'Day 1', false, NULL),
+  (42, 14, 11, '400 mg/m2 bolus + 600 mg/m2 CI', 'IV', 'Day 1, 2', false, NULL),
+  (43, 14, 60, '200 mg/m2', 'IV', 'Day 1, 2', false, NULL),
+  (44, 14, 10, '85 mg/m2', 'IV', 'Day 1', false, NULL),
+  (45, 24, 9, 'AUC 5', 'IV', 'Day 1', false, NULL),
+  (46, 24, 15, '1000 mg/m2', 'IV', 'Day 1, 8', false, NULL),
+  (47, 23, 8, '75 mg/m2', 'IV', 'Day 1', false, NULL),
+  (48, 23, 15, '1000-1250 mg/m2', 'IV', 'Day 1, 8', false, NULL),
+  (49, 19, 33, 'Per protocol', 'IP', 'Intraop', false, NULL),
+  (50, 36, 1, '300 mg/m2', 'IV', 'Day 1-3 (q12h)', false, 'Courses 1,3,5,7')
+ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
+
+INSERT INTO regimen_drugs (id, regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
+VALUES
+  (51, 36, 14, '3 g/m2', 'IV', 'Day 2-3 (q12h)', false, 'Courses 2,4,6,8 - high dose Ara-C'),
+  (52, 36, 20, '50 mg/m2', 'IV CI', 'Day 4', false, 'Courses 1,3,5,7'),
+  (53, 36, 13, '1 g/m2', 'IV', 'Day 1', false, 'Courses 2,4,6,8 - high dose'),
+  (54, 36, 27, '2 mg', 'IV', 'Day 4, 11', false, 'Courses 1,3,5,7'),
+  (55, 39, 44, '400-600 mg', 'PO', 'Daily', false, NULL),
+  (56, 45, 41, '11.25-22.5 mg', 'SC/IM', 'q3m or q6m', false, 'Or Triptorelin'),
+  (57, 15, 11, '400 mg/m2 bolus + 2400 mg/m2 CI 46h', 'IV', 'Day 1', false, NULL),
+  (58, 15, 60, '400 mg/m2', 'IV', 'Day 1', false, NULL),
+  (59, 15, 10, '85 mg/m2', 'IV', 'Day 1', false, NULL),
+  (60, 11, 43, '500 mg', 'IM', 'Day 1, 15 (C1), Day 1', false, NULL),
+  (61, 11, 54, '125 mg', 'PO', 'Day 1-21', false, NULL),
+  (62, 10, 36, '2.5 mg', 'PO', 'Daily', false, NULL),
+  (63, 10, 54, '125 mg', 'PO', 'Day 1-21', false, NULL),
+  (64, 32, 1, '750 mg/m2', 'IV', 'Day 1', false, NULL),
+  (65, 32, 20, '50 mg/m2', 'IV', 'Day 1', false, NULL),
+  (66, 32, 63, '100 mg', 'PO', 'Day 1-5', false, NULL),
+  (67, 32, 48, '375 mg/m2', 'IV', 'Day 1', false, NULL),
+  (68, 32, 27, '1.4 mg/m2 (max 2 mg)', 'IV', 'Day 1', false, NULL),
+  (69, 8, 36, '2.5 mg', 'PO', 'Daily', false, NULL),
+  (70, 8, 53, '600 mg', 'PO', 'Day 1-21', false, NULL),
+  (71, 3, 1, '500 mg/m2', 'IV', 'Day 1', false, NULL),
+  (72, 3, 26, '75 mg/m2', 'IV', 'Day 1', false, NULL),
+  (73, 3, 20, '50 mg/m2', 'IV', 'Day 1', false, NULL),
+  (74, 2, 1, '600 mg/m2', 'IV', 'Day 1', false, NULL),
+  (75, 2, 26, '75 mg/m2', 'IV', 'Day 1', false, NULL),
+  (76, 27, 8, '75 mg/m2', 'IV', 'Day 1', false, NULL),
+  (77, 27, 26, '75 mg/m2', 'IV', 'Day 1', false, NULL),
+  (78, 27, 11, '750 mg/m2', 'IV CI', 'Day 1-5', false, NULL),
+  (79, 41, 1, '1200 mg/m2', 'IV', 'Day 1 (VDC)', false, NULL),
+  (80, 41, 20, '75 mg/m2', 'IV', 'Day 1 (VDC)', false, NULL),
+  (81, 41, 22, '100 mg/m2', 'IV', 'Day 1-5 (IE)', false, NULL),
+  (82, 41, 2, '1800 mg/m2', 'IV', 'Day 1-5 (IE)', false, NULL),
+  (83, 41, 27, '1.5 mg/m2 (max 2 mg)', 'IV', 'Day 1 (VDC)', false, NULL),
+  (84, 17, 12, '1000 mg/m2 BID', 'PO', 'Day 1-14', false, NULL),
+  (85, 17, 10, '130 mg/m2', 'IV', 'Day 1', false, NULL),
+  (86, 49, 47, 'loading dose 8 mg/kg then 6 mg/kg', 'IV', 'D1', false, 'Trastuzumab loading dose 8 mg/kg IV then 6 mg/kg'),
+  (87, 50, 25, '175 mg/m2 over 3 hours', 'IV', 'D1', false, NULL),
+  (88, 51, 9, '5 AUC', 'IV', 'D1', false, NULL),
+  (89, 46, 35, '20 mg', 'PO', 'daily', false, NULL),
+  (90, 47, 36, '2.5 mg', 'PO', 'daily', false, NULL),
+  (91, 48, 37, '1 mg', 'PO', 'daily', false, NULL),
+  (92, 52, 40, '160 mg/day', 'PO', 'daily', false, '<= 90 days/visit'),
+  (93, 53, 8, '70-75 mg/m2', 'IV', 'every 21-28 days', false, NULL),
+  (94, 54, 8, '75 mg/m2', 'IV', 'every 21 days', false, NULL),
+  (95, 54, 11, '1,000 mg/m2', 'IV', 'D1-D4 every 21 days', false, NULL),
+  (96, 55, 9, 'AUC 2', 'IV', 'Weekly', false, 'maximum total dose <= 300 mg'),
+  (124, 81, 8, '40 mg/m2 weekly or 100 mg/m2 q3w', 'IV', 'Weekly', false, NULL),
+  (267, 146, 35, '20 mg', 'PO', 'Daily', false, 'ต่อเนื่อง 5-10 ปี (adjuvant) หรือจนโรคดำเนินไป (metastatic)'),
+  (268, 147, 36, '2.5 mg', 'PO', 'Daily', false, 'Postmenopausal only'),
+  (269, 148, 37, '1 mg', 'PO', 'Daily', false, 'Postmenopausal only')
+ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
+
+INSERT INTO regimen_drugs (id, regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
+VALUES
+  (270, 149, 43, '500 mg', 'IM', 'Day 1, 15 (C1), then Day 1', false, NULL),
+  (271, 150, 35, '20 mg', 'PO', 'Daily', false, NULL),
+  (272, 150, 41, '11.25 mg or 22.5 mg', 'SC/IM', 'q3m or q6m', false, 'หรือ Triptorelin'),
+  (273, 151, 36, '2.5 mg', 'PO', 'Daily', false, 'หรือ Anastrozole 1 mg'),
+  (274, 151, 41, '11.25 mg or 22.5 mg', 'SC/IM', 'q3m or q6m', false, 'หรือ Triptorelin'),
+  (275, 152, 40, '160 mg', 'PO', 'Daily', false, NULL),
+  (464, 257, 53, '400 - 600 ng/day', 'PO', 'D1-D21', false, 'ปริมาณการเบิกยา ครั้งละ 1 เดือน ใน 6 เดือนแรก และไม่เกินครั้งละ 2 เดือนในครั้งต่อๆ ไป'),
+  (465, 258, 54, '100 - 125 mg/day', 'PO', 'D1-D21', false, 'ปริมาณการเบิกยา ครั้งละ 1 เดือน ใน 3 เดือนแรก และไม่เกินครั้งละ 2 เดือนในครั้งต่อๆ ไป'),
+  (466, 259, 8, '75-80 mg/m2', 'IV', 'D1', false, NULL),
+  (467, 259, 29, '25-30 mg/m2', 'IV', 'D1, D8', false, NULL),
+  (468, 260, 8, '50 mg/m2', 'IV', 'D1, D8', false, NULL),
+  (469, 260, 29, '25-30 mg/m2', 'IV', 'D1, D8', false, NULL),
+  (470, 261, 8, '50 mg/m2', 'IV', 'D1, D8, D29, D36', false, NULL),
+  (471, 261, 22, '50 mg/m2', 'IV', 'D1-5, D29-33', false, NULL),
+  (472, 262, 8, '80 mg/m2', 'IV', 'D1', false, NULL),
+  (473, 262, 22, '100 mg/m2', 'IV', 'D1-3', false, NULL),
+  (474, 264, 9, 'AUC 5-6', 'IV', 'D1, D29', false, NULL),
+  (475, 264, 22, '50 mg/m2', 'IV', 'D1-5, D29-33', false, NULL),
+  (476, 263, 9, 'AUC 5-6', 'IV', 'D1', false, NULL),
+  (477, 263, 22, '100 mg/m2', 'IV', 'D1-3', false, NULL),
+  (478, 266, 9, 'AUC 5-6', 'IV', 'D1', false, NULL),
+  (479, 266, 25, '200 mg/m2', 'IV', 'D1', false, NULL),
+  (480, 265, 9, 'AUC 2', 'IV', 'D1, D8, D15, D22, D29, D33', false, NULL),
+  (481, 265, 25, '50 mg/m2', 'IV', 'D1, D8, D15, D22, D29, D33', false, NULL),
+  (482, 267, 50, '100-150 mg/day', 'PO', 'daily', false, NULL),
+  (483, 18, 11, '1,000 mg/m2', 'IV', 'D1-D4 every 21 days', false, NULL),
+  (484, 268, 8, '75 mg/m2', 'IV', 'D1', false, NULL),
+  (485, 269, 25, '135 mg/m2', 'IV', 'D1', false, NULL),
+  (486, 269, 8, '75 mg/m2', 'IV', 'D1', false, NULL),
+  (487, 270, 33, '10 mg/m2', 'IV', 'D1', false, NULL),
+  (488, 271, 11, '1,000 mg/m2', 'IV', 'D1-4', false, NULL),
+  (489, 272, 2, '2,500 mg/m2', 'IV', 'D1-2', false, NULL),
+  (490, 272, 59, '1,500 mg/m2', 'IV', 'D1-2', false, NULL),
+  (491, 274, 9, 'AUC 5-6', 'IV', 'D1', false, NULL),
+  (492, 274, 1, '600 mg/m2', 'IV', 'D1', false, NULL),
+  (493, 273, 8, '75-100 mg/m2', 'IV', 'D1', false, NULL),
+  (494, 273, 1, '600 mg/m2', 'IV', 'D1', false, NULL),
+  (871, 372, 15, '800-1,250 mg/m2', 'IV', NULL, false, NULL),
+  (872, 484, 22, '50 mg/m2', 'IV', 'D21', false, NULL),
+  (873, 485, 1, '600 mg/m2', 'IV', 'D600', false, NULL),
+  (874, 486, 28, NULL, NULL, NULL, false, NULL),
+  (875, 486, 31, NULL, NULL, NULL, false, NULL),
+  (876, 486, 8, NULL, NULL, NULL, false, NULL),
+  (877, 488, 22, NULL, NULL, NULL, false, NULL),
+  (878, 488, 2, NULL, NULL, NULL, false, NULL),
+  (879, 488, 59, NULL, NULL, NULL, false, NULL),
+  (880, 488, 9, NULL, NULL, NULL, false, NULL),
+  (881, 487, 22, NULL, NULL, NULL, false, NULL),
+  (882, 487, 2, NULL, NULL, NULL, false, NULL),
+  (883, 487, 59, NULL, NULL, NULL, false, NULL)
+ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
+
+INSERT INTO regimen_drugs (id, regimen_id, drug_id, dose_per_cycle, route, day_schedule, is_optional, notes)
+VALUES
+  (884, 487, 8, NULL, NULL, NULL, false, NULL),
+  (885, 7, 20, NULL, NULL, NULL, false, NULL),
+  (886, 7, 1, NULL, NULL, NULL, false, NULL),
+  (887, 7, 25, NULL, NULL, NULL, false, NULL),
+  (888, 33, 1, NULL, NULL, NULL, false, NULL),
+  (889, 33, 27, NULL, NULL, NULL, false, NULL),
+  (890, 33, 63, NULL, NULL, NULL, false, NULL),
+  (891, 30, 8, NULL, NULL, NULL, false, NULL),
+  (892, 30, 11, NULL, NULL, NULL, false, NULL),
+  (893, 5, 11, NULL, NULL, NULL, false, NULL),
+  (894, 5, 883, NULL, NULL, NULL, false, NULL),
+  (895, 5, 1, NULL, NULL, NULL, false, NULL),
+  (896, 12, 25, NULL, NULL, NULL, false, NULL),
+  (897, 12, 47, NULL, NULL, NULL, false, NULL),
+  (898, 34, 48, NULL, NULL, NULL, false, NULL),
+  (899, 34, 1, NULL, NULL, NULL, false, NULL),
+  (900, 34, 27, NULL, NULL, NULL, false, NULL),
+  (901, 34, 63, NULL, NULL, NULL, false, NULL),
+  (902, 9, 53, NULL, NULL, NULL, false, NULL),
+  (903, 9, 43, NULL, NULL, NULL, false, NULL),
+  (904, 29, 10, NULL, NULL, NULL, false, NULL),
+  (905, 29, 12, NULL, NULL, NULL, false, NULL)
+ON CONFLICT (regimen_id, drug_id, day_schedule) DO NOTHING;
+
+-- Reset sequence
+SELECT setval(pg_get_serial_sequence('regimen_drugs', 'id'), COALESCE((SELECT MAX(id) FROM regimen_drugs), 1));

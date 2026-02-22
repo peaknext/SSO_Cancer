@@ -20,6 +20,30 @@ const ENTITY_TYPE_MAP: Record<string, string> = {
 
 const MUTATION_METHODS = new Set(['POST', 'PATCH', 'DELETE']);
 
+// Fields to strip from audit log body to prevent leaking secrets
+const SENSITIVE_FIELDS = new Set([
+  'password',
+  'currentPassword',
+  'newPassword',
+  'passwordHash',
+  'tempPassword',
+  'apiKey',
+  'secret',
+  'settingValue',
+]);
+
+function sanitizeBody(body: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (SENSITIVE_FIELDS.has(key)) {
+      result[key] = '[REDACTED]';
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 @Injectable()
 export class AuditLogInterceptor implements NestInterceptor {
   constructor(private readonly prisma: PrismaService) {}
@@ -66,10 +90,10 @@ export class AuditLogInterceptor implements NestInterceptor {
             entityId: isNaN(entityId as number) ? null : entityId,
             newValues:
               method === 'POST' || method === 'PATCH'
-                ? JSON.stringify(request.body)
+                ? JSON.stringify(sanitizeBody(request.body || {}))
                 : null,
             ipAddress: ip,
-            userAgent,
+            userAgent: userAgent?.substring(0, 500) || null,
           }).catch(() => {
             // Silently fail — audit logging should never break the request
           });

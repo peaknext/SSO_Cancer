@@ -81,8 +81,11 @@ export class UsersController {
   @Patch(':id/activate')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Reactivate user' })
-  async activate(@Param('id', ParseIntPipe) id: number) {
-    const user = await this.usersService.activate(id);
+  async activate(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    const user = await this.usersService.activate(id, currentUserRole);
     if (!user) throw new NotFoundException('USER_NOT_FOUND');
     return { message: 'User activated' };
   }

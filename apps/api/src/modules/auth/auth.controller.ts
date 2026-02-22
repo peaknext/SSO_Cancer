@@ -12,6 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -30,14 +31,14 @@ export class AuthController {
     private readonly jwtService: JwtService,
     configService: ConfigService,
   ) {
-    this.refreshSecret = configService.get<string>(
-      'JWT_REFRESH_SECRET',
-      'dev-jwt-refresh-secret',
-    );
+    const refreshSecret = configService.get<string>('JWT_REFRESH_SECRET');
+    if (!refreshSecret) throw new Error('JWT_REFRESH_SECRET is required');
+    this.refreshSecret = refreshSecret;
   }
 
   @Public()
   @Post('login')
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   async login(

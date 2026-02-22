@@ -131,7 +131,12 @@ export class UsersService {
     });
   }
 
-  async activate(id: number) {
+  async activate(id: number, currentUserRole: string) {
+    const target = await this.prisma.user.findUnique({ where: { id } });
+    if (!target) return null;
+    if (target.role === 'SUPER_ADMIN' && currentUserRole !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Cannot activate SUPER_ADMIN');
+    }
     return this.prisma.user.update({
       where: { id },
       data: { isActive: true, failedLoginAttempts: 0, lockedUntil: null },
@@ -159,6 +164,12 @@ export class UsersService {
   async getSessions(userId: number) {
     return this.prisma.session.findMany({
       where: { userId },
+      select: {
+        id: true,
+        createdAt: true,
+        expiresAt: true,
+        userAgent: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

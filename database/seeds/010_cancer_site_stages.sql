@@ -1,647 +1,146 @@
--- 010: Cancer Site Stages — valid stage combinations per cancer site
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '01' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '01' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '01' AND cst.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '01' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '01' AND cst.stage_code = 'NEOADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '01' AND cst.stage_code = 'PALLIATIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '01' AND cst.stage_code = 'RECURRENT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '02' AND cst.stage_code = 'ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '02' AND cst.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '02' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '02' AND cst.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '02' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '02' AND cst.stage_code = 'NEOADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '02' AND cst.stage_code = 'RECURRENT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '03' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '03' AND cst.stage_code = 'ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '03' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '03' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '03' AND cst.stage_code = 'NEOADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '03' AND cst.stage_code = 'PALLIATIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '03' AND cst.stage_code = 'RECURRENT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '04' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '04' AND cst.stage_code = 'ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '04' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '04' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '04' AND cst.stage_code = 'RECURRENT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '05' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '05' AND cst.stage_code = 'ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '05' AND cst.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '05' AND cst.stage_code = 'DEFINITIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '05' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '05' AND cst.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '05' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '05' AND cst.stage_code = 'NEOADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '05' AND cst.stage_code = 'RECURRENT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'EXTENSIVE_STAGE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'LIMITED_STAGE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'NEOADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'STAGE_II'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'STAGE_III'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'STAGE_IIIA'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'STAGE_IIIB_C'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '06' AND cst.stage_code = 'STAGE_IV'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '07' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '07' AND cst.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '07' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '07' AND cst.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '07' AND cst.stage_code = 'LOCOREGIONAL'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '07' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '07' AND cst.stage_code = 'NEOADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '07' AND cst.stage_code = 'PALLIATIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '07' AND cst.stage_code = 'STAGE_IV'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '08' AND cst.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '08' AND cst.stage_code = 'DEFINITIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '08' AND cst.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '08' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '08' AND cst.stage_code = 'PALLIATIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '08' AND cst.stage_code = 'RECURRENT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '08' AND cst.stage_code = 'STAGE_IV'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '09' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '09' AND cst.stage_code = 'ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '09' AND cst.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '09' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '09' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '09' AND cst.stage_code = 'PALLIATIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '09' AND cst.stage_code = 'PERIOPERATIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '10' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '10' AND cst.stage_code = 'ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '10' AND cst.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '10' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '10' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '10' AND cst.stage_code = 'PALLIATIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '11' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '11' AND cst.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '11' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '11' AND cst.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '11' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '11' AND cst.stage_code = 'NEOADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '11' AND cst.stage_code = 'RECURRENT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '12' AND cst.stage_code = 'CONCURRENT_CRT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '12' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '12' AND cst.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '12' AND cst.stage_code = 'M1CRPC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '12' AND cst.stage_code = 'M1CSPC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '12' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '13' AND cst.stage_code = 'CONSOLIDATION'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '13' AND cst.stage_code = 'INDUCTION'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '13' AND cst.stage_code = 'MAINTENANCE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '13' AND cst.stage_code = 'REFRACTORY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '13' AND cst.stage_code = 'RELAPSED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '14' AND cst.stage_code = 'CONSOLIDATION'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '14' AND cst.stage_code = 'INDUCTION'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '14' AND cst.stage_code = 'REFRACTORY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '14' AND cst.stage_code = 'RELAPSED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '15' AND cst.stage_code = 'CONSOLIDATION'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '15' AND cst.stage_code = 'INDUCTION'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '15' AND cst.stage_code = 'MAINTENANCE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '15' AND cst.stage_code = 'RELAPSED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '16' AND cst.stage_code = 'BLAST_CRISIS'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '16' AND cst.stage_code = 'REFRACTORY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '16' AND cst.stage_code = 'RELAPSED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '17' AND cst.stage_code = 'ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '17' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '17' AND cst.stage_code = 'PALLIATIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '17' AND cst.stage_code = 'REFRACTORY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '17' AND cst.stage_code = 'RELAPSED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '18' AND cst.stage_code = 'CONSOLIDATION'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '18' AND cst.stage_code = 'INDUCTION'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '18' AND cst.stage_code = 'MAINTENANCE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '18' AND cst.stage_code = 'PALLIATIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '18' AND cst.stage_code = 'REFRACTORY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '18' AND cst.stage_code = 'RELAPSED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '19' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '19' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '19' AND cst.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '19' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '19' AND cst.stage_code = 'NEOADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '20' AND cst.stage_code = 'ADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '20' AND cst.stage_code = 'EARLY'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '20' AND cst.stage_code = 'LOCALLY_ADVANCED'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '20' AND cst.stage_code = 'METASTATIC'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '20' AND cst.stage_code = 'NEOADJUVANT'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
-INSERT INTO cancer_site_stages (cancer_site_id, stage_id)
-SELECT cs.id, cst.id
-FROM cancer_sites cs, cancer_stages cst WHERE cs.site_code = '20' AND cst.stage_code = 'PALLIATIVE'
-ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
-
+-- 010: Cancer Site Stages — ตำแหน่งมะเร็ง ↔ ระยะโรค
+-- Exported from database: 129 rows
+
+INSERT INTO cancer_site_stages (id, cancer_site_id, stage_id)
+VALUES
+  (1, 1, 23),
+  (2, 1, 1),
+  (3, 1, 2),
+  (4, 1, 4),
+  (5, 1, 24),
+  (6, 1, 26),
+  (7, 1, 5),
+  (8, 2, 3),
+  (9, 2, 27),
+  (10, 2, 1),
+  (11, 2, 2),
+  (12, 2, 4),
+  (13, 2, 24),
+  (14, 2, 5),
+  (15, 3, 23),
+  (16, 3, 3),
+  (17, 3, 1),
+  (18, 3, 4),
+  (19, 3, 24),
+  (20, 3, 26),
+  (21, 3, 5),
+  (22, 4, 23),
+  (23, 4, 3),
+  (24, 4, 1),
+  (25, 4, 4),
+  (26, 4, 5),
+  (27, 5, 23),
+  (28, 5, 3),
+  (29, 5, 27),
+  (30, 5, 28),
+  (31, 5, 1),
+  (32, 5, 2),
+  (33, 5, 4),
+  (34, 5, 24),
+  (35, 5, 5),
+  (36, 6, 23),
+  (37, 6, 3),
+  (38, 6, 27),
+  (39, 6, 1),
+  (40, 6, 14),
+  (41, 6, 13),
+  (42, 6, 2),
+  (43, 6, 4),
+  (44, 6, 24),
+  (45, 6, 8),
+  (46, 6, 9),
+  (47, 6, 10),
+  (48, 6, 11),
+  (49, 6, 12),
+  (50, 7, 23)
+ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
+
+INSERT INTO cancer_site_stages (id, cancer_site_id, stage_id)
+VALUES
+  (51, 7, 27),
+  (52, 7, 1),
+  (53, 7, 2),
+  (54, 7, 6),
+  (55, 7, 4),
+  (56, 7, 24),
+  (57, 7, 26),
+  (58, 7, 12),
+  (59, 8, 27),
+  (60, 8, 28),
+  (61, 8, 2),
+  (62, 8, 4),
+  (63, 8, 26),
+  (64, 8, 5),
+  (65, 8, 12),
+  (66, 9, 23),
+  (67, 9, 3),
+  (68, 9, 27),
+  (69, 9, 1),
+  (70, 9, 4),
+  (71, 9, 26),
+  (72, 9, 25),
+  (73, 10, 23),
+  (74, 10, 3),
+  (75, 10, 27),
+  (76, 10, 1),
+  (77, 10, 4),
+  (78, 10, 26),
+  (79, 11, 23),
+  (80, 11, 27),
+  (81, 11, 1),
+  (82, 11, 2),
+  (83, 11, 4),
+  (84, 11, 24),
+  (85, 11, 5),
+  (86, 12, 27),
+  (87, 12, 1),
+  (88, 12, 2),
+  (89, 12, 16),
+  (90, 12, 15),
+  (91, 12, 4),
+  (92, 13, 18),
+  (93, 13, 17),
+  (94, 13, 19),
+  (95, 13, 21),
+  (96, 13, 20),
+  (97, 14, 18),
+  (98, 14, 17),
+  (99, 14, 21),
+  (100, 14, 20)
+ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
+
+INSERT INTO cancer_site_stages (id, cancer_site_id, stage_id)
+VALUES
+  (101, 15, 18),
+  (102, 15, 17),
+  (103, 15, 19),
+  (104, 15, 20),
+  (105, 16, 22),
+  (106, 16, 21),
+  (107, 16, 20),
+  (108, 17, 3),
+  (109, 17, 1),
+  (110, 17, 26),
+  (111, 17, 21),
+  (112, 17, 20),
+  (113, 18, 18),
+  (114, 18, 17),
+  (115, 18, 19),
+  (116, 18, 26),
+  (117, 18, 21),
+  (118, 18, 20),
+  (119, 19, 23),
+  (120, 19, 1),
+  (121, 19, 2),
+  (122, 19, 4),
+  (123, 19, 24),
+  (124, 20, 23),
+  (125, 20, 1),
+  (126, 20, 2),
+  (127, 20, 4),
+  (128, 20, 24),
+  (129, 20, 26)
+ON CONFLICT (cancer_site_id, stage_id) DO NOTHING;
+
+-- Reset sequence
+SELECT setval(pg_get_serial_sequence('cancer_site_stages', 'id'), COALESCE((SELECT MAX(id) FROM cancer_site_stages), 1));

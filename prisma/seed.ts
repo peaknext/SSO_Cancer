@@ -23,9 +23,6 @@ const seedFiles = [
   '011_app_settings.sql',
   '012_initial_super_admin.sql',
   '013_icd10_cancer_site_map.sql',
-  '014_hormonal_regimens_and_trade_names.sql',
-  '015_hospital_trade_names.sql',
-  '016_ai_settings.sql',
 ];
 
 async function main() {

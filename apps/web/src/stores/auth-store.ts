@@ -32,7 +32,8 @@ export const useAuthStore = create<AuthStore>()(
           );
           apiClient.setAccessToken(data.accessToken);
           if (typeof document !== 'undefined') {
-            document.cookie = 'sso-cancer-auth-flag=1; path=/; max-age=604800';
+            document.cookie =
+              'sso-cancer-auth-flag=1; path=/; max-age=604800; SameSite=Strict; Secure';
           }
           set({
             user: data.user,
@@ -53,7 +54,8 @@ export const useAuthStore = create<AuthStore>()(
           // Ignore errors during logout
         }
         if (typeof document !== 'undefined') {
-          document.cookie = 'sso-cancer-auth-flag=; path=/; max-age=0';
+          document.cookie =
+            'sso-cancer-auth-flag=; path=/; max-age=0; SameSite=Strict; Secure';
         }
         apiClient.setAccessToken(null);
         set({
@@ -64,8 +66,27 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       refreshUser: async () => {
+        // Token is in memory — if page reloaded, we need to re-auth via refresh cookie
         const { accessToken } = get();
-        if (!accessToken) return;
+        if (!accessToken) {
+          // Attempt silent refresh via httpOnly cookie
+          try {
+            const data = await apiClient.post<LoginResponse>('/auth/refresh');
+            apiClient.setAccessToken(data.accessToken);
+            set({
+              user: data.user,
+              accessToken: data.accessToken,
+              isAuthenticated: true,
+            });
+          } catch {
+            set({
+              user: null,
+              accessToken: null,
+              isAuthenticated: false,
+            });
+          }
+          return;
+        }
         apiClient.setAccessToken(accessToken);
         try {
           const user = await apiClient.get<User>('/auth/me');
@@ -87,14 +108,15 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: 'sso-cancer-auth',
+      // Only persist user info for display, NOT the access token
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state?.accessToken) {
-          apiClient.setAccessToken(state.accessToken);
+        // On rehydrate, token is not in storage — trigger refresh
+        if (state?.isAuthenticated) {
+          state.refreshUser();
         }
       },
     },
