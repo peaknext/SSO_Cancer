@@ -1,0 +1,462 @@
+// SSO Cancer Care - Cancer Treatment Protocol Database
+// PostgreSQL + Prisma ORM
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// 1. drugs — รายการยา generic names
+// =============================================================================
+model Drug {
+  id           Int      @id @default(autoincrement())
+  genericName  String   @unique @map("generic_name") @db.VarChar(200)
+  drugCategory String?  @map("drug_category") @db.VarChar(100)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tradeNames       DrugTradeName[]
+  regimenDrugs     RegimenDrug[]
+  visitMedications VisitMedication[]
+
+  @@map("drugs")
+}
+
+// =============================================================================
+// 2. drug_trade_names — รหัสยา SSO + ชื่อทางการค้า
+// =============================================================================
+model DrugTradeName {
+  id         Int      @id @default(autoincrement())
+  drugId     Int      @map("drug_id")
+  drugCode   String   @unique @map("drug_code") @db.VarChar(10)
+  tradeName  String?  @map("trade_name") @db.VarChar(300)
+  dosageForm String   @map("dosage_form") @db.VarChar(200)
+  strength   String   @db.VarChar(200)
+  unit       String?  @db.VarChar(50)
+  unitPrice  Decimal? @map("unit_price") @db.Decimal(12, 2)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  drug Drug @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  @@index([drugId], map: "idx_drug_trade_names_drug_id")
+  @@map("drug_trade_names")
+}
+
+// =============================================================================
+// 3. cancer_sites — ตำแหน่ง(อวัยวะ)ของมะเร็ง
+// =============================================================================
+model CancerSite {
+  id          Int      @id @default(autoincrement())
+  siteCode    String   @unique @map("site_code") @db.VarChar(5)
+  nameThai    String   @map("name_thai") @db.VarChar(300)
+  nameEnglish String   @map("name_english") @db.VarChar(300)
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  protocols      ProtocolName[]
+  siteStages     CancerSiteStage[]
+  icd10Mappings  Icd10CancerSiteMap[]
+  patientVisits  PatientVisit[]
+
+  @@map("cancer_sites")
+}
+
+// =============================================================================
+// 4. cancer_stages — ระยะของโรคมะเร็ง
+// =============================================================================
+model CancerStage {
+  id          Int      @id @default(autoincrement())
+  stageCode   String   @unique @map("stage_code") @db.VarChar(30)
+  nameThai    String   @map("name_thai") @db.VarChar(200)
+  nameEnglish String   @map("name_english") @db.VarChar(200)
+  description String?  @db.Text
+  stageGroup  String?  @map("stage_group") @db.VarChar(50)
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  siteStages     CancerSiteStage[]
+  protocolStages ProtocolStage[]
+
+  @@index([stageGroup], map: "idx_cancer_stages_stage_group")
+  @@map("cancer_stages")
+}
+
+// =============================================================================
+// 5. protocol_names — ชื่อโปรโตคอลการรักษา
+// =============================================================================
+model ProtocolName {
+  id              Int      @id @default(autoincrement())
+  protocolCode    String   @unique @map("protocol_code") @db.VarChar(10)
+  cancerSiteId    Int      @map("cancer_site_id")
+  nameThai        String?  @map("name_thai") @db.Text
+  nameEnglish     String   @map("name_english") @db.Text
+  protocolType    String?  @map("protocol_type") @db.VarChar(50)
+  treatmentIntent String?  @map("treatment_intent") @db.VarChar(50)
+  notes           String?  @db.Text
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cancerSite       CancerSite        @relation(fields: [cancerSiteId], references: [id], onDelete: Cascade)
+  protocolRegimens ProtocolRegimen[]
+  protocolStages   ProtocolStage[]
+  confirmedVisits  PatientVisit[]
+  aiSuggestions    AiSuggestion[] @relation("aiSuggestedProtocol")
+
+  @@index([cancerSiteId], map: "idx_protocol_names_cancer_site_id")
+  @@index([protocolType], map: "idx_protocol_names_protocol_type")
+  @@map("protocol_names")
+}
+
+// =============================================================================
+// 6. regimens — สูตรยา
+// =============================================================================
+model Regimen {
+  id          Int      @id @default(autoincrement())
+  regimenCode String   @unique @map("regimen_code") @db.VarChar(50)
+  regimenName String   @map("regimen_name") @db.VarChar(200)
+  description String?  @db.Text
+  cycleDays   Int?     @map("cycle_days")
+  maxCycles   Int?     @map("max_cycles")
+  regimenType String?  @map("regimen_type") @db.VarChar(50)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  protocolRegimens ProtocolRegimen[]
+  regimenDrugs     RegimenDrug[]
+  confirmedVisits  PatientVisit[]
+  aiSuggestions    AiSuggestion[] @relation("aiSuggestedRegimen")
+
+  @@index([regimenType], map: "idx_regimens_regimen_type")
+  @@map("regimens")
+}
+
+// =============================================================================
+// 7. protocol_regimens — Junction: โปรโตคอล ↔ สูตรยา
+// =============================================================================
+model ProtocolRegimen {
+  id            Int      @id @default(autoincrement())
+  protocolId    Int      @map("protocol_id")
+  regimenId     Int      @map("regimen_id")
+  lineOfTherapy Int?     @map("line_of_therapy")
+  isPreferred   Boolean  @default(false) @map("is_preferred")
+  notes         String?  @db.Text
+
+  protocol ProtocolName @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+  regimen  Regimen      @relation(fields: [regimenId], references: [id], onDelete: Cascade)
+
+  @@unique([protocolId, regimenId])
+  @@index([protocolId], map: "idx_protocol_regimens_protocol_id")
+  @@index([regimenId], map: "idx_protocol_regimens_regimen_id")
+  @@map("protocol_regimens")
+}
+
+// =============================================================================
+// 8. regimen_drugs — Junction: สูตรยา ↔ ยา (พร้อม dose/route/schedule)
+// =============================================================================
+model RegimenDrug {
+  id           Int      @id @default(autoincrement())
+  regimenId    Int      @map("regimen_id")
+  drugId       Int      @map("drug_id")
+  dosePerCycle String?  @map("dose_per_cycle") @db.VarChar(100)
+  route        String?  @db.VarChar(50)
+  daySchedule  String?  @map("day_schedule") @db.VarChar(100)
+  isOptional   Boolean  @default(false) @map("is_optional")
+  notes        String?  @db.Text
+
+  regimen Regimen @relation(fields: [regimenId], references: [id], onDelete: Cascade)
+  drug    Drug    @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  @@unique([regimenId, drugId, daySchedule])
+  @@index([regimenId], map: "idx_regimen_drugs_regimen_id")
+  @@index([drugId], map: "idx_regimen_drugs_drug_id")
+  @@map("regimen_drugs")
+}
+
+// =============================================================================
+// 9. protocol_stages — Junction: โปรโตคอล ↔ ระยะโรค
+// =============================================================================
+model ProtocolStage {
+  id         Int     @id @default(autoincrement())
+  protocolId Int     @map("protocol_id")
+  stageId    Int     @map("stage_id")
+  notes      String? @db.Text
+
+  protocol ProtocolName @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+  stage    CancerStage  @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@unique([protocolId, stageId])
+  @@index([protocolId], map: "idx_protocol_stages_protocol_id")
+  @@index([stageId], map: "idx_protocol_stages_stage_id")
+  @@map("protocol_stages")
+}
+
+// =============================================================================
+// 10. cancer_site_stages — Junction: ตำแหน่งมะเร็ง ↔ ระยะโรค
+// =============================================================================
+model CancerSiteStage {
+  id           Int @id @default(autoincrement())
+  cancerSiteId Int @map("cancer_site_id")
+  stageId      Int @map("stage_id")
+
+  cancerSite CancerSite  @relation(fields: [cancerSiteId], references: [id], onDelete: Cascade)
+  stage      CancerStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@unique([cancerSiteId, stageId])
+  @@index([cancerSiteId], map: "idx_cancer_site_stages_cancer_site_id")
+  @@index([stageId], map: "idx_cancer_site_stages_stage_id")
+  @@map("cancer_site_stages")
+}
+
+// =============================================================================
+// 11. users — ผู้ใช้งานระบบ
+// =============================================================================
+model User {
+  id                  Int       @id @default(autoincrement())
+  email               String    @unique @db.VarChar(255)
+  passwordHash        String    @map("password_hash") @db.VarChar(255)
+  fullName            String    @map("full_name") @db.VarChar(200)
+  fullNameThai        String?   @map("full_name_thai") @db.VarChar(200)
+  role                String    @default("VIEWER") @db.VarChar(20)
+  department          String?   @db.VarChar(200)
+  position            String?   @db.VarChar(200)
+  phoneNumber         String?   @map("phone_number") @db.VarChar(20)
+  avatarUrl           String?   @map("avatar_url") @db.VarChar(500)
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until") @db.Timestamptz(6)
+  lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz(6)
+  lastLoginIp         String?   @map("last_login_ip") @db.VarChar(45)
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sessions        Session[]
+  passwordHistory PasswordHistory[]
+  auditLogs       AuditLog[]
+  patientImports  PatientImport[]
+  confirmedVisits PatientVisit[] @relation("confirmedVisits")
+  aiSuggestions   AiSuggestion[] @relation("aiSuggestions")
+
+  @@index([role], map: "idx_users_role")
+  @@map("users")
+}
+
+// =============================================================================
+// 12. sessions — เซสชันผู้ใช้ (refresh tokens)
+// =============================================================================
+model Session {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  tokenId   String   @unique @map("token_id") @db.VarChar(36)
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.Text
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_sessions_user_id")
+  @@index([expiresAt], map: "idx_sessions_expires_at")
+  @@map("sessions")
+}
+
+// =============================================================================
+// 13. password_history — ประวัติรหัสผ่าน (ป้องกันการใช้ซ้ำ)
+// =============================================================================
+model PasswordHistory {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_password_history_user_id")
+  @@map("password_history")
+}
+
+// =============================================================================
+// 14. audit_logs — บันทึกการใช้งานระบบ
+// =============================================================================
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?     @map("user_id")
+  action     String   @db.VarChar(50)
+  entityType String   @map("entity_type") @db.VarChar(50)
+  entityId   Int?     @map("entity_id")
+  oldValues  String?  @map("old_values") @db.Text
+  newValues  String?  @map("new_values") @db.Text
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.Text
+  metadata   String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId], map: "idx_audit_logs_user_id")
+  @@index([entityType, entityId], map: "idx_audit_logs_entity")
+  @@index([action], map: "idx_audit_logs_action")
+  @@index([createdAt], map: "idx_audit_logs_created_at")
+  @@map("audit_logs")
+}
+
+// =============================================================================
+// 15. app_settings — ตั้งค่าแอปพลิเคชัน
+// =============================================================================
+model AppSetting {
+  id           Int      @id @default(autoincrement())
+  settingKey   String   @unique @map("setting_key") @db.VarChar(100)
+  settingValue String   @map("setting_value") @db.Text
+  description  String?  @db.VarChar(500)
+  settingGroup String?  @map("setting_group") @db.VarChar(50)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([settingGroup], map: "idx_app_settings_group")
+  @@map("app_settings")
+}
+
+// =============================================================================
+// 16. icd10_cancer_site_map — ICD-10 → CancerSite mapping
+// =============================================================================
+model Icd10CancerSiteMap {
+  id           Int        @id @default(autoincrement())
+  icdPrefix    String     @unique @map("icd_prefix") @db.VarChar(10)
+  cancerSiteId Int        @map("cancer_site_id")
+  description  String?    @db.Text
+  isActive     Boolean    @default(true) @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cancerSite   CancerSite @relation(fields: [cancerSiteId], references: [id], onDelete: Cascade)
+
+  @@index([icdPrefix], map: "idx_icd10_map_icd_prefix")
+  @@index([cancerSiteId], map: "idx_icd10_map_cancer_site_id")
+  @@map("icd10_cancer_site_map")
+}
+
+// =============================================================================
+// 17. patient_imports — Import batch tracking
+// =============================================================================
+model PatientImport {
+  id            Int       @id @default(autoincrement())
+  filename      String    @db.VarChar(255)
+  totalRows     Int       @map("total_rows")
+  importedRows  Int       @map("imported_rows")
+  skippedRows   Int       @default(0) @map("skipped_rows")
+  importedById  Int?      @map("imported_by_id")
+  status        String    @default("COMPLETED") @db.VarChar(20)
+  errorLog      String?   @map("error_log") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  importedBy    User?     @relation(fields: [importedById], references: [id], onDelete: SetNull)
+  visits        PatientVisit[]
+
+  @@index([importedById], map: "idx_patient_imports_imported_by")
+  @@map("patient_imports")
+}
+
+// =============================================================================
+// 18. patient_visits — Individual visit records
+// =============================================================================
+model PatientVisit {
+  id                  Int       @id @default(autoincrement())
+  importId            Int       @map("import_id")
+  hn                  String    @db.VarChar(20)
+  vn                  String    @unique @db.VarChar(30)
+  visitDate           DateTime  @map("visit_date") @db.Date
+  primaryDiagnosis    String    @map("primary_diagnosis") @db.VarChar(10)
+  secondaryDiagnoses  String?   @map("secondary_diagnoses") @db.Text
+  hpi                 String?   @db.Text
+  doctorNotes         String?   @map("doctor_notes") @db.Text
+  medicationsRaw      String?   @map("medications_raw") @db.Text
+  resolvedSiteId      Int?      @map("resolved_site_id")
+  confirmedProtocolId Int?      @map("confirmed_protocol_id")
+  confirmedRegimenId  Int?      @map("confirmed_regimen_id")
+  confirmedByUserId   Int?      @map("confirmed_by_user_id")
+  confirmedAt         DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  import             PatientImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  resolvedSite       CancerSite?   @relation(fields: [resolvedSiteId], references: [id], onDelete: SetNull)
+  confirmedProtocol  ProtocolName? @relation(fields: [confirmedProtocolId], references: [id], onDelete: SetNull)
+  confirmedRegimen   Regimen?      @relation(fields: [confirmedRegimenId], references: [id], onDelete: SetNull)
+  confirmedByUser    User?         @relation("confirmedVisits", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  medications        VisitMedication[]
+  aiSuggestions      AiSuggestion[]
+
+  @@index([hn], map: "idx_patient_visits_hn")
+  @@index([importId], map: "idx_patient_visits_import_id")
+  @@index([resolvedSiteId], map: "idx_patient_visits_resolved_site_id")
+  @@index([visitDate], map: "idx_patient_visits_visit_date")
+  @@index([confirmedProtocolId], map: "idx_patient_visits_confirmed_protocol")
+  @@index([confirmedByUserId], map: "idx_patient_visits_confirmed_by")
+  @@map("patient_visits")
+}
+
+// =============================================================================
+// 19. visit_medications — Parsed medications per visit
+// =============================================================================
+model VisitMedication {
+  id              Int       @id @default(autoincrement())
+  visitId         Int       @map("visit_id")
+  rawLine         String    @map("raw_line") @db.Text
+  hospitalCode    String?   @map("hospital_code") @db.VarChar(20)
+  medicationName  String?   @map("medication_name") @db.VarChar(300)
+  quantity        String?   @db.VarChar(50)
+  unit            String?   @db.VarChar(50)
+  resolvedDrugId  Int?      @map("resolved_drug_id")
+
+  visit           PatientVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  resolvedDrug    Drug?        @relation(fields: [resolvedDrugId], references: [id], onDelete: SetNull)
+
+  @@index([visitId], map: "idx_visit_medications_visit_id")
+  @@index([resolvedDrugId], map: "idx_visit_medications_resolved_drug_id")
+  @@map("visit_medications")
+}
+
+// =============================================================================
+// 20. ai_suggestions — AI protocol recommendation cache
+// =============================================================================
+model AiSuggestion {
+  id                Int      @id @default(autoincrement())
+  visitId           Int      @map("visit_id")
+  provider          String   @db.VarChar(30)
+  model             String   @db.VarChar(100)
+  promptHash        String   @map("prompt_hash") @db.VarChar(64)
+  requestPayload    String?  @map("request_payload") @db.Text
+  responseRaw       String   @map("response_raw") @db.Text
+  recommendation    String   @map("recommendation") @db.Text
+  confidenceScore   Decimal? @map("confidence_score") @db.Decimal(5, 2)
+  protocolId        Int?     @map("protocol_id")
+  regimenId         Int?     @map("regimen_id")
+  tokensUsed        Int?     @map("tokens_used")
+  latencyMs         Int?     @map("latency_ms")
+  status            String   @default("SUCCESS") @db.VarChar(20)
+  errorMessage      String?  @map("error_message") @db.Text
+  requestedByUserId Int?     @map("requested_by_user_id")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  visit           PatientVisit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  protocol        ProtocolName? @relation("aiSuggestedProtocol", fields: [protocolId], references: [id], onDelete: SetNull)
+  regimen         Regimen?      @relation("aiSuggestedRegimen", fields: [regimenId], references: [id], onDelete: SetNull)
+  requestedByUser User?         @relation("aiSuggestions", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([visitId], map: "idx_ai_suggestions_visit")
+  @@index([visitId, provider, promptHash], map: "idx_ai_suggestions_cache")
+  @@map("ai_suggestions")
+}

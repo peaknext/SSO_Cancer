@@ -1,0 +1,38 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+
+# Next.js
+.next/
+out/
+
+# Prisma
+prisma/generated/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+apps/*/dist/
+apps/web/.next/
+
+# Source data (large files)
+cancer_full.txt
+cancerTreatments.pdf
+SSO_Cancer.xlsx
+
+# Claude Code / AI agent local files
+.agent/
+.agents/
+.claude/
+skills-lock.json
