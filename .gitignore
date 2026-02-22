@@ -31,6 +31,13 @@ cancer_full.txt
 cancerTreatments.pdf
 SSO_Cancer.xlsx
 
+# Docker secrets (never commit)
+.env.docker
+.env.production
+deploy/nginx/ssl/*.pem
+deploy/nginx/ssl/*.key
+deploy/nginx/ssl/*.crt
+
 # Claude Code / AI agent local files
 .agent/
 .agents/

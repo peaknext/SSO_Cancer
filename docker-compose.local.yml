@@ -1,0 +1,19 @@
+# Local Docker testing override — ports 3500 (web) and 3600 (API)
+# Usage: docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.docker up --build
+services:
+  db:
+    ports:
+      - '5433:5432'
+
+  api:
+    ports:
+      - '3600:4000'
+    environment:
+      CORS_ORIGIN: http://localhost:3500
+
+  web:
+    build:
+      args:
+        NEXT_PUBLIC_API_URL: 'http://localhost:3600'
+    ports:
+      - '3500:3000'

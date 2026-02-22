@@ -4,9 +4,10 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
+COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 
-RUN npm ci --workspace=@sso-cancer/web
+RUN npm ci
 
 # ─── Stage 2: Builder ─────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -19,6 +20,9 @@ COPY apps/web/ apps/web/
 COPY package.json ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
+
+ARG NEXT_PUBLIC_API_URL=""
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 RUN cd apps/web && npm run build
 

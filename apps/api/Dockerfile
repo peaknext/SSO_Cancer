@@ -3,13 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy root workspace files
+# Copy workspace package files for dependency resolution
 COPY package.json package-lock.json* ./
 COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
 COPY prisma/ prisma/
 
-# Install all dependencies (including devDependencies for build)
-RUN npm ci --workspace=@sso-cancer/api
+# Install all dependencies (root + workspaces, devDeps needed for build + Prisma)
+RUN npm ci
 
 # Generate Prisma client
 RUN npx prisma generate --config prisma/prisma.config.ts
@@ -19,6 +20,11 @@ COPY apps/api/ apps/api/
 
 # Build NestJS
 RUN cd apps/api && npm run build
+
+# Fix Prisma client ESM/CJS conflict: tsc compiles Prisma's import.meta.url
+# to invalid CJS. Replace the import.meta.url line with CJS __dirname.
+RUN find apps/api/dist/prisma -name "*.js" -exec \
+    sed -i "s|globalThis\['__dirname'\] = .*import\.meta\.url.*|globalThis['__dirname'] = __dirname;|g" {} +
 
 # ─── Stage 2: Runner ──────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
@@ -45,4 +51,4 @@ EXPOSE 4000
 ENV NODE_ENV=production
 ENV PORT=4000
 
-CMD ["node", "dist/main"]
+CMD ["node", "dist/apps/api/src/main"]
