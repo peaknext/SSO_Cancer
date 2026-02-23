@@ -21,8 +21,13 @@ COPY package.json ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# NEXT_PUBLIC_API_URL: Used by browser (empty = relative paths /api/v1/...)
 ARG NEXT_PUBLIC_API_URL=""
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+# API_INTERNAL_URL: Used by server-side rewrites (Docker: http://api:4000)
+ARG API_INTERNAL_URL="http://localhost:4000"
+ENV API_INTERNAL_URL=${API_INTERNAL_URL}
 
 RUN cd apps/web && npm run build
 

@@ -49,6 +49,11 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        # Empty string = browser uses relative paths (/api/v1/...)
+        NEXT_PUBLIC_API_URL: ''
+        # Internal URL for server-side proxy (Docker service name)
+        API_INTERNAL_URL: 'http://api:4000'
     restart: unless-stopped
     environment:
       NODE_ENV: production
