@@ -38,6 +38,8 @@ const ALLOWED_SORT_FIELDS = [
   'isActive',
   'role',
   'lastLoginAt',
+  'hn',
+  'vn',
 ];
 
 export class PaginationQueryDto {
