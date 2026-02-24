@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsInt, IsBoolean, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsInt, IsBoolean, IsDateString, MaxLength } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
@@ -27,4 +27,14 @@ export class QueryPatientsDto extends PaginationQueryDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   hasZ51?: boolean;
+
+  @ApiPropertyOptional({ description: 'Filter visits from this date (YYYY-MM-DD)', example: '2025-01-01' })
+  @IsOptional()
+  @IsDateString()
+  visitDateFrom?: string;
+
+  @ApiPropertyOptional({ description: 'Filter visits up to this date (YYYY-MM-DD)', example: '2025-12-31' })
+  @IsOptional()
+  @IsDateString()
+  visitDateTo?: string;
 }

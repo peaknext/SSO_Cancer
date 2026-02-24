@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ImportService } from './import.service';
-import { MatchResult, StageInference, TreatmentModality } from '../types/matching.types';
+import { SsoProtocolDrugsService } from '../../sso-protocol-drugs/sso-protocol-drugs.service';
+import {
+  FormularyCompliance,
+  MatchResult,
+  StageInference,
+  TreatmentModality,
+} from '../types/matching.types';
 
 // Stage codes that match each inferred stage
 const STAGE_MAP: Record<string, string[]> = {
@@ -50,6 +56,7 @@ export class MatchingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly importService: ImportService,
+    private readonly formularyService: SsoProtocolDrugsService,
   ) {}
 
   /**
@@ -256,6 +263,7 @@ export class MatchingService {
           stageMatch: null,
           inferredStage: stageInference.inferredStage,
           treatmentModality: stageInference.treatmentModality,
+          formularyCompliance: null,
         }],
       };
     }
@@ -267,6 +275,31 @@ export class MatchingService {
       if (med.resolvedDrugId && med.resolvedDrug) {
         visitDrugIds.add(med.resolvedDrugId);
         visitDrugNames.set(med.resolvedDrugId, med.resolvedDrug.genericName);
+      }
+    }
+
+    // Step 3b: Collect resolved drug generic names for formulary checking
+    const visitResolvedDrugNames = new Set<string>();
+    for (const med of visit.medications) {
+      if (med.resolvedDrug?.genericName) {
+        visitResolvedDrugNames.add(med.resolvedDrug.genericName.toLowerCase());
+      }
+    }
+
+    // Step 3.5: Get previously confirmed protocol IDs for this patient
+    const confirmedProtocolIds = new Set<number>();
+    if (visit.hn) {
+      const confirmedVisits = await this.prisma.patientVisit.findMany({
+        where: {
+          hn: visit.hn,
+          confirmedProtocolId: { not: null },
+          vn: { not: vn },
+        },
+        select: { confirmedProtocolId: true },
+        distinct: ['confirmedProtocolId'],
+      });
+      for (const cv of confirmedVisits) {
+        if (cv.confirmedProtocolId) confirmedProtocolIds.add(cv.confirmedProtocolId);
       }
     }
 
@@ -316,7 +349,15 @@ export class MatchingService {
       },
     });
 
-    // Step 5: Score each protocol
+    // Step 5.5: Load formulary drug names for all candidate protocols
+    const formularyNameMap =
+      visitResolvedDrugNames.size > 0
+        ? await this.formularyService.getFormularyDrugNames(
+            protocols.map((p) => p.protocolCode),
+          )
+        : new Map<string, Set<string>>();
+
+    // Step 6: Score each protocol
     const results: MatchResult[] = [];
 
     for (const protocol of protocols) {
@@ -363,7 +404,31 @@ export class MatchingService {
           const drugMatchScore = drugMatchRatio * 40;
           const drugCountBonus = Math.min(matchedDrugList.length * 2, 10);
           const preferenceScore = pr.isPreferred ? 5 : 0;
-          const score = 20 + drugMatchScore + drugCountBonus + stageMatchScore + modScore + preferenceScore;
+
+          // Formulary compliance scoring (up to 20 points)
+          let formularyScore = 0;
+          let formularyCompliance: FormularyCompliance | null = null;
+          if (visitResolvedDrugNames.size > 0) {
+            const formularyNames = formularyNameMap.get(protocol.protocolCode);
+            if (formularyNames && formularyNames.size > 0) {
+              const visitDrugArray = [...visitResolvedDrugNames];
+              const compliantCount = visitDrugArray.filter((name) =>
+                formularyNames.has(name),
+              ).length;
+              const ratio = compliantCount / visitDrugArray.length;
+              formularyScore = Math.round(ratio * 20);
+              formularyCompliance = {
+                compliantCount,
+                totalChecked: visitDrugArray.length,
+                ratio: Math.round(ratio * 100),
+              };
+            }
+          }
+
+          // History confirmation bonus (15 points)
+          const historyBonus = confirmedProtocolIds.has(protocol.id) ? 15 : 0;
+
+          const score = 20 + drugMatchScore + drugCountBonus + stageMatchScore + modScore + preferenceScore + formularyScore + historyBonus;
 
           if (score > bestScore) {
             bestScore = score;
@@ -392,11 +457,44 @@ export class MatchingService {
               reasons.push('ไม่ตรงกับระยะโรคที่อนุมาน');
             }
             if (pr.isPreferred) reasons.push('สูตรยาแนะนำ (Preferred)');
+            if (historyBonus > 0) reasons.push('โปรโตคอลนี้เคยได้รับการยืนยันจาก visit อื่นของผู้ป่วยคนนี้');
+            if (formularyCompliance) {
+              if (formularyCompliance.ratio >= 80) {
+                reasons.push(
+                  `บัญชียา SSO: ${formularyCompliance.compliantCount}/${formularyCompliance.totalChecked} รายการ (${formularyCompliance.ratio}%) — ผ่านเกณฑ์`,
+                );
+              } else if (formularyCompliance.ratio > 0) {
+                reasons.push(
+                  `บัญชียา SSO: ${formularyCompliance.compliantCount}/${formularyCompliance.totalChecked} รายการ (${formularyCompliance.ratio}%) — ต่ำกว่าเกณฑ์`,
+                );
+              } else {
+                reasons.push('ยาไม่อยู่ในบัญชี SSO ของโปรโตคอลนี้');
+              }
+            }
             bestReasons = reasons;
           }
         }
 
         if (bestRegimen) {
+          // Compute formulary compliance for the best regimen
+          let bestFormulary: FormularyCompliance | null = null;
+          if (visitResolvedDrugNames.size > 0) {
+            const formularyNames = formularyNameMap.get(protocol.protocolCode);
+            if (formularyNames && formularyNames.size > 0) {
+              const visitDrugArray = [...visitResolvedDrugNames];
+              const compliantCount = visitDrugArray.filter((name) =>
+                formularyNames.has(name),
+              ).length;
+              bestFormulary = {
+                compliantCount,
+                totalChecked: visitDrugArray.length,
+                ratio: Math.round(
+                  (compliantCount / visitDrugArray.length) * 100,
+                ),
+              };
+            }
+          }
+
           results.push({
             protocolId: protocol.id,
             protocolCode: protocol.protocolCode,
@@ -410,16 +508,19 @@ export class MatchingService {
             stageMatch,
             inferredStage: stageInference.inferredStage,
             treatmentModality: stageInference.treatmentModality,
+            formularyCompliance: bestFormulary,
           });
         }
       } else {
         // Protocols with no regimens (radiation, follow-up, non-protocol)
-        const score = 20 + stageMatchScore + modScore;
+        const historyBonus = confirmedProtocolIds.has(protocol.id) ? 15 : 0;
+        const score = 20 + stageMatchScore + modScore + historyBonus;
         const reasons: string[] = [`ตรงกับตำแหน่งมะเร็ง: ${siteName}`, 'ไม่มีสูตรยาที่กำหนด'];
         if (stageMatch === true) reasons.push('ตรงระยะโรค');
         if (protocol.protocolType === 'radiation' && stageInference.treatmentModality.isRadiation) {
           reasons.push('ตรงกับการรักษาด้วยรังสี (Z510/9224)');
         }
+        if (historyBonus > 0) reasons.push('โปรโตคอลนี้เคยได้รับการยืนยันจาก visit อื่นของผู้ป่วยคนนี้');
 
         results.push({
           protocolId: protocol.id,
@@ -437,6 +538,7 @@ export class MatchingService {
           stageMatch,
           inferredStage: stageInference.inferredStage,
           treatmentModality: stageInference.treatmentModality,
+          formularyCompliance: null,
         });
       }
     }
@@ -469,6 +571,7 @@ export class MatchingService {
         stageMatch: null,
         inferredStage: stageInference.inferredStage,
         treatmentModality: stageInference.treatmentModality,
+        formularyCompliance: null,
       });
     }
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  Users,
   FileText,
   Pill,
   FlaskConical,
@@ -35,6 +36,12 @@ const navItems: NavItem[] = [
     labelThai: 'แดชบอร์ด',
     href: '/',
     icon: LayoutDashboard,
+  },
+  {
+    label: 'Cancer Patients',
+    labelThai: 'ผู้ป่วยมะเร็ง',
+    href: '/cancer-patients',
+    icon: Users,
   },
   {
     label: 'Protocols',

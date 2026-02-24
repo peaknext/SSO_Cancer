@@ -23,6 +23,12 @@ export interface StageInference {
   reasons: string[];
 }
 
+export interface FormularyCompliance {
+  compliantCount: number;
+  totalChecked: number;
+  ratio: number; // 0-100
+}
+
 export interface MatchResult {
   protocolId: number;
   protocolCode: string;
@@ -36,6 +42,7 @@ export interface MatchResult {
   stageMatch: boolean | null;
   inferredStage: string | null;
   treatmentModality: TreatmentModality;
+  formularyCompliance: FormularyCompliance | null;
 }
 
 export interface ParsedMedication {

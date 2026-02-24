@@ -114,6 +114,7 @@ model ProtocolName {
   protocolStages   ProtocolStage[]
   confirmedVisits  PatientVisit[]
   aiSuggestions    AiSuggestion[] @relation("aiSuggestedProtocol")
+  patientCases     PatientCase[]
 
   @@index([cancerSiteId], map: "idx_protocol_names_cancer_site_id")
   @@index([protocolType], map: "idx_protocol_names_protocol_type")
@@ -249,6 +250,8 @@ model User {
   patientImports  PatientImport[]
   confirmedVisits PatientVisit[] @relation("confirmedVisits")
   aiSuggestions   AiSuggestion[] @relation("aiSuggestions")
+  createdCases    PatientCase[]       @relation("caseCreatedBy")
+  createdClaims   VisitBillingClaim[] @relation("claimCreatedBy")
 
   @@index([role], map: "idx_users_role")
   @@map("users")
@@ -389,6 +392,8 @@ model PatientVisit {
   confirmedRegimenId  Int?      @map("confirmed_regimen_id")
   confirmedByUserId   Int?      @map("confirmed_by_user_id")
   confirmedAt         DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  patientId           Int?      @map("patient_id")
+  caseId              Int?      @map("case_id")
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   import             PatientImport @relation(fields: [importId], references: [id], onDelete: Cascade)
@@ -396,8 +401,11 @@ model PatientVisit {
   confirmedProtocol  ProtocolName? @relation(fields: [confirmedProtocolId], references: [id], onDelete: SetNull)
   confirmedRegimen   Regimen?      @relation(fields: [confirmedRegimenId], references: [id], onDelete: SetNull)
   confirmedByUser    User?         @relation("confirmedVisits", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  patient            Patient?      @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  case               PatientCase?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
   medications        VisitMedication[]
   aiSuggestions      AiSuggestion[]
+  billingClaims      VisitBillingClaim[]
 
   @@index([hn], map: "idx_patient_visits_hn")
   @@index([importId], map: "idx_patient_visits_import_id")
@@ -405,6 +413,8 @@ model PatientVisit {
   @@index([visitDate], map: "idx_patient_visits_visit_date")
   @@index([confirmedProtocolId], map: "idx_patient_visits_confirmed_protocol")
   @@index([confirmedByUserId], map: "idx_patient_visits_confirmed_by")
+  @@index([patientId], map: "idx_patient_visits_patient_id")
+  @@index([caseId], map: "idx_patient_visits_case_id")
   @@map("patient_visits")
 }
 
@@ -459,4 +469,124 @@ model AiSuggestion {
   @@index([visitId], map: "idx_ai_suggestions_visit")
   @@index([visitId, provider, promptHash], map: "idx_ai_suggestions_cache")
   @@map("ai_suggestions")
+}
+
+// =============================================================================
+// 21. patients — ผู้ป่วยมะเร็ง
+// =============================================================================
+model Patient {
+  id        Int      @id @default(autoincrement())
+  hn        String   @unique @db.VarChar(20)
+  citizenId String   @unique @map("citizen_id") @db.VarChar(13)
+  fullName  String   @map("full_name") @db.VarChar(200)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cases  PatientCase[]
+  visits PatientVisit[]
+
+  @@index([citizenId], map: "idx_patients_citizen_id")
+  @@map("patients")
+}
+
+// =============================================================================
+// 22. patient_cases — เลขที่เคส (1 case per protocol per patient)
+// =============================================================================
+model PatientCase {
+  id              Int       @id @default(autoincrement())
+  caseNumber      String    @unique @map("case_number") @db.VarChar(50)
+  patientId       Int       @map("patient_id")
+  protocolId      Int?      @map("protocol_id")
+  status          String    @default("ACTIVE") @map("status") @db.VarChar(20)
+  openedAt        DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
+  closedAt        DateTime? @map("closed_at") @db.Timestamptz(6)
+  notes           String?   @db.Text
+  createdByUserId Int?      @map("created_by_user_id")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  protocol      ProtocolName? @relation(fields: [protocolId], references: [id], onDelete: SetNull)
+  createdByUser User?         @relation("caseCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  visits        PatientVisit[]
+
+  @@index([patientId], map: "idx_patient_cases_patient_id")
+  @@index([protocolId], map: "idx_patient_cases_protocol_id")
+  @@index([status], map: "idx_patient_cases_status")
+  @@map("patient_cases")
+}
+
+// =============================================================================
+// 23. visit_billing_claims — การเรียกเก็บค่ารักษา (per visit, multiple rounds)
+// =============================================================================
+model VisitBillingClaim {
+  id              Int       @id @default(autoincrement())
+  visitId         Int       @map("visit_id")
+  roundNumber     Int       @map("round_number")
+  status          String    @default("PENDING") @map("status") @db.VarChar(20)
+  rejectionReason String?   @map("rejection_reason") @db.Text
+  submittedAt     DateTime? @map("submitted_at") @db.Timestamptz(6)
+  decidedAt       DateTime? @map("decided_at") @db.Timestamptz(6)
+  notes           String?   @db.Text
+  createdByUserId Int?      @map("created_by_user_id")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  visit         PatientVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  createdByUser User?        @relation("claimCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([visitId, roundNumber])
+  @@index([visitId], map: "idx_visit_billing_claims_visit_id")
+  @@index([status], map: "idx_visit_billing_claims_status")
+  @@map("visit_billing_claims")
+}
+
+// =============================================================================
+// SSO AIPN Drug/Equipment Catalog -- บัญชีรายการยา/อุปกรณ์ สปส.
+// =============================================================================
+model SsoAipnItem {
+  id            Int      @id @default(autoincrement())
+  billingGroup  String   @map("billing_group") @db.VarChar(5)
+  code          Int      @unique
+  unit          String   @db.VarChar(100)
+  rate          Decimal  @db.Decimal(12, 2)
+  rate2         Decimal  @default(0) @db.Decimal(12, 2)
+  description   String   @db.Text
+  dateRevised   DateTime @map("date_revised") @db.Date
+  dateEffective DateTime @map("date_effective") @db.Date
+  dateExpiry    DateTime @map("date_expiry") @db.Date
+  lastUpdated   DateTime @map("last_updated") @db.Date
+  condition     String   @default("SSOCAC") @db.VarChar(20)
+  note          String?  @db.Text
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([billingGroup], map: "idx_sso_aipn_items_billing_group")
+  @@index([rate], map: "idx_sso_aipn_items_rate")
+  @@map("sso_aipn_items")
+}
+
+// =============================================================================
+// SSO Protocol Drug Formulary — บัญชียาตามโปรโตคอล สปส.
+// =============================================================================
+model SsoProtocolDrug {
+  id              Int      @id @default(autoincrement())
+  protocolCode    String   @map("protocol_code") @db.VarChar(10)
+  formulaCategory String   @default("") @map("formula_category") @db.VarChar(30)
+  aipnCode        Int      @map("aipn_code")
+  description     String   @db.Text
+  rate            Decimal  @db.Decimal(12, 2)
+  unit            String   @db.VarChar(30)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([protocolCode, aipnCode], map: "uq_sso_protocol_drug_code")
+  @@index([protocolCode], map: "idx_sso_protocol_drugs_protocol_code")
+  @@index([aipnCode], map: "idx_sso_protocol_drugs_aipn_code")
+  @@map("sso_protocol_drugs")
 }

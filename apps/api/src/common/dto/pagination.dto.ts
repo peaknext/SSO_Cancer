@@ -40,6 +40,18 @@ const ALLOWED_SORT_FIELDS = [
   'lastLoginAt',
   'hn',
   'vn',
+  'citizenId',
+  'caseNumber',
+  'openedAt',
+  'closedAt',
+  'roundNumber',
+  'code',
+  'rate',
+  'description',
+  'billingGroup',
+  'lastUpdated',
+  'aipnCode',
+  'formulaCategory',
 ];
 
 export class PaginationQueryDto {

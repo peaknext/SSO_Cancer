@@ -23,6 +23,8 @@ import {
   SearchCheck,
   RefreshCw,
   Trash2,
+  Banknote,
+  ClipboardCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -69,6 +71,16 @@ interface VisitMedication {
     id: number;
     genericName: string;
     tradeNames: { tradeName: string | null; drugCode: string }[];
+  } | null;
+  aipnPricing: {
+    rate: number;
+    unit: string;
+    aipnDescription: string;
+  } | null;
+  formularyStatus: {
+    inFormulary: boolean;
+    formularyRate?: number;
+    category?: string;
   } | null;
 }
 
@@ -118,6 +130,12 @@ interface MatchedRegimen {
   drugMatchRatio: number;
 }
 
+interface FormularyCompliance {
+  compliantCount: number;
+  totalChecked: number;
+  ratio: number;
+}
+
 interface MatchResult {
   protocolId: number;
   protocolCode: string;
@@ -131,6 +149,7 @@ interface MatchResult {
   stageMatch: boolean | null;
   inferredStage: string | null;
   treatmentModality: TreatmentModality;
+  formularyCompliance: FormularyCompliance | null;
 }
 
 interface MatchResponse {
@@ -192,7 +211,9 @@ export default function ProtocolAnalysisPage() {
   const [filterSiteId, setFilterSiteId, h4] = usePersistedState('pa:filterSite', '');
   const [filterHasMeds, setFilterHasMeds, h5] = usePersistedState('pa:filterMeds', false);
   const [filterHasZ51, setFilterHasZ51, h6] = usePersistedState('pa:filterZ51', false);
-  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6;
+  const [filterDateFrom, setFilterDateFrom, h7] = usePersistedState('pa:dateFrom', '');
+  const [filterDateTo, setFilterDateTo, h8] = usePersistedState('pa:dateTo', '');
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7 && h8;
 
   // Transient state (not persisted)
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -209,7 +230,7 @@ export default function ProtocolAnalysisPage() {
   const [cancerSites, setCancerSites] = useState<CancerSite[]>([]);
   const [confirmingMatch, setConfirmingMatch] = useState<MatchResult | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const hasActiveFilters = !!filterSiteId || filterHasMeds || filterHasZ51;
+  const hasActiveFilters = !!filterSiteId || filterHasMeds || filterHasZ51 || !!filterDateFrom || !!filterDateTo;
 
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestionResponse | null>(null);
   const [aiCached, setAiCached] = useState(false);
@@ -244,6 +265,8 @@ export default function ProtocolAnalysisPage() {
       if (filterSiteId) params.set('cancerSiteId', filterSiteId);
       if (filterHasMeds) params.set('hasMedications', 'true');
       if (filterHasZ51) params.set('hasZ51', 'true');
+      if (filterDateFrom) params.set('visitDateFrom', filterDateFrom);
+      if (filterDateTo) params.set('visitDateTo', filterDateTo);
       const res = await apiClient.get<PaginatedResponse<Patient>>(
         `/protocol-analysis/patients?${params}`,
       );
@@ -254,7 +277,7 @@ export default function ProtocolAnalysisPage() {
     } finally {
       setLoadingPatients(false);
     }
-  }, [patientSearch, filterSiteId, filterHasMeds, filterHasZ51, hasActiveFilters, filtersHydrated]);
+  }, [patientSearch, filterSiteId, filterHasMeds, filterHasZ51, filterDateFrom, filterDateTo, hasActiveFilters, filtersHydrated]);
 
   useEffect(() => {
     fetchPatients();
@@ -278,6 +301,8 @@ export default function ProtocolAnalysisPage() {
     if (filterSiteId) params.set('cancerSiteId', filterSiteId);
     if (filterHasMeds) params.set('hasMedications', 'true');
     if (filterHasZ51) params.set('hasZ51', 'true');
+    if (filterDateFrom) params.set('visitDateFrom', filterDateFrom);
+    if (filterDateTo) params.set('visitDateTo', filterDateTo);
     apiClient
       .get<PaginatedResponse<VisitSummary>>(
         `/protocol-analysis/patients/${selectedHn}/visits?${params}`,
@@ -285,7 +310,7 @@ export default function ProtocolAnalysisPage() {
       .then((res) => setVisits(res.data))
       .catch(() => setVisits([]))
       .finally(() => setLoadingVisits(false));
-  }, [selectedHn, filterSiteId, filterHasMeds, filterHasZ51, filtersHydrated]);
+  }, [selectedHn, filterSiteId, filterHasMeds, filterHasZ51, filterDateFrom, filterDateTo, filtersHydrated]);
 
   // ─── Fetch visit detail + match ────────────────────────────
   useEffect(() => {
@@ -335,6 +360,8 @@ export default function ProtocolAnalysisPage() {
     setFilterSiteId('');
     setFilterHasMeds(false);
     setFilterHasZ51(false);
+    setFilterDateFrom('');
+    setFilterDateTo('');
   };
 
   // ─── Filtered visits (client-side VN search) ──────────────
@@ -585,6 +612,24 @@ export default function ProtocolAnalysisPage() {
           />
           Z51x (รักษา)
         </label>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground shrink-0">จาก:</span>
+          <input
+            type="date"
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground shrink-0">ถึง:</span>
+          <input
+            type="date"
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+          />
+        </div>
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
@@ -887,6 +932,7 @@ export default function ProtocolAnalysisPage() {
                           <th className="text-left py-1.5 px-2 font-medium text-foreground/70">ชื่อยา</th>
                           <th className="text-left py-1.5 px-2 font-medium text-foreground/70">จำนวน</th>
                           <th className="text-left py-1.5 px-2 font-medium text-foreground/70">จับคู่</th>
+                          <th className="text-right py-1.5 px-2 font-medium text-foreground/70">ราคา AIPN</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -916,6 +962,32 @@ export default function ProtocolAnalysisPage() {
                                   <XCircle className="h-3.5 w-3.5 shrink-0" />
                                   <span>ไม่พบ</span>
                                 </div>
+                              )}
+                            </td>
+                            <td className="py-1.5 px-2 text-right">
+                              {med.aipnPricing ? (
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <span className="font-mono text-[11px] font-semibold tabular-nums text-foreground/80">
+                                    ฿{med.aipnPricing.rate.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                  </span>
+                                  <span className="text-[9px] text-foreground/40">/{med.aipnPricing.unit}</span>
+                                  {med.formularyStatus && (
+                                    <span className={cn(
+                                      'inline-flex items-center gap-0.5 text-[9px] font-medium px-1 py-0 rounded',
+                                      med.formularyStatus.inFormulary
+                                        ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40'
+                                        : 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40',
+                                    )}>
+                                      {med.formularyStatus.inFormulary ? (
+                                        <><ClipboardCheck className="h-2.5 w-2.5" />ในบัญชี</>
+                                      ) : (
+                                        <><XCircle className="h-2.5 w-2.5" />นอกบัญชี</>
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-foreground/25 text-[10px]">—</span>
                               )}
                             </td>
                           </tr>
@@ -1012,6 +1084,22 @@ export default function ProtocolAnalysisPage() {
                                 <Badge variant="destructive" className="text-[10px] px-1.5 py-0 gap-0.5 opacity-70">
                                   <XCircle className="h-2.5 w-2.5" />
                                   ไม่ตรงระยะ
+                                </Badge>
+                              )}
+                              {/* Formulary compliance indicator */}
+                              {match.formularyCompliance && (
+                                <Badge
+                                  variant={
+                                    match.formularyCompliance.ratio >= 80
+                                      ? 'success'
+                                      : match.formularyCompliance.ratio > 0
+                                        ? 'warning'
+                                        : 'destructive'
+                                  }
+                                  className="text-[10px] px-1.5 py-0 gap-0.5"
+                                >
+                                  <ClipboardCheck className="h-2.5 w-2.5" />
+                                  บัญชี SSO: {match.formularyCompliance.ratio}%
                                 </Badge>
                               )}
                             </div>
