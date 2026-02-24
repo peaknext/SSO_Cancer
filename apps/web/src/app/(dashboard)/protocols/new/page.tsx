@@ -122,7 +122,7 @@ export default function ProtocolCreatePage() {
   // Load cancer sites
   useEffect(() => {
     apiClient
-      .get<{ data: CancerSite[]; meta: { total: number } }>('/cancer-sites?limit=100&sortBy=nameThai&sortOrder=asc')
+      .get<{ data: CancerSite[]; meta: { total: number } }>('/cancer-sites?limit=100&sortBy=sortOrder&sortOrder=asc')
       .then((res) => setCancerSites(res.data))
       .catch(() => toast.error('ไม่สามารถโหลดตำแหน่งมะเร็งได้'));
   }, []);

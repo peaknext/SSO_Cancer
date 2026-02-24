@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FlaskConical, Plus } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { SearchInput } from '@/components/shared/search-input';
 import { Select } from '@/components/ui/select';
@@ -48,11 +49,11 @@ const typeVariant: Record<string, 'default' | 'success' | 'warning' | 'accent' |
 
 export default function RegimensPage() {
   const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [regimenType, setRegimenType] = useState('');
-  const [sortBy, setSortBy] = useState('regimenCode');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = usePersistedState('sso-regimens-page', 1);
+  const [search, setSearch] = usePersistedState('sso-regimens-search', '');
+  const [regimenType, setRegimenType] = usePersistedState('sso-regimens-type', '');
+  const [sortBy, setSortBy] = usePersistedState('sso-regimens-sortBy', 'regimenCode');
+  const [sortOrder, setSortOrder] = usePersistedState<'asc' | 'desc'>('sso-regimens-sortOrder', 'asc');
 
   const { data: response, isLoading } = usePaginatedApi<RegimensResponse>('/regimens', {
     page,

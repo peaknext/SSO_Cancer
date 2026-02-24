@@ -4,6 +4,7 @@ import { useState, useCallback, Fragment } from 'react';
 import { Download, ScrollText } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePaginatedApi } from '@/hooks/use-api';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import { useAuthStore } from '@/stores/auth-store';
 import { apiClient } from '@/lib/api-client';
 import { DataTable, type Column } from '@/components/shared/data-table';
@@ -76,9 +77,9 @@ function MetadataView({ metadata }: { metadata: string }) {
 
 export default function AuditLogsPage() {
   const user = useAuthStore((s) => s.user);
-  const [page, setPage] = useState(1);
-  const [action, setAction] = useState('');
-  const [entityType, setEntityType] = useState('');
+  const [page, setPage] = usePersistedState('sso-audit-page', 1);
+  const [action, setAction] = usePersistedState('sso-audit-action', '');
+  const [entityType, setEntityType] = usePersistedState('sso-audit-entity', '');
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const { data: response, isLoading } = usePaginatedApi<AuditLogsResponse>('/audit-logs', {

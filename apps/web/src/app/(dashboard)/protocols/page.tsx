@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FileText, Plus } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import { apiClient } from '@/lib/api-client';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { SearchInput } from '@/components/shared/search-input';
@@ -66,18 +67,18 @@ interface CancerSite {
 
 export default function ProtocolsPage() {
   const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [protocolType, setProtocolType] = useState('');
-  const [treatmentIntent, setTreatmentIntent] = useState('');
-  const [cancerSiteId, setCancerSiteId] = useState('');
-  const [sortBy, setSortBy] = useState('protocolCode');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [cancerSites, setCancerSites] = useState<CancerSite[]>([]);
+  const [page, setPage] = usePersistedState('sso-protocols-page', 1);
+  const [search, setSearch] = usePersistedState('sso-protocols-search', '');
+  const [protocolType, setProtocolType] = usePersistedState('sso-protocols-type', '');
+  const [treatmentIntent, setTreatmentIntent] = usePersistedState('sso-protocols-intent', '');
+  const [cancerSiteId, setCancerSiteId] = usePersistedState('sso-protocols-site', '');
+  const [sortBy, setSortBy] = usePersistedState('sso-protocols-sortBy', 'protocolCode');
+  const [sortOrder, setSortOrder] = usePersistedState<'asc' | 'desc'>('sso-protocols-sortOrder', 'asc');
+  const [cancerSites, setCancerSites] = usePersistedState<CancerSite[]>('sso-protocols-sites-cache', []);
 
   useEffect(() => {
     apiClient
-      .get<{ data: CancerSite[]; meta: { total: number } }>('/cancer-sites?limit=100&sortBy=nameThai&sortOrder=asc')
+      .get<{ data: CancerSite[]; meta: { total: number } }>('/cancer-sites?limit=100&sortBy=sortOrder&sortOrder=asc')
       .then((res) => setCancerSites(res.data || []))
       .catch(() => {});
   }, []);

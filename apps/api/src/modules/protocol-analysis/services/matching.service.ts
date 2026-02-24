@@ -144,6 +144,28 @@ export class MatchingService {
   }
 
   /**
+   * Get all drug IDs that belong to ANY regimen for ANY protocol for the given cancer site
+   */
+  private async getProtocolDrugIds(cancerSiteId: number): Promise<Set<number>> {
+    const regimenDrugs = await this.prisma.regimenDrug.findMany({
+      where: {
+        regimen: {
+          protocolRegimens: {
+            some: {
+              protocol: {
+                cancerSiteId,
+                isActive: true,
+              },
+            },
+          },
+        },
+      },
+      select: { drugId: true },
+    });
+    return new Set(regimenDrugs.map((rd) => rd.drugId));
+  }
+
+  /**
    * Calculate modality match score
    * When radiation signal (Z510/9224) is present, radiation protocols get max boost
    * and non-radiation protocols are heavily penalized.
@@ -181,7 +203,7 @@ export class MatchingService {
       where: { vn },
       include: {
         medications: {
-          include: { resolvedDrug: { select: { id: true, genericName: true } } },
+          include: { resolvedDrug: { select: { id: true, genericName: true, drugCategory: true } } },
         },
         resolvedSite: { select: { id: true, nameEnglish: true, nameThai: true } },
       },
@@ -258,7 +280,21 @@ export class MatchingService {
       };
     }
 
-    // Step 4: Find candidate protocols (include protocolStages for stage matching)
+    // Step 4.5: Detect non-protocol chemotherapy drugs
+    const chemoDrugs = visit.medications.filter(
+      (m) => m.resolvedDrug?.drugCategory?.toLowerCase() === 'chemotherapy',
+    );
+
+    const protocolDrugIds = await this.getProtocolDrugIds(siteId);
+
+    const nonProtocolChemoDrugs: string[] = [];
+    for (const med of chemoDrugs) {
+      if (med.resolvedDrugId && !protocolDrugIds.has(med.resolvedDrugId)) {
+        nonProtocolChemoDrugs.push(med.resolvedDrug?.genericName || `Drug#${med.resolvedDrugId}`);
+      }
+    }
+
+    // Step 5: Find candidate protocols (include protocolStages for stage matching)
     const protocols = await this.prisma.protocolName.findMany({
       where: { cancerSiteId: siteId, isActive: true },
       include: {
@@ -403,6 +439,37 @@ export class MatchingService {
           treatmentModality: stageInference.treatmentModality,
         });
       }
+    }
+
+    // Step 7: Add non-protocol result if unmatched chemotherapy drugs found
+    if (nonProtocolChemoDrugs.length > 0) {
+      results.unshift({
+        protocolId: 0,
+        protocolCode: 'NON-PROTOCOL',
+        protocolName: 'Non-Protocol Treatment',
+        cancerSiteName: siteName,
+        protocolType: 'non_protocol',
+        treatmentIntent: null,
+        score: 100, // High score to appear first
+        matchedRegimen: {
+          regimenId: 0,
+          regimenCode: '',
+          regimenName: 'นอกโปรโตคอล',
+          lineOfTherapy: null,
+          isPreferred: false,
+          matchedDrugs: nonProtocolChemoDrugs,
+          totalDrugs: nonProtocolChemoDrugs.length,
+          drugMatchRatio: 0,
+        },
+        reasons: [
+          `ตรงกับตำแหน่งมะเร็ง: ${siteName}`,
+          `พบยาเคมีบำบัดนอกโปรโตคอล: ${nonProtocolChemoDrugs.join(', ')}`,
+          'ยาเหล่านี้ไม่อยู่ในสูตรการรักษามาตรฐานของตำแหน่งมะเร็งนี้',
+        ],
+        stageMatch: null,
+        inferredStage: stageInference.inferredStage,
+        treatmentModality: stageInference.treatmentModality,
+      });
     }
 
     results.sort((a, b) => b.score - a.score);

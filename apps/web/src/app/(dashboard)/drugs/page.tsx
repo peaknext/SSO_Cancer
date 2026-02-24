@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Pill, Plus } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { SearchInput } from '@/components/shared/search-input';
 import { Select } from '@/components/ui/select';
@@ -48,11 +49,11 @@ const categoryVariant: Record<string, 'default' | 'success' | 'warning' | 'accen
 
 export default function DrugsPage() {
   const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [drugCategory, setDrugCategory] = useState('');
-  const [sortBy, setSortBy] = useState('genericName');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = usePersistedState('sso-drugs-page', 1);
+  const [search, setSearch] = usePersistedState('sso-drugs-search', '');
+  const [drugCategory, setDrugCategory] = usePersistedState('sso-drugs-category', '');
+  const [sortBy, setSortBy] = usePersistedState('sso-drugs-sortBy', 'genericName');
+  const [sortOrder, setSortOrder] = usePersistedState<'asc' | 'desc'>('sso-drugs-sortOrder', 'asc');
 
   const { data: response, isLoading } = usePaginatedApi<DrugsResponse>('/drugs', {
     page,

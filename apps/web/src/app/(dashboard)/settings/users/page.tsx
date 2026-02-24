@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserPlus } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { SearchInput } from '@/components/shared/search-input';
 import { Select } from '@/components/ui/select';
@@ -53,9 +54,9 @@ const roleLabels: Record<string, string> = {
 
 export default function UsersPage() {
   const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [role, setRole] = useState('');
+  const [page, setPage] = usePersistedState('sso-users-page', 1);
+  const [search, setSearch] = usePersistedState('sso-users-search', '');
+  const [role, setRole] = usePersistedState('sso-users-role', '');
   const [showCreate, setShowCreate] = useState(false);
 
   const { data: response, isLoading, refetch } = usePaginatedApi<UsersResponse>('/users', {

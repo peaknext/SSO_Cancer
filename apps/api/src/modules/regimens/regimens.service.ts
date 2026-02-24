@@ -57,7 +57,31 @@ export class RegimensService {
   }
 
   async create(dto: CreateRegimenDto) {
-    return this.prisma.regimen.create({ data: dto });
+    const { drugs, ...regimenData } = dto;
+
+    return this.prisma.regimen.create({
+      data: {
+        ...regimenData,
+        regimenDrugs: drugs?.length
+          ? {
+              create: drugs.map((drug) => ({
+                drugId: drug.drugId,
+                dosePerCycle: drug.dosePerCycle,
+                route: drug.route,
+                daySchedule: drug.daySchedule,
+                isOptional: drug.isOptional ?? false,
+                notes: drug.notes,
+              })),
+            }
+          : undefined,
+      },
+      include: {
+        regimenDrugs: {
+          include: { drug: true },
+          orderBy: { id: 'asc' },
+        },
+      },
+    });
   }
 
   async update(id: number, dto: UpdateRegimenDto) {

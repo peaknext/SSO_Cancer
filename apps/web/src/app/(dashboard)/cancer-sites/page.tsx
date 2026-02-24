@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Microscope } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { SearchInput } from '@/components/shared/search-input';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -27,10 +28,10 @@ interface CancerSitesResponse {
 
 export default function CancerSitesPage() {
   const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState('sortOrder');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = usePersistedState('sso-sites-page', 1);
+  const [search, setSearch] = usePersistedState('sso-sites-search', '');
+  const [sortBy, setSortBy] = usePersistedState('sso-sites-sortBy', 'sortOrder');
+  const [sortOrder, setSortOrder] = usePersistedState<'asc' | 'desc'>('sso-sites-sortOrder', 'asc');
 
   const { data: response, isLoading } = usePaginatedApi<CancerSitesResponse>('/cancer-sites', {
     page,
