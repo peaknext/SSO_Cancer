@@ -137,49 +137,85 @@ export function TopDrugsChart({ data }: { data: BarChartData[] }) {
   );
 }
 
-// --- Price Coverage (stacked bar — kept from original) ---
+// --- Z51x Billing Approval Rate (donut with center percentage) ---
 
-interface PriceCoverageData {
-  name: string;
-  withPrice: number;
-  withoutPrice: number;
+interface BillingApprovalRateData {
+  approved: number;
+  pending: number;
+  rejected: number;
+  rate: number;
 }
 
-export function PriceCoverageChart({ data }: { data: PriceCoverageData[] }) {
+export function BillingApprovalRateChart({ data }: { data: BillingApprovalRateData }) {
+  const pieData = [
+    { name: 'เรียกเก็บสำเร็จ', value: data.approved },
+    { name: 'รอดำเนินการ', value: data.pending },
+    { name: 'ถูกปฏิเสธ', value: data.rejected },
+  ].filter((d) => d.value > 0);
+
+  const hasData = data.approved + data.pending + data.rejected > 0;
+
   return (
-    <ChartCard title="ความครอบคลุมราคายา">
-      <div className="h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ left: 8, right: 16 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
-            <YAxis tick={{ fontSize: 12, fill: 'var(--muted)' }} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'var(--card)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                fontSize: '13px',
-              }}
-            />
-            <Legend
-              wrapperStyle={{ fontSize: '12px' }}
-              formatter={(value) => (
-                <span style={{ color: 'var(--foreground)' }}>
-                  {value === 'withPrice' ? 'มีราคา' : 'ไม่มีราคา'}
-                </span>
-              )}
-            />
-            <Bar dataKey="withPrice" stackId="a" fill="#059669" radius={[0, 0, 0, 0]} />
-            <Bar
-              dataKey="withoutPrice"
-              stackId="a"
-              fill="#D97706"
-              radius={[4, 4, 0, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+    <ChartCard title="อัตราการเรียกเก็บสำเร็จ (Z51x)">
+      {!hasData ? (
+        <EmptyState message="ยังไม่มีข้อมูลการเรียกเก็บ — No billing data yet" />
+      ) : (
+        <div className="h-[300px] relative">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={100}
+                paddingAngle={2}
+              >
+                {pieData.map((entry) => (
+                  <Cell
+                    key={entry.name}
+                    fill={
+                      entry.name === 'เรียกเก็บสำเร็จ'
+                        ? '#059669'
+                        : entry.name === 'รอดำเนินการ'
+                          ? '#D97706'
+                          : '#E11D48'
+                    }
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                }}
+                formatter={(value: number) => [
+                  value.toLocaleString('th-TH'),
+                  'visits',
+                ]}
+              />
+              <Legend
+                wrapperStyle={{ fontSize: '12px' }}
+                formatter={(value) => (
+                  <span style={{ color: 'var(--foreground)' }}>{value}</span>
+                )}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="text-center -mt-6">
+              <p className="text-2xl font-bold tabular-nums text-foreground">
+                {data.rate}%
+              </p>
+              <p className="text-xs text-muted-foreground">เรียกเก็บสำเร็จ</p>
+            </div>
+          </div>
+        </div>
+      )}
     </ChartCard>
   );
 }

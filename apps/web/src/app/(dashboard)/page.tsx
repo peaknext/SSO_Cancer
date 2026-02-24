@@ -1,10 +1,9 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
-  FileText,
-  Microscope,
-  FlaskConical,
   ClipboardList,
   TrendingUp,
   AlertTriangle,
@@ -12,18 +11,25 @@ import {
   Sparkles,
   Coins,
   Crown,
+  Syringe,
+  CircleCheckBig,
+  Clock,
+  ChevronDown,
+  AlertCircle,
 } from 'lucide-react';
 import { useApi } from '@/hooks/use-api';
+import { apiClient } from '@/lib/api-client';
 import { StatCard } from '@/components/dashboard/stat-card';
 import {
   VisitsBySiteChart,
   TopDrugsChart,
-  PriceCoverageChart,
+  BillingApprovalRateChart,
   ConfirmationRateChart,
 } from '@/components/dashboard/charts';
 import { DashboardSkeleton } from '@/components/shared/loading-skeleton';
-import { useAuthStore } from '@/stores/auth-store';
+import { CodeBadge } from '@/components/shared/code-badge';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface TopCancerSite {
   id: number;
@@ -49,11 +55,44 @@ interface DashboardOverview {
   visitDateRange: VisitDateRange | null;
 }
 
+interface Z51BillingStats {
+  totalZ51Visits: number;
+  approvedZ51Visits: number;
+  pendingZ51Visits: number;
+  rejectedZ51Visits: number;
+  billedZ51Visits: number;
+}
+
+interface Z51ActionableVisit {
+  vn: string;
+  hn: string;
+  visitDate: string;
+  patientId: number | null;
+  fullName: string | null;
+  caseNumber: string | null;
+  protocolCode: string | null;
+  protocolNameThai: string | null;
+  billingStatus: string | null;
+}
+
+interface Z51ActionableResponse {
+  data: Z51ActionableVisit[];
+  total: number;
+}
+
 function formatThaiDate(iso: string): string {
   return new Date(iso).toLocaleDateString('th-TH', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+  });
+}
+
+function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: '2-digit',
   });
 }
 
@@ -87,13 +126,6 @@ interface EmptyRegimen {
   protocolCount: number;
 }
 
-interface PriceCoverageItem {
-  name?: string;
-  drugCategory?: string;
-  withPrice: number;
-  withoutPrice: number;
-}
-
 interface AiStats {
   totalCalls: number;
   totalTokens: number;
@@ -104,19 +136,12 @@ interface AiStats {
   } | null;
 }
 
-interface RecentActivity {
-  id: number;
-  action: string;
-  entityType: string;
-  entityId: string | null;
-  createdAt: string;
-  user?: { fullName: string } | null;
-}
-
 export default function DashboardPage() {
-  const user = useAuthStore((s) => s.user);
+  const router = useRouter();
   const { data: overview, isLoading: loadingOverview } =
     useApi<DashboardOverview>('/dashboard/overview');
+  const { data: z51Stats } =
+    useApi<Z51BillingStats>('/dashboard/z51-billing-stats');
   const { data: visitsBySite } =
     useApi<VisitBySite[]>('/dashboard/visits-by-site');
   const { data: topDrugs } = useApi<TopDrug[]>('/dashboard/top-drugs');
@@ -124,16 +149,37 @@ export default function DashboardPage() {
     useApi<ConfirmationRate>('/dashboard/confirmation-rate');
   const { data: emptyRegimens } =
     useApi<EmptyRegimen[]>('/dashboard/empty-regimens');
-  const { data: priceCoverage } =
-    useApi<PriceCoverageItem[]>('/dashboard/price-coverage');
   const { data: aiStats } =
     useApi<AiStats>('/dashboard/ai-stats');
-  const { data: recentActivity } = useApi<RecentActivity[]>(
-    '/dashboard/recent-activity',
-    {
-      enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN',
-    },
-  );
+  const { data: initialActionable } =
+    useApi<Z51ActionableResponse>('/dashboard/z51-actionable-visits?offset=0&limit=20');
+
+  // Actionable visits — local state for load-more
+  const [extraVisits, setExtraVisits] = useState<Z51ActionableVisit[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadedAll, setLoadedAll] = useState(false);
+
+  const allVisits = [...(initialActionable?.data ?? []), ...extraVisits];
+  const totalActionable = initialActionable?.total ?? 0;
+
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const nextOffset = allVisits.length;
+      const res = await apiClient.get<Z51ActionableResponse>(
+        `/dashboard/z51-actionable-visits?offset=${nextOffset}&limit=20`,
+      );
+      if (res.data.length === 0 || nextOffset + res.data.length >= res.total) {
+        setLoadedAll(true);
+      }
+      setExtraVisits((prev) => [...prev, ...res.data]);
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [allVisits.length, loadingMore]);
 
   if (loadingOverview) {
     return <DashboardSkeleton />;
@@ -170,26 +216,33 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — Row 1: Z51x billing stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
-          label="ตำแหน่งมะเร็ง"
-          value={stats?.cancerSites ?? 0}
-          icon={<Microscope className="h-5 w-5" />}
-          accentColor="bg-primary"
-        />
-        <StatCard
-          label="โปรโตคอลทั้งหมด"
-          value={stats?.protocols ?? 0}
-          icon={<FileText className="h-5 w-5" />}
-          accentColor="bg-primary"
-        />
-        <StatCard
-          label="สูตรยา (Regimens)"
-          value={stats?.regimens ?? 0}
-          icon={<FlaskConical className="h-5 w-5" />}
+          label="Visit Z51x ทั้งหมด"
+          value={z51Stats?.totalZ51Visits ?? 0}
+          icon={<Syringe className="h-5 w-5" />}
           accentColor="bg-[#0D9488]"
+          suffix="visits"
         />
+        <StatCard
+          label="Z51x เรียกเก็บสำเร็จ"
+          value={z51Stats?.approvedZ51Visits ?? 0}
+          icon={<CircleCheckBig className="h-5 w-5" />}
+          accentColor="bg-emerald-600"
+          suffix="visits"
+        />
+        <StatCard
+          label="Z51x รอดำเนินการ"
+          value={initialActionable?.total ?? 0}
+          icon={<Clock className="h-5 w-5" />}
+          accentColor="bg-amber-500"
+          suffix="visits"
+        />
+      </div>
+
+      {/* Stat cards — Row 2: existing overview stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           label="Visit ทั้งหมด"
           value={stats?.totalVisits ?? 0}
@@ -262,16 +315,19 @@ export default function DashboardPage() {
             value: d.visitCount,
           }))}
         />
-        {priceCoverage && (
-          <PriceCoverageChart
-            data={priceCoverage.map((d) => ({
-              name:
-                (d as any).category || d.drugCategory || d.name || '',
-              withPrice: d.withPrice,
-              withoutPrice: d.withoutPrice,
-            }))}
-          />
-        )}
+        <BillingApprovalRateChart
+          data={{
+            approved: z51Stats?.approvedZ51Visits ?? 0,
+            pending: z51Stats?.pendingZ51Visits ?? 0,
+            rejected: z51Stats?.rejectedZ51Visits ?? 0,
+            rate:
+              z51Stats && z51Stats.billedZ51Visits > 0
+                ? Math.round(
+                    (z51Stats.approvedZ51Visits / z51Stats.billedZ51Visits) * 1000,
+                  ) / 10
+                : 0,
+          }}
+        />
         <ConfirmationRateChart
           data={{
             confirmed: confirmationRate?.confirmedVisits ?? 0,
@@ -364,44 +420,177 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Recent activity (admin only) */}
-      {recentActivity && recentActivity.length > 0 && (
+      {/* Z51x Actionable Visits — work queue */}
+      {totalActionable > 0 && (
         <div className="rounded-xl border bg-card">
           <div className="p-4 border-b">
-            <h2 className="font-heading text-base font-semibold">
-              กิจกรรมล่าสุด
-            </h2>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-heading text-base font-semibold flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  Visit Z51x ที่ต้องดำเนินการ
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Visits ที่มีรหัส Z51x แต่ยังไม่มีการเรียกเก็บ หรือถูกปฏิเสธ —{' '}
+                  <span className="font-semibold text-foreground tabular-nums">{totalActionable}</span> รายการ
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="divide-y">
-            {recentActivity.map((item) => (
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/5">
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground w-24">
+                    HN
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    ชื่อ-สกุล
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    เคส/โปรโตคอล
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground w-28">
+                    VN
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground w-20">
+                    วันที่
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground w-36">
+                    สถานะการเรียกเก็บ
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {allVisits.map((v) => (
+                  <tr
+                    key={v.vn}
+                    className="border-b last:border-0 transition-colors hover:bg-muted/5 cursor-pointer"
+                    onClick={() => {
+                      if (v.patientId) {
+                        router.push(`/cancer-patients/${v.patientId}`);
+                      }
+                    }}
+                  >
+                    <td className="px-4 py-3">
+                      <CodeBadge code={v.hn} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-foreground">
+                        {v.fullName || '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {v.caseNumber ? (
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="success" className="text-[11px]">
+                            {v.caseNumber}
+                          </Badge>
+                          {v.protocolNameThai && (
+                            <span className="text-xs text-muted-foreground truncate max-w-40">
+                              {v.protocolNameThai}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <CodeBadge code={v.vn} />
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                      {formatShortDate(v.visitDate)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {v.billingStatus === 'REJECTED' ? (
+                        <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 ring-1 ring-inset ring-rose-300/40 dark:ring-rose-500/30">
+                          Rejected
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 ring-1 ring-inset ring-red-200/60 dark:ring-red-500/30">
+                          ยังไม่เรียกเก็บ
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y">
+            {allVisits.map((v) => (
               <div
-                key={item.id}
-                className="px-4 py-3 flex items-center gap-3 text-sm"
+                key={v.vn}
+                className="p-4 space-y-2 cursor-pointer active:bg-muted/5"
+                onClick={() => {
+                  if (v.patientId) {
+                    router.push(`/cancer-patients/${v.patientId}`);
+                  }
+                }}
               >
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary-subtle text-primary text-xs font-medium shrink-0">
-                  {item.user?.fullName?.charAt(0) || '?'}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <span className="font-medium">
-                    {item.user?.fullName || 'System'}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {' '}
-                    {item.action.toLowerCase()} {item.entityType}
-                    {item.entityId ? ` #${item.entityId}` : ''}
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CodeBadge code={v.hn} />
+                    <span className="font-medium text-sm">{v.fullName || '—'}</span>
+                  </div>
+                  {v.billingStatus === 'REJECTED' ? (
+                    <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 ring-1 ring-inset ring-rose-300/40 dark:ring-rose-500/30">
+                      Rejected
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 ring-1 ring-inset ring-red-200/60 dark:ring-red-500/30">
+                      ยังไม่เรียกเก็บ
+                    </span>
+                  )}
                 </div>
-                <time className="text-xs text-muted-foreground whitespace-nowrap">
-                  {new Date(item.createdAt).toLocaleDateString('th-TH', {
-                    day: 'numeric',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </time>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CodeBadge code={v.vn} />
+                  <span>{formatShortDate(v.visitDate)}</span>
+                </div>
+                {v.caseNumber && (
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="success" className="text-[11px]">
+                      {v.caseNumber}
+                    </Badge>
+                    {v.protocolNameThai && (
+                      <span className="text-xs text-muted-foreground truncate">
+                        {v.protocolNameThai}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
+
+          {/* Load more */}
+          {!loadedAll && allVisits.length < totalActionable && (
+            <div className="p-4 border-t flex items-center justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+                    กำลังโหลด...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <ChevronDown className="h-3.5 w-3.5" />
+                    โหลดเพิ่ม ({totalActionable - allVisits.length} รายการ)
+                  </span>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

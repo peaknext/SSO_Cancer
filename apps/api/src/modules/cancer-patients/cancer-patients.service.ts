@@ -85,21 +85,72 @@ export class CancerPatientsService {
       this.prisma.patient.count({ where }),
     ]);
 
-    // Count visits by HN (natural key) instead of patientId FK
+    // Aggregate visit stats by HN (natural key)
     const hns = patients.map((p) => p.hn);
-    const visitCounts = hns.length
-      ? await this.prisma.patientVisit.groupBy({
-          by: ['hn'],
-          where: { hn: { in: hns } },
-          _count: true,
-        })
-      : [];
-    const hnVisitMap = new Map(visitCounts.map((vc) => [vc.hn, vc._count]));
 
-    const data = patients.map((p) => ({
-      ...p,
-      _count: { ...p._count, visits: hnVisitMap.get(p.hn) ?? 0 },
-    }));
+    const [visitCounts, z51Counts, billingStatusRows] = hns.length
+      ? await Promise.all([
+          // 1. Total visit counts per HN
+          this.prisma.patientVisit.groupBy({
+            by: ['hn'],
+            where: { hn: { in: hns } },
+            _count: true,
+          }),
+          // 2. Z51x visit counts per HN (chemo/immunotherapy encounters)
+          this.prisma.patientVisit.groupBy({
+            by: ['hn'],
+            where: {
+              hn: { in: hns },
+              secondaryDiagnoses: { contains: 'Z51', mode: 'insensitive' },
+            },
+            _count: true,
+          }),
+          // 3. Billing status counts — latest claim per visit
+          this.prisma.$queryRawUnsafe<
+            { hn: string; status: string; count: number }[]
+          >(
+            `WITH latest_claims AS (
+              SELECT DISTINCT ON (vbc.visit_id)
+                pv.hn, vbc.status
+              FROM visit_billing_claims vbc
+              JOIN patient_visits pv ON pv.id = vbc.visit_id
+              WHERE vbc.is_active = true AND pv.hn = ANY($1)
+              ORDER BY vbc.visit_id, vbc.round_number DESC
+            )
+            SELECT hn, status, COUNT(*)::int AS count
+            FROM latest_claims
+            GROUP BY hn, status`,
+            hns,
+          ),
+        ])
+      : [[], [], []];
+
+    const hnVisitMap = new Map(visitCounts.map((vc) => [vc.hn, vc._count]));
+    const hnZ51Map = new Map(z51Counts.map((vc) => [vc.hn, vc._count]));
+
+    // Build billing status map: HN → { PENDING, APPROVED, REJECTED }
+    const billingMap = new Map<string, Record<string, number>>();
+    for (const row of billingStatusRows) {
+      if (!billingMap.has(row.hn)) billingMap.set(row.hn, {});
+      billingMap.get(row.hn)![row.status] = row.count;
+    }
+
+    const data = patients.map((p) => {
+      const bc = billingMap.get(p.hn);
+      return {
+        ...p,
+        _count: {
+          ...p._count,
+          visits: hnVisitMap.get(p.hn) ?? 0,
+          z51Visits: hnZ51Map.get(p.hn) ?? 0,
+        },
+        _billingCounts: {
+          pending: bc?.PENDING ?? 0,
+          approved: bc?.APPROVED ?? 0,
+          rejected: bc?.REJECTED ?? 0,
+        },
+      };
+    });
 
     return { data, total, page, limit };
   }

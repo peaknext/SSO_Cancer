@@ -353,6 +353,99 @@ export class DashboardService {
     });
   }
 
+  async getZ51BillingStats() {
+    return this.withCache('z51-billing-stats', async () => {
+      const rows = await this.prisma.$queryRawUnsafe<
+        [{
+          totalZ51Visits: number;
+          approvedZ51Visits: number;
+          pendingZ51Visits: number;
+          rejectedZ51Visits: number;
+          billedZ51Visits: number;
+        }]
+      >(`
+        WITH z51_visits AS (
+          SELECT id FROM patient_visits
+          WHERE secondary_diagnoses ILIKE '%Z51%'
+        ),
+        latest_claims AS (
+          SELECT DISTINCT ON (vbc.visit_id)
+            vbc.visit_id, vbc.status
+          FROM visit_billing_claims vbc
+          WHERE vbc.is_active = true AND vbc.visit_id IN (SELECT id FROM z51_visits)
+          ORDER BY vbc.visit_id, vbc.round_number DESC
+        )
+        SELECT
+          (SELECT COUNT(*) FROM z51_visits)::int AS "totalZ51Visits",
+          COALESCE((SELECT COUNT(*) FROM latest_claims WHERE status = 'APPROVED'), 0)::int AS "approvedZ51Visits",
+          COALESCE((SELECT COUNT(*) FROM latest_claims WHERE status = 'PENDING'), 0)::int AS "pendingZ51Visits",
+          COALESCE((SELECT COUNT(*) FROM latest_claims WHERE status = 'REJECTED'), 0)::int AS "rejectedZ51Visits",
+          (SELECT COUNT(*) FROM latest_claims)::int AS "billedZ51Visits"
+      `);
+      return rows[0];
+    });
+  }
+
+  async getZ51ActionableVisits(offset = 0, limit = 20) {
+    const dataQuery = `
+      SELECT
+        pv.vn, pv.hn, pv.visit_date AS "visitDate",
+        p.id AS "patientId", p.full_name AS "fullName",
+        pc.case_number AS "caseNumber",
+        pn.protocol_code AS "protocolCode",
+        pn.name_thai AS "protocolNameThai",
+        lc.status AS "billingStatus"
+      FROM patient_visits pv
+      LEFT JOIN patients p ON p.hn = pv.hn
+      LEFT JOIN patient_cases pc ON pc.id = pv.case_id
+      LEFT JOIN protocol_names pn ON pn.id = pc.protocol_id
+      LEFT JOIN LATERAL (
+        SELECT vbc.status
+        FROM visit_billing_claims vbc
+        WHERE vbc.visit_id = pv.id AND vbc.is_active = true
+        ORDER BY vbc.round_number DESC
+        LIMIT 1
+      ) lc ON true
+      WHERE pv.secondary_diagnoses ILIKE '%Z51%'
+        AND (lc.status IS NULL OR lc.status = 'REJECTED')
+      ORDER BY pv.visit_date ASC
+      LIMIT $1 OFFSET $2
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*)::int AS total
+      FROM patient_visits pv
+      LEFT JOIN LATERAL (
+        SELECT vbc.status
+        FROM visit_billing_claims vbc
+        WHERE vbc.visit_id = pv.id AND vbc.is_active = true
+        ORDER BY vbc.round_number DESC
+        LIMIT 1
+      ) lc ON true
+      WHERE pv.secondary_diagnoses ILIKE '%Z51%'
+        AND (lc.status IS NULL OR lc.status = 'REJECTED')
+    `;
+
+    const [data, countRows] = await Promise.all([
+      this.prisma.$queryRawUnsafe<
+        {
+          vn: string;
+          hn: string;
+          visitDate: Date;
+          patientId: number | null;
+          fullName: string | null;
+          caseNumber: string | null;
+          protocolCode: string | null;
+          protocolNameThai: string | null;
+          billingStatus: string | null;
+        }[]
+      >(dataQuery, limit, offset),
+      this.prisma.$queryRawUnsafe<[{ total: number }]>(countQuery),
+    ]);
+
+    return { data, total: countRows[0].total };
+  }
+
   async getRecentActivity() {
     return this.prisma.auditLog.findMany({
       take: 10,

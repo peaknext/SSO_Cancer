@@ -663,8 +663,16 @@ export default function ProtocolAnalysisPage() {
                 placeholder="ค้นหา HN..."
                 value={patientSearch}
                 onChange={(e) => setPatientSearch(e.target.value)}
-                className="w-full rounded-md border bg-transparent py-1.5 pl-8 pr-2 text-xs outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-md border bg-transparent py-1.5 pl-8 pr-7 text-xs outline-none focus:ring-1 focus:ring-primary"
               />
+              {patientSearch && (
+                <button
+                  onClick={() => setPatientSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -709,8 +717,16 @@ export default function ProtocolAnalysisPage() {
                 value={vnSearch}
                 onChange={(e) => setVnSearch(e.target.value)}
                 disabled={!selectedHn}
-                className="w-full rounded-md border bg-transparent py-1.5 pl-8 pr-2 text-xs outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                className="w-full rounded-md border bg-transparent py-1.5 pl-8 pr-7 text-xs outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
+              {vnSearch && (
+                <button
+                  onClick={() => setVnSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">

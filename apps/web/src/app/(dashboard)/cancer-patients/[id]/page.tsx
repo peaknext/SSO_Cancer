@@ -102,9 +102,11 @@ interface Visit {
 }
 
 interface TopMatch {
+  protocolId: number;
   protocolCode: string;
   protocolName: string;
   score: number;
+  regimenId: number | null;
   regimenCode: string | null;
   regimenName: string | null;
 }
@@ -222,6 +224,16 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
     setVisitsExpanded(false);
   }, []);
 
+  // Protocol confirmation from timeline
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    vn: string;
+    protocolId: number;
+    regimenId: number | null;
+    protocolCode: string;
+    protocolName: string;
+  } | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
   // Batch-fetch top matching protocol for unconfirmed visits
   const [topMatches, setTopMatches] = useState<Record<string, TopMatch>>({});
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -297,6 +309,27 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
       refetch();
     } catch {
       toast.error('ไม่สามารถกำหนดเคสได้');
+    }
+  };
+
+  const handleConfirmProtocol = async () => {
+    if (!pendingConfirm) return;
+    setConfirmLoading(true);
+    try {
+      await apiClient.patch(
+        `/protocol-analysis/visits/${pendingConfirm.vn}/confirm`,
+        {
+          protocolId: pendingConfirm.protocolId,
+          regimenId: pendingConfirm.regimenId ?? undefined,
+        },
+      );
+      toast.success('ยืนยันโปรโตคอลสำเร็จ');
+      setPendingConfirm(null);
+      refetch();
+    } catch {
+      toast.error('ไม่สามารถยืนยันโปรโตคอลได้');
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -466,6 +499,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                     onClaimAdded={refetch}
                     topMatch={topMatches[visit.vn] || null}
                     loadingMatch={loadingMatches}
+                    onConfirmProtocol={(match) => setPendingConfirm({ vn: visit.vn, ...match })}
                   />
                 );
               })}
@@ -505,6 +539,20 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
         description="เคสนี้จะถูกเปลี่ยนสถานะเป็น 'เสร็จสิ้น' คุณแน่ใจหรือไม่?"
         confirmText="ปิดเคส"
         loading={completeLoading}
+      />
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        onConfirm={handleConfirmProtocol}
+        onCancel={() => setPendingConfirm(null)}
+        title="ยืนยันโปรโตคอล"
+        description={
+          pendingConfirm
+            ? `ยืนยัน ${pendingConfirm.protocolCode} — ${pendingConfirm.protocolName} สำหรับ VN ${pendingConfirm.vn}?`
+            : ''
+        }
+        confirmText="ยืนยัน"
+        loading={confirmLoading}
       />
     </div>
   );
@@ -656,6 +704,7 @@ function VisitTimelineEntry({
   onClaimAdded,
   topMatch,
   loadingMatch,
+  onConfirmProtocol,
 }: {
   visit: Visit;
   activeCases: PatientCase[];
@@ -668,6 +717,12 @@ function VisitTimelineEntry({
   onClaimAdded: () => void;
   topMatch: TopMatch | null;
   loadingMatch: boolean;
+  onConfirmProtocol: (match: {
+    protocolId: number;
+    regimenId: number | null;
+    protocolCode: string;
+    protocolName: string;
+  }) => void;
 }) {
   const activeBillingClaims = visit.billingClaims.filter((bc) => bc.isActive);
   const caseOptions = activeCases.map((c) => ({
@@ -804,6 +859,25 @@ function VisitTimelineEntry({
                         <span className="font-mono text-xs font-semibold">{topMatch.protocolCode}</span>
                         <span className="text-xs">{topMatch.protocolName}</span>
                         <span className="text-xs tabular-nums text-muted-foreground">({topMatch.score} คะแนน)</span>
+                        {topMatch.protocolId !== 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-5 px-2 text-[10px] gap-1 cursor-pointer text-primary border-primary/30 hover:bg-primary/5"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onConfirmProtocol({
+                                protocolId: topMatch.protocolId,
+                                regimenId: topMatch.regimenId,
+                                protocolCode: topMatch.protocolCode,
+                                protocolName: topMatch.protocolName,
+                              });
+                            }}
+                          >
+                            <CheckCircle2 className="h-2.5 w-2.5" />
+                            คลิกเพื่อยืนยัน
+                          </Button>
+                        )}
                       </div>
                       {topMatch.regimenCode && (
                         <div className="flex items-center gap-2 ml-15">

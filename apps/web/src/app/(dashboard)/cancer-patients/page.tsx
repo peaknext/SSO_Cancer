@@ -9,7 +9,6 @@ import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { SearchInput } from '@/components/shared/search-input';
 import { Select } from '@/components/ui/select';
-import { StatusBadge } from '@/components/shared/status-badge';
 import { CodeBadge } from '@/components/shared/code-badge';
 import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/shared/loading-skeleton';
@@ -36,12 +35,12 @@ interface PatientCase {
 interface Patient {
   id: number;
   hn: string;
-  citizenId: string;
   fullName: string;
   isActive: boolean;
   createdAt: string;
   cases: PatientCase[];
-  _count?: { visits: number; cases: number };
+  _count?: { visits: number; z51Visits: number; cases: number };
+  _billingCounts?: { pending: number; approved: number; rejected: number };
 }
 
 interface PatientsResponse {
@@ -58,11 +57,6 @@ interface CancerSite {
 interface CancerSitesResponse {
   data: CancerSite[];
   meta: { total: number };
-}
-
-function maskCitizenId(cid: string): string {
-  if (!cid || cid.length !== 13) return cid;
-  return `${cid[0]}-${cid.slice(1, 5)}-${cid.slice(5, 10)}-${cid.slice(10, 12)}-${cid[12]}`;
 }
 
 export default function CancerPatientsPage() {
@@ -83,7 +77,9 @@ export default function CancerPatientsPage() {
     sortOrder,
   }, { enabled: filtersHydrated });
 
-  const { data: sitesResponse } = useApi<CancerSitesResponse>('/cancer-sites?limit=100&sortBy=siteCode&sortOrder=asc');
+  const { data: sitesResponse } = useApi<CancerSitesResponse>(
+    '/cancer-sites?limit=100&sortBy=siteCode&sortOrder=asc',
+  );
 
   const siteOptions = (sitesResponse?.data ?? []).map((s) => ({
     value: String(s.id),
@@ -122,15 +118,6 @@ export default function CancerPatientsPage() {
       ),
     },
     {
-      key: 'citizenId',
-      header: 'เลขบัตรประชาชน',
-      render: (row) => (
-        <span className="font-mono text-xs text-muted-foreground tracking-wide">
-          {maskCitizenId(row.citizenId)}
-        </span>
-      ),
-    },
-    {
       key: 'activeCase',
       header: 'เคส/โปรโตคอล',
       render: (row) => {
@@ -154,18 +141,53 @@ export default function CancerPatientsPage() {
     },
     {
       key: 'visits',
-      header: 'Visits',
-      className: 'text-center w-20',
+      header: 'Visits (ทั้งหมด/Z51x)',
+      className: 'text-center w-32',
       headerClassName: 'text-center',
-      render: (row) => (
-        <span className="tabular-nums text-sm">{row._count?.visits ?? 0}</span>
-      ),
+      render: (row) => {
+        const total = row._count?.visits ?? 0;
+        const z51 = row._count?.z51Visits ?? 0;
+        return (
+          <div className="font-mono tabular-nums text-sm flex items-center justify-center gap-0.5">
+            <span className="text-foreground">{total}</span>
+            <span className="text-muted-foreground/60">/</span>
+            <span className="text-primary font-semibold">{z51}</span>
+          </div>
+        );
+      },
     },
     {
-      key: 'isActive',
-      header: 'สถานะ',
-      sortable: true,
-      render: (row) => <StatusBadge active={row.isActive} />,
+      key: 'billing',
+      header: 'การเรียกเก็บ',
+      className: 'w-44',
+      render: (row) => {
+        const bc = row._billingCounts;
+        const p = bc?.pending ?? 0;
+        const a = bc?.approved ?? 0;
+        const r = bc?.rejected ?? 0;
+        if (p === 0 && a === 0 && r === 0) {
+          return <span className="text-muted-foreground text-xs">—</span>;
+        }
+        return (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {p > 0 && (
+              <span className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 ring-1 ring-inset ring-amber-300/40 dark:ring-amber-500/30">
+                P {p}
+              </span>
+            )}
+            {a > 0 && (
+              <span className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 ring-1 ring-inset ring-emerald-300/40 dark:ring-emerald-500/30">
+                A {a}
+              </span>
+            )}
+            {r > 0 && (
+              <span className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 ring-1 ring-inset ring-rose-300/40 dark:ring-rose-500/30">
+                R {r}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -206,7 +228,7 @@ export default function CancerPatientsPage() {
       </div>
 
       {isLoading ? (
-        <TableSkeleton rows={10} cols={6} />
+        <TableSkeleton rows={10} cols={5} />
       ) : (
         <DataTable
           columns={columns}

@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
@@ -68,6 +68,26 @@ export class DashboardController {
   @ApiOperation({ summary: 'AI suggestion usage statistics' })
   async getAiStats() {
     return this.dashboardService.getAiStats();
+  }
+
+  @Get('z51-billing-stats')
+  @ApiOperation({ summary: 'Z51x visit counts with billing status breakdown' })
+  async getZ51BillingStats() {
+    return this.dashboardService.getZ51BillingStats();
+  }
+
+  @Get('z51-actionable-visits')
+  @ApiOperation({ summary: 'Z51x visits with no billing or rejected status' })
+  @ApiQuery({ name: 'offset', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getZ51ActionableVisits(
+    @Query('offset') offset?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.dashboardService.getZ51ActionableVisits(
+      offset ? parseInt(offset, 10) : 0,
+      limit ? Math.min(parseInt(limit, 10), 100) : 20,
+    );
   }
 
   @Get('recent-activity')

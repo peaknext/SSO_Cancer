@@ -427,9 +427,11 @@ export class ProtocolAnalysisController {
     const results: Record<
       string,
       {
+        protocolId: number;
         protocolCode: string;
         protocolName: string;
         score: number;
+        regimenId: number | null;
         regimenCode: string | null;
         regimenName: string | null;
       } | null
@@ -448,9 +450,11 @@ export class ProtocolAnalysisController {
         const top = match.results[0];
         results[vn] = top
           ? {
+              protocolId: top.protocolId,
               protocolCode: top.protocolCode,
               protocolName: top.protocolName,
               score: top.score,
+              regimenId: top.matchedRegimen?.regimenId || null,
               regimenCode: top.matchedRegimen?.regimenCode || null,
               regimenName: top.matchedRegimen?.regimenName || null,
             }

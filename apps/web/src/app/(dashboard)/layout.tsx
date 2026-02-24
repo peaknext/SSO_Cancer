@@ -13,19 +13,20 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isAuthenticated, refreshUser } = useAuthStore();
+  const { isAuthenticated, isHydrating } = useAuthStore();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
+    // Don't redirect while the initial token refresh is in progress
+    if (isHydrating) return;
     if (!isAuthenticated) {
       router.replace('/login');
-      return;
     }
-    refreshUser();
-  }, [isAuthenticated, refreshUser, router]);
+  }, [isAuthenticated, isHydrating, router]);
 
-  if (!isAuthenticated) {
+  // Show nothing while hydrating or not authenticated (avoids flash)
+  if (isHydrating || !isAuthenticated) {
     return null;
   }
 
