@@ -45,6 +45,12 @@ export interface MatchResult {
   formularyCompliance: FormularyCompliance | null;
 }
 
+export interface MatchResponse {
+  results: MatchResult[];
+  stageInference: StageInference;
+  nonProtocolChemoDrugs: string[];
+}
+
 export interface ParsedMedication {
   rawLine: string;
   hospitalCode: string | null;

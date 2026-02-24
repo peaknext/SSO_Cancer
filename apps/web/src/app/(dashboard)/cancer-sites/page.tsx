@@ -28,10 +28,11 @@ interface CancerSitesResponse {
 
 export default function CancerSitesPage() {
   const router = useRouter();
-  const [page, setPage] = usePersistedState('sso-sites-page', 1);
-  const [search, setSearch] = usePersistedState('sso-sites-search', '');
-  const [sortBy, setSortBy] = usePersistedState('sso-sites-sortBy', 'sortOrder');
-  const [sortOrder, setSortOrder] = usePersistedState<'asc' | 'desc'>('sso-sites-sortOrder', 'asc');
+  const [page, setPage, h1] = usePersistedState('sso-sites-page', 1);
+  const [search, setSearch, h2] = usePersistedState('sso-sites-search', '');
+  const [sortBy, setSortBy, h3] = usePersistedState('sso-sites-sortBy', 'sortOrder');
+  const [sortOrder, setSortOrder, h4] = usePersistedState<'asc' | 'desc'>('sso-sites-sortOrder', 'asc');
+  const filtersHydrated = h1 && h2 && h3 && h4;
 
   const { data: response, isLoading } = usePaginatedApi<CancerSitesResponse>('/cancer-sites', {
     page,
@@ -39,7 +40,7 @@ export default function CancerSitesPage() {
     search: search || undefined,
     sortBy,
     sortOrder,
-  });
+  }, { enabled: filtersHydrated });
 
   const handleSort = useCallback((key: string) => {
     if (sortBy === key) {

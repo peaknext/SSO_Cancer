@@ -49,11 +49,12 @@ const categoryVariant: Record<string, 'default' | 'success' | 'warning' | 'accen
 
 export default function DrugsPage() {
   const router = useRouter();
-  const [page, setPage] = usePersistedState('sso-drugs-page', 1);
-  const [search, setSearch] = usePersistedState('sso-drugs-search', '');
-  const [drugCategory, setDrugCategory] = usePersistedState('sso-drugs-category', '');
-  const [sortBy, setSortBy] = usePersistedState('sso-drugs-sortBy', 'genericName');
-  const [sortOrder, setSortOrder] = usePersistedState<'asc' | 'desc'>('sso-drugs-sortOrder', 'asc');
+  const [page, setPage, h1] = usePersistedState('sso-drugs-page', 1);
+  const [search, setSearch, h2] = usePersistedState('sso-drugs-search', '');
+  const [drugCategory, setDrugCategory, h3] = usePersistedState('sso-drugs-category', '');
+  const [sortBy, setSortBy, h4] = usePersistedState('sso-drugs-sortBy', 'genericName');
+  const [sortOrder, setSortOrder, h5] = usePersistedState<'asc' | 'desc'>('sso-drugs-sortOrder', 'asc');
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5;
 
   const { data: response, isLoading } = usePaginatedApi<DrugsResponse>('/drugs', {
     page,
@@ -62,7 +63,7 @@ export default function DrugsPage() {
     drugCategory: drugCategory || undefined,
     sortBy,
     sortOrder,
-  });
+  }, { enabled: filtersHydrated });
 
   const handleSort = useCallback((key: string) => {
     if (sortBy === key) {

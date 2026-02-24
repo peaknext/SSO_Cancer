@@ -49,11 +49,12 @@ const typeVariant: Record<string, 'default' | 'success' | 'warning' | 'accent' |
 
 export default function RegimensPage() {
   const router = useRouter();
-  const [page, setPage] = usePersistedState('sso-regimens-page', 1);
-  const [search, setSearch] = usePersistedState('sso-regimens-search', '');
-  const [regimenType, setRegimenType] = usePersistedState('sso-regimens-type', '');
-  const [sortBy, setSortBy] = usePersistedState('sso-regimens-sortBy', 'regimenCode');
-  const [sortOrder, setSortOrder] = usePersistedState<'asc' | 'desc'>('sso-regimens-sortOrder', 'asc');
+  const [page, setPage, h1] = usePersistedState('sso-regimens-page', 1);
+  const [search, setSearch, h2] = usePersistedState('sso-regimens-search', '');
+  const [regimenType, setRegimenType, h3] = usePersistedState('sso-regimens-type', '');
+  const [sortBy, setSortBy, h4] = usePersistedState('sso-regimens-sortBy', 'regimenCode');
+  const [sortOrder, setSortOrder, h5] = usePersistedState<'asc' | 'desc'>('sso-regimens-sortOrder', 'asc');
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5;
 
   const { data: response, isLoading } = usePaginatedApi<RegimensResponse>('/regimens', {
     page,
@@ -62,7 +63,7 @@ export default function RegimensPage() {
     regimenType: regimenType || undefined,
     sortBy,
     sortOrder,
-  });
+  }, { enabled: filtersHydrated });
 
   const handleSort = useCallback((key: string) => {
     if (sortBy === key) {

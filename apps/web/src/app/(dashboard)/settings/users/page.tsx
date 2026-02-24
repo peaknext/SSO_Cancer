@@ -54,9 +54,10 @@ const roleLabels: Record<string, string> = {
 
 export default function UsersPage() {
   const router = useRouter();
-  const [page, setPage] = usePersistedState('sso-users-page', 1);
-  const [search, setSearch] = usePersistedState('sso-users-search', '');
-  const [role, setRole] = usePersistedState('sso-users-role', '');
+  const [page, setPage, h1] = usePersistedState('sso-users-page', 1);
+  const [search, setSearch, h2] = usePersistedState('sso-users-search', '');
+  const [role, setRole, h3] = usePersistedState('sso-users-role', '');
+  const filtersHydrated = h1 && h2 && h3;
   const [showCreate, setShowCreate] = useState(false);
 
   const { data: response, isLoading, refetch } = usePaginatedApi<UsersResponse>('/users', {
@@ -64,7 +65,7 @@ export default function UsersPage() {
     limit: 20,
     search: search || undefined,
     role: role || undefined,
-  });
+  }, { enabled: filtersHydrated });
 
   const handleSearch = useCallback((v: string) => {
     setSearch(v);

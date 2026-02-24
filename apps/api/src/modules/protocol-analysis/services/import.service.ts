@@ -430,6 +430,14 @@ export class ImportService {
       },
     });
 
+    // Pre-load HN→Patient mapping for auto-linking
+    const uniqueHns = [...new Set(validRows.map((r) => r.hn))];
+    const existingPatients = await this.prisma.patient.findMany({
+      where: { hn: { in: uniqueHns } },
+      select: { id: true, hn: true },
+    });
+    const hnToPatientId = new Map(existingPatients.map((p) => [p.hn, p.id]));
+
     let importedCount = 0;
     let skippedCount = 0;
 
@@ -452,6 +460,9 @@ export class ImportService {
         // Resolve ICD-10 → CancerSite
         const resolvedSiteId = await this.resolveIcd10(row.primaryDiagnosis);
 
+        // Auto-link to existing patient by HN
+        const patientId = hnToPatientId.get(row.hn) ?? null;
+
         // Create visit
         const visit = await this.prisma.patientVisit.create({
           data: {
@@ -465,6 +476,7 @@ export class ImportService {
             doctorNotes: row.doctorNotes,
             medicationsRaw: row.medicationsRaw,
             resolvedSiteId,
+            patientId,
           },
         });
 

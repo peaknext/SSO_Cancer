@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
-import { ArrowLeft, Plus, X, Search, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, X, Search, Loader2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ import { CodeBadge } from '@/components/shared/code-badge';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { CreateRegimenDialog } from '@/components/protocols/create-regimen-dialog';
+import { EditRegimenDrugsDialog } from '@/components/protocols/edit-regimen-drugs-dialog';
 import { Skeleton } from '@/components/shared/loading-skeleton';
 import { useApi } from '@/hooks/use-api';
 import { apiClient } from '@/lib/api-client';
@@ -139,6 +140,9 @@ export default function ProtocolEditPage({ params }: { params: Promise<{ id: str
 
   // Create regimen dialog
   const [createRegimenOpen, setCreateRegimenOpen] = useState(false);
+
+  // Edit regimen drugs dialog
+  const [editDrugsRegimenId, setEditDrugsRegimenId] = useState<number | null>(null);
 
   const {
     register,
@@ -562,13 +566,25 @@ export default function ProtocolEditPage({ params }: { params: Promise<{ id: str
                           <Badge variant="secondary" className="text-[11px]">เดิม</Badge>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeRegimen(lr.regimenId)}
-                        className="text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-muted-foreground"
+                          onClick={() => setEditDrugsRegimenId(lr.regimenId)}
+                        >
+                          <Pencil className="h-3.5 w-3.5 mr-1" />
+                          จัดการยา
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => removeRegimen(lr.regimenId)}
+                          className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex items-center gap-2">
@@ -655,6 +671,21 @@ export default function ProtocolEditPage({ params }: { params: Promise<{ id: str
           setAvailableRegimens((prev) => [...prev, newRegimen]);
         }}
       />
+
+      {/* Edit regimen drugs dialog */}
+      {editDrugsRegimenId !== null && (() => {
+        const lr = linkedRegimens.find((r) => r.regimenId === editDrugsRegimenId);
+        if (!lr) return null;
+        return (
+          <EditRegimenDrugsDialog
+            open
+            onClose={() => setEditDrugsRegimenId(null)}
+            regimenId={lr.regimenId}
+            regimenCode={lr.regimenCode}
+            regimenName={lr.regimenName}
+          />
+        );
+      })()}
     </div>
   );
 }

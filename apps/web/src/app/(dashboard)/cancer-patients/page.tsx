@@ -67,11 +67,12 @@ function maskCitizenId(cid: string): string {
 
 export default function CancerPatientsPage() {
   const router = useRouter();
-  const [page, setPage] = usePersistedState('cp-page', 1);
-  const [search, setSearch] = usePersistedState('cp-search', '');
-  const [cancerSiteId, setCancerSiteId] = usePersistedState('cp-cancerSiteId', '');
-  const [sortBy, setSortBy] = usePersistedState('cp-sortBy', 'hn');
-  const [sortOrder, setSortOrder] = usePersistedState<'asc' | 'desc'>('cp-sortOrder', 'asc');
+  const [page, setPage, h1] = usePersistedState('cp-page', 1);
+  const [search, setSearch, h2] = usePersistedState('cp-search', '');
+  const [cancerSiteId, setCancerSiteId, h3] = usePersistedState('cp-cancerSiteId', '');
+  const [sortBy, setSortBy, h4] = usePersistedState('cp-sortBy', 'hn');
+  const [sortOrder, setSortOrder, h5] = usePersistedState<'asc' | 'desc'>('cp-sortOrder', 'asc');
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5;
 
   const { data: response, isLoading } = usePaginatedApi<PatientsResponse>('/cancer-patients', {
     page,
@@ -80,7 +81,7 @@ export default function CancerPatientsPage() {
     cancerSiteId: cancerSiteId || undefined,
     sortBy,
     sortOrder,
-  });
+  }, { enabled: filtersHydrated });
 
   const { data: sitesResponse } = useApi<CancerSitesResponse>('/cancer-sites?limit=100&sortBy=siteCode&sortOrder=asc');
 

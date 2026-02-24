@@ -155,6 +155,7 @@ interface MatchResult {
 interface MatchResponse {
   results: MatchResult[];
   stageInference: StageInference;
+  nonProtocolChemoDrugs: string[];
 }
 
 interface PaginatedResponse<T> {
@@ -224,6 +225,7 @@ export default function ProtocolAnalysisPage() {
   const [visitDetail, setVisitDetail] = useState<VisitDetail | null>(null);
   const [matchResults, setMatchResults] = useState<MatchResult[]>([]);
   const [stageInference, setStageInference] = useState<StageInference | null>(null);
+  const [nonProtocolChemoDrugs, setNonProtocolChemoDrugs] = useState<string[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [loadingMatch, setLoadingMatch] = useState(false);
   const [isEmpty, setIsEmpty] = useState(false);
@@ -297,6 +299,7 @@ export default function ProtocolAnalysisPage() {
     setVisitDetail(null);
     setMatchResults([]);
     setStageInference(null);
+    setNonProtocolChemoDrugs([]);
     const params = new URLSearchParams({ limit: '100', sortOrder: 'desc' });
     if (filterSiteId) params.set('cancerSiteId', filterSiteId);
     if (filterHasMeds) params.set('hasMedications', 'true');
@@ -318,6 +321,7 @@ export default function ProtocolAnalysisPage() {
       setVisitDetail(null);
       setMatchResults([]);
       setStageInference(null);
+      setNonProtocolChemoDrugs([]);
       setAiSuggestion(null);
       setAiCached(false);
       setAiError(null);
@@ -337,10 +341,12 @@ export default function ProtocolAnalysisPage() {
       .then((res) => {
         setMatchResults(res.results);
         setStageInference(res.stageInference);
+        setNonProtocolChemoDrugs(res.nonProtocolChemoDrugs ?? []);
       })
       .catch(() => {
         setMatchResults([]);
         setStageInference(null);
+        setNonProtocolChemoDrugs([]);
       })
       .finally(() => setLoadingMatch(false));
 
@@ -514,6 +520,7 @@ export default function ProtocolAnalysisPage() {
       setVisitDetail(null);
       setMatchResults([]);
       setStageInference(null);
+      setNonProtocolChemoDrugs([]);
       setAiSuggestion(null);
       setIsEmpty(true);
       fetchPatients();
@@ -546,6 +553,9 @@ export default function ProtocolAnalysisPage() {
       </div>
     );
   }
+
+  // Derive non-protocol chemo drug lookup for red text highlighting
+  const nonProtocolDrugSet = new Set(nonProtocolChemoDrugs.map((n) => n.toLowerCase()));
 
   return (
     <div className="space-y-4">
@@ -950,14 +960,32 @@ export default function ProtocolAnalysisPage() {
                               {med.quantity ? `${med.quantity} ${med.unit || ''}` : '—'}
                             </td>
                             <td className="py-1.5 px-2">
-                              {med.resolvedDrug ? (
-                                <div className="flex items-center gap-1">
-                                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" />
-                                  <span className="text-green-700 dark:text-green-400">
-                                    {med.resolvedDrug.genericName}
-                                  </span>
-                                </div>
-                              ) : (
+                              {med.resolvedDrug ? (() => {
+                                const isNonProtocol = nonProtocolDrugSet.has(
+                                  med.resolvedDrug!.genericName.toLowerCase(),
+                                );
+                                return (
+                                  <div className="flex items-center gap-1">
+                                    {isNonProtocol ? (
+                                      <AlertTriangle className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400 shrink-0" />
+                                    ) : (
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" />
+                                    )}
+                                    <span className={cn(
+                                      isNonProtocol
+                                        ? 'text-rose-600 dark:text-rose-400 font-semibold'
+                                        : 'text-green-700 dark:text-green-400',
+                                    )}>
+                                      {med.resolvedDrug!.genericName}
+                                    </span>
+                                    {isNonProtocol && (
+                                      <span className="text-[9px] text-rose-500/80 dark:text-rose-400/70 whitespace-nowrap">
+                                        (นอกโปรโตคอล)
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })() : (
                                 <div className="flex items-center gap-1 text-foreground/40">
                                   <XCircle className="h-3.5 w-3.5 shrink-0" />
                                   <span>ไม่พบ</span>
@@ -1014,17 +1042,13 @@ export default function ProtocolAnalysisPage() {
                     <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0" />
                     <span>ไม่พบโปรโตคอลที่ตรงกัน — อาจเป็นเพราะยังไม่มีข้อมูลยาหรือรหัส ICD-10 ไม่ตรงกับตำแหน่งมะเร็งในระบบ</span>
                   </div>
-                ) : matchResults[0]?.protocolId === 0 ? (
-                  <div className="flex items-center gap-2 rounded-lg bg-warning-subtle border border-warning/20 p-3 text-xs">
-                    <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0" />
-                    <span>{matchResults[0].reasons[0]}</span>
-                  </div>
                 ) : (
                   <div className="space-y-2">
                     {matchResults.map((match, idx) => {
                       const isConfirmed =
                         visitDetail?.confirmedProtocolId === match.protocolId &&
                         visitDetail?.confirmedRegimenId === (match.matchedRegimen?.regimenId || null);
+                      const isRadiation = match.protocolType === 'radiation';
 
                       return (
                       <div
@@ -1034,9 +1058,13 @@ export default function ProtocolAnalysisPage() {
                           'rounded-lg border p-3 text-xs transition-all',
                           isConfirmed
                             ? 'border-green-400/60 dark:border-green-600/50 bg-green-50/80 dark:bg-green-950/30 ring-1 ring-green-300/30 dark:ring-green-700/30'
-                            : idx === 0
-                              ? 'border-primary/40 bg-primary/5'
-                              : 'hover:bg-primary/4',
+                            : isRadiation
+                              ? idx === 0
+                                ? 'border-orange-400/50 dark:border-orange-600/40 bg-orange-50/60 dark:bg-orange-950/25'
+                                : 'border-orange-200/50 dark:border-orange-700/30 hover:bg-orange-50/40 dark:hover:bg-orange-950/15'
+                              : idx === 0
+                                ? 'border-primary/40 bg-primary/5'
+                                : 'hover:bg-primary/4',
                           canConfirm && match.protocolId !== 0 && 'cursor-pointer hover:shadow-sm',
                         )}
                       >
@@ -1048,7 +1076,11 @@ export default function ProtocolAnalysisPage() {
                               )}
                               <span className={cn(
                                 'font-mono text-[11px] font-semibold',
-                                isConfirmed ? 'text-green-700 dark:text-green-400' : 'text-primary',
+                                isConfirmed
+                                  ? 'text-green-700 dark:text-green-400'
+                                  : isRadiation
+                                    ? 'text-orange-600 dark:text-orange-400'
+                                    : 'text-primary',
                               )}>
                                 {match.protocolCode}
                               </span>
@@ -1064,7 +1096,15 @@ export default function ProtocolAnalysisPage() {
                             </div>
                             <div className="flex flex-wrap gap-1 mb-1.5">
                               {match.protocolType && (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                <Badge
+                                  variant="secondary"
+                                  className={cn(
+                                    'text-[10px] px-1.5 py-0 gap-0.5',
+                                    isRadiation &&
+                                      'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border-orange-200/50 dark:border-orange-700/30',
+                                  )}
+                                >
+                                  {isRadiation && <Radiation className="h-2.5 w-2.5" />}
                                   {match.protocolType.replace(/_/g, ' ')}
                                 </Badge>
                               )}

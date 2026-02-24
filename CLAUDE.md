@@ -26,20 +26,20 @@ Root `package.json` scripts (`npm run db:generate`, `db:seed`, etc.) wrap these 
 
 ```bash
 cd apps/api
-npm run start:dev     # Watch mode on port 4000
+npm run start:dev     # Watch mode on port 48002
 npm run start:debug   # Debug mode (attach Node inspector)
 npm run build         # Compile to dist/
 npm run start:prod    # Run compiled
 ```
 
-API base: `http://localhost:4000/api/v1`
-Swagger docs: `http://localhost:4000/api/v1/docs` (disabled in production)
+API base: `http://localhost:48002/api/v1`
+Swagger docs: `http://localhost:48002/api/v1/docs` (disabled in production)
 
 ### Next.js Frontend (`apps/web/`)
 
 ```bash
 cd apps/web
-npm run dev           # Dev server on port 3000
+npm run dev           # Dev server on port 47001
 npm run build         # Production build (standalone output)
 npm run start         # Start production server
 npm run lint          # ESLint check
@@ -79,7 +79,7 @@ Production deploy script: `deploy/deploy.sh` — checks `.env.production`, gener
 
 ### Environment Variables
 
-Copy `.env.example` to `.env`. Key variables: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CORS_ORIGIN`, `API_PORT` (4000), `WEB_PORT` (3000).
+Copy `.env.example` to `.env`. Key variables: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CORS_ORIGIN`, `API_PORT` (48002), `WEB_PORT` (47001). High dev ports avoid conflict with Docker containers on 3000/4000.
 
 Additional production env vars (see `.env.production.example`): `MAX_FAILED_LOGIN_ATTEMPTS`, `LOCKOUT_DURATION_SECONDS`, `MAX_CONCURRENT_SESSIONS`, `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL`, `PASSWORD_HISTORY_COUNT`, `LOG_LEVEL`.
 
@@ -92,8 +92,8 @@ No test framework (Jest/Vitest) is configured yet.
 ### Monorepo Structure
 
 ```
-apps/api/       NestJS 11 REST API (port 4000, prefix /api/v1)
-apps/web/       Next.js 15 frontend (port 3000)
+apps/api/       NestJS 11 REST API (dev port 48002, Docker port 4000, prefix /api/v1)
+apps/web/       Next.js 15 frontend (dev port 47001, Docker port 3000)
 prisma/         Schema, config, migrations, generated client
 database/seeds/ Numbered SQL files (001–015) executed by prisma/seed.ts
 deploy/         Production deploy script + nginx config (SSL, reverse proxy)
@@ -137,9 +137,9 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `dashboard` — aggregation stats with 5-min in-memory cache (8 cached endpoints, `getRecentActivity` uncached)
 - `audit-logs` — paginated query + CSV export (ADMIN+)
 - `app-settings` — grouped key-value config (SUPER_ADMIN to edit)
-- `protocol-analysis` — CSV/Excel import of hospital visit data, drug resolution (3-tier: exact→startsWith→contains), protocol matching with scoring, protocol confirmation (PATCH confirm/DELETE unconfirm per visit)
+- `protocol-analysis` — CSV/Excel import of hospital visit data, drug resolution (3-tier: exact→startsWith→contains), protocol matching with scoring, protocol confirmation (PATCH confirm/DELETE unconfirm per visit). Import service auto-links visits to existing Patient records by HN during import.
 - `ai` — multi-provider AI suggestion engine (see AI Module below)
-- `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking)
+- `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
 - `sso-aipn-catalog` — Read-only SSO AIPN drug/equipment catalog with search, stats, code lookup
 - `sso-protocol-drugs` — SSO protocol drug formulary: list, stats, per-protocol lookup, compliance checking. `getFormularyDrugNames()` extracts generic names from descriptions for name-based formulary matching
 
@@ -170,7 +170,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `(auth)/login/` — Login page with teal gradient split layout
 - `(dashboard)/` — Protected routes with sidebar + topbar layout:
   - `/` — Dashboard with stat cards (animated counters) and 4 Recharts charts
-  - `/protocols`, `/protocols/[id]`, `/protocols/new`, `/protocols/[id]/edit` — Protocol CRUD
+  - `/protocols`, `/protocols/[id]`, `/protocols/new`, `/protocols/[id]/edit` — Protocol CRUD. Edit page has `EditRegimenDrugsDialog` modal for managing drugs inside linked regimens without leaving the page.
   - `/regimens`, `/regimens/[id]`, `/regimens/new`, `/regimens/[id]/edit` — Regimen CRUD with drug management
   - `/drugs`, `/drugs/[id]`, `/drugs/new`, `/drugs/[id]/edit` — Drug CRUD with trade name management
   - `/cancer-sites` — Cancer sites list
@@ -192,17 +192,18 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 
 **Key patterns:**
 - `useApi<T>(path)` / `usePaginatedApi<T>(basePath, params)` hooks in `hooks/use-api.ts`
-- `usePersistedState<T>(key, default)` hook in `hooks/use-persisted-state.ts` — localStorage-backed state with SSR-safe hydration
+- `usePersistedState<T>(key, default)` hook in `hooks/use-persisted-state.ts` — localStorage-backed state with SSR-safe hydration. Returns `[value, setter, hydrated]` — the third `hydrated` boolean is `false` until localStorage is read in `useEffect`. **All list pages must gate API fetches on hydration** via `usePaginatedApi(path, params, { enabled: filtersHydrated })` where `filtersHydrated = h1 && h2 && h3 ...` (AND of all hydrated flags). Without this, the initial render fires a fetch with default params, ignoring persisted filters.
 - `useTranslation()` hook in `hooks/use-translation.ts` — fetches `/locales/{locale}.json` at runtime, module-level cache, `t(key)` with dot notation
 - `apiClient` singleton in `lib/api-client.ts` — Bearer token injection, auto-refresh on 401, redirect to /login on session expiry. Also has `upload<T>(path, formData)` for multipart uploads.
 - `middleware.ts` — Route protection checking `sso-cancer-auth-flag` cookie, redirects to `/login?redirect=pathname`
-- Shared components in `components/shared/` — DataTable, SearchInput, StatusBadge, CodeBadge, PriceBadge, EmptyState, LoadingSkeleton
-- UI primitives in `components/ui/` — shadcn/ui pattern (Button, Card, Input, Label, Select, Badge, Separator)
+- Shared components in `components/shared/` — DataTable, SearchInput, StatusBadge, CodeBadge, PriceBadge, EmptyState, LoadingSkeleton, ProtocolCombobox (searchable grouped protocol picker)
+- UI primitives in `components/ui/` — shadcn/ui pattern (Button, Card, Input, Label, Select, Badge, Separator, Modal)
+- `ProtocolCombobox` in `components/shared/protocol-combobox.tsx` — searchable dropdown with protocols grouped by cancer site (sticky headers), module-level 5-min cache, fetches all ~170 protocols via two parallel paginated requests. Drop-in replacement for `<Select>` (same `value`/`onChange` API). Accepts `suggestedCancerSiteId` prop to float a relevant group to the top.
 - i18n: locale JSON files in `public/locales/th.json` and `en.json`
 
 **Root layout** providers: `ThemeProvider` from `next-themes` (attribute="class", defaultTheme="light", enableSystem), `Toaster` from `sonner` (top-right, richColors).
 
-**`next.config.ts`**: `output: 'standalone'`, `outputFileTracingRoot` set to monorepo root, `eslint.ignoreDuringBuilds: true`. Rewrites `/api/*` to backend using `API_INTERNAL_URL` env var (falls back to `http://localhost:4000`).
+**`next.config.ts`**: `output: 'standalone'`, `outputFileTracingRoot` set to monorepo root, `eslint.ignoreDuringBuilds: true`. Rewrites `/api/*` to backend using `API_INTERNAL_URL` env var (falls back to `http://localhost:48002`).
 
 ### Authentication
 
@@ -290,10 +291,19 @@ Scoring in `matching.service.ts`:
 - Stage match: 25 (matched) / 0 (no match) / 10 (no stages defined)
 - Modality: radiation signal gives +50 to radiation protocols, −40 to non-radiation
 - Preference: +5 for `isPreferred` regimens
-- Formulary compliance: up to 20 (ratio of resolved drugs found in SSO protocol formulary × 20). Uses **drug generic name matching** against names extracted from `SsoProtocolDrug.description` — NOT AIPN code comparison (hospital codes and SSO codes are different numbering systems)
+- Formulary compliance: up to 20 (ratio of resolved drugs found in SSO protocol formulary × 20). Uses **drug generic name matching** against names extracted from `SsoProtocolDrug.description` — NOT AIPN code comparison (hospital codes and SSO codes are different numbering systems). **Excludes supportive drugs** (`drugCategory === 'supportive'`, e.g. filgrastim, ondansetron, dexamethasone) from the ratio calculation since they're not in SSO protocol formularies and would unfairly reduce the compliance percentage
 - History bonus: +15 if this protocol was previously confirmed for another visit of the same patient
 - Returns top 10 sorted by score descending
 - NON-PROTOCOL sentinel (score 100) inserted when non-protocol chemotherapy drugs found
+
+### Drug Categories
+
+`Drug.drugCategory` field classifies drugs for scoring logic:
+- `chemotherapy` — cisplatin, doxorubicin, paclitaxel, etc. (used for non-protocol chemo detection)
+- `hormonal` — tamoxifen, letrozole, anastrozole
+- `targeted therapy` — imatinib, trastuzumab, bevacizumab
+- `immunotherapy` — pembrolizumab, nivolumab, BCG
+- `supportive` — filgrastim, ondansetron, dexamethasone, mesna, etc. (excluded from formulary scoring)
 
 ### Import Service Column Mappings
 
@@ -348,8 +358,10 @@ The `TransformInterceptor` wraps all API responses in `{ success: true, data: <p
 - Frontend `next.config.ts` rewrites `/api/*` to the backend, but `apiClient` uses `NEXT_PUBLIC_API_URL` directly
 - Tailwind v4 uses `@import "tailwindcss"` and `@theme` directive instead of v3's `@tailwind` directives
 - Next.js dev server frequently needs `.next` cache cleared after code changes (`rm -rf apps/web/.next`) — stale webpack modules cause `__webpack_modules__[moduleId] is not a function` or `Cannot find module` errors
-- When restarting dev servers, always kill old processes first (`npx kill-port 3000 4000`) to avoid port conflicts
+- When restarting dev servers, always kill old processes first (`npx kill-port 47001 48002`) to avoid port conflicts
 - Docker builds for API require a complex Prisma client compilation step (TS→CJS, sed fixes for `import.meta.url`/extensions) — see `apps/api/Dockerfile`
 - Docker `docker-compose.yml` uses `.env.docker` (NOT `.env`) — don't confuse them
 - Web Dockerfile sets `NEXT_TELEMETRY_DISABLED=1` and `HOSTNAME="0.0.0.0"` (required for standalone in Docker)
 - Nginx in production: `client_max_body_size 50M` for file uploads, TLS 1.2/1.3
+- `backdrop-filter` (e.g. `backdrop-blur-sm`) creates a new containing block for `position: fixed` descendants — use `createPortal` to render modals/dialogs to `document.body` instead of placing them inside such elements
+- `usePaginatedApi` accepts optional third arg `{ enabled: boolean }` — always gate on `filtersHydrated` when using `usePersistedState` (see Key Patterns above)

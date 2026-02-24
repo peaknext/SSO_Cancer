@@ -51,7 +51,7 @@ export class CancerPatientsService {
       where.isActive = isActive;
     }
 
-    const [data, total] = await Promise.all([
+    const [patients, total] = await Promise.all([
       this.prisma.patient.findMany({
         where,
         include: {
@@ -76,7 +76,7 @@ export class CancerPatientsService {
             },
             orderBy: { openedAt: 'desc' },
           },
-          _count: { select: { visits: true, cases: true } },
+          _count: { select: { cases: true } },
         },
         orderBy: { [sortBy]: sortOrder },
         skip: (page - 1) * limit,
@@ -85,11 +85,28 @@ export class CancerPatientsService {
       this.prisma.patient.count({ where }),
     ]);
 
+    // Count visits by HN (natural key) instead of patientId FK
+    const hns = patients.map((p) => p.hn);
+    const visitCounts = hns.length
+      ? await this.prisma.patientVisit.groupBy({
+          by: ['hn'],
+          where: { hn: { in: hns } },
+          _count: true,
+        })
+      : [];
+    const hnVisitMap = new Map(visitCounts.map((vc) => [vc.hn, vc._count]));
+
+    const data = patients.map((p) => ({
+      ...p,
+      _count: { ...p._count, visits: hnVisitMap.get(p.hn) ?? 0 },
+    }));
+
     return { data, total, page, limit };
   }
 
   async findById(id: number) {
-    return this.prisma.patient.findUnique({
+    // Fetch patient with cases (visits queried separately by HN)
+    const patient = await this.prisma.patient.findUnique({
       where: { id },
       include: {
         cases: {
@@ -115,50 +132,72 @@ export class CancerPatientsService {
           },
           orderBy: { openedAt: 'desc' },
         },
-        visits: {
-          include: {
-            case: {
-              select: {
-                id: true,
-                caseNumber: true,
-                status: true,
-                protocol: {
-                  select: {
-                    id: true,
-                    protocolCode: true,
-                    nameThai: true,
-                  },
+      },
+    });
+
+    if (!patient) return null;
+
+    // Re-link any visits whose patientId is null or stale
+    await this.prisma.patientVisit.updateMany({
+      where: {
+        hn: patient.hn,
+        OR: [{ patientId: null }, { patientId: { not: patient.id } }],
+      },
+      data: { patientId: patient.id },
+    });
+
+    // Query visits by HN (natural key) — not by patientId FK
+    const [visits, visitCount] = await Promise.all([
+      this.prisma.patientVisit.findMany({
+        where: { hn: patient.hn },
+        include: {
+          case: {
+            select: {
+              id: true,
+              caseNumber: true,
+              status: true,
+              protocol: {
+                select: {
+                  id: true,
+                  protocolCode: true,
+                  nameThai: true,
                 },
               },
             },
-            confirmedProtocol: {
-              select: {
-                id: true,
-                protocolCode: true,
-                nameThai: true,
-                nameEnglish: true,
-              },
-            },
-            confirmedRegimen: {
-              select: {
-                id: true,
-                regimenCode: true,
-                regimenName: true,
-              },
-            },
-            resolvedSite: {
-              select: { id: true, siteCode: true, nameThai: true },
-            },
-            billingClaims: {
-              where: { isActive: true },
-              orderBy: { roundNumber: 'asc' },
+          },
+          confirmedProtocol: {
+            select: {
+              id: true,
+              protocolCode: true,
+              nameThai: true,
+              nameEnglish: true,
             },
           },
-          orderBy: { visitDate: 'desc' },
+          confirmedRegimen: {
+            select: {
+              id: true,
+              regimenCode: true,
+              regimenName: true,
+            },
+          },
+          resolvedSite: {
+            select: { id: true, siteCode: true, nameThai: true },
+          },
+          billingClaims: {
+            where: { isActive: true },
+            orderBy: { roundNumber: 'asc' },
+          },
         },
-        _count: { select: { visits: true, cases: true } },
-      },
-    });
+        orderBy: { visitDate: 'desc' },
+      }),
+      this.prisma.patientVisit.count({ where: { hn: patient.hn } }),
+    ]);
+
+    return {
+      ...patient,
+      visits,
+      _count: { visits: visitCount, cases: patient.cases.length },
+    };
   }
 
   async create(dto: CreatePatientDto) {

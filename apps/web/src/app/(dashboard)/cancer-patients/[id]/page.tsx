@@ -36,6 +36,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { Skeleton } from '@/components/shared/loading-skeleton';
 import { Modal } from '@/components/ui/modal';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { ProtocolCombobox } from '@/components/shared/protocol-combobox';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
@@ -118,17 +119,6 @@ interface PatientDetail {
   cases: PatientCase[];
   visits: Visit[];
   _count: { visits: number; cases: number };
-}
-
-interface Protocol {
-  id: number;
-  protocolCode: string;
-  nameThai: string;
-}
-
-interface ProtocolsResponse {
-  data: Protocol[];
-  meta: { total: number };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -539,16 +529,6 @@ function CaseCard({
   );
   const [savingProtocol, setSavingProtocol] = useState(false);
 
-  const { data: protocolsResp } = useApi<ProtocolsResponse>(
-    '/protocols?limit=100&sortBy=nameThai&sortOrder=asc',
-    { enabled: editingProtocol },
-  );
-
-  const protocolOptions = (protocolsResp?.data ?? []).map((p) => ({
-    value: String(p.id),
-    label: `${p.protocolCode} — ${p.nameThai}`,
-  }));
-
   const handleSaveProtocol = async () => {
     setSavingProtocol(true);
     try {
@@ -586,12 +566,12 @@ function CaseCard({
             <div className="mt-1.5 text-sm">
               {editingProtocol ? (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Select
+                  <ProtocolCombobox
                     value={selectedProtocolId}
                     onChange={setSelectedProtocolId}
-                    options={protocolOptions}
-                    placeholder="เลือกโปรโตคอล..."
-                    className="w-full max-w-xs"
+                    placeholder="ค้นหาโปรโตคอล..."
+                    className="w-full max-w-sm"
+                    suggestedCancerSiteId={c.protocol?.cancerSite?.id}
                   />
                   <div className="flex items-center gap-1.5">
                     <Button
@@ -1190,16 +1170,6 @@ function CreateCaseModal({
     }
   }, [open, activeCases.length]);
 
-  const { data: protocolsResp } = useApi<ProtocolsResponse>(
-    '/protocols?limit=100&sortBy=nameThai&sortOrder=asc',
-    { enabled: open && step === 'form' },
-  );
-
-  const protocolOptions = (protocolsResp?.data ?? []).map((p) => ({
-    value: String(p.id),
-    label: `${p.protocolCode} — ${p.nameThai}`,
-  }));
-
   const handleCloseActiveCase = async (caseId: number) => {
     setClosingCaseId(caseId);
     try {
@@ -1323,11 +1293,10 @@ function CreateCaseModal({
 
             <div className="space-y-2">
               <Label className="text-sm">โปรโตคอล</Label>
-              <Select
+              <ProtocolCombobox
                 value={protocolId}
                 onChange={setProtocolId}
-                options={protocolOptions}
-                placeholder="เลือกโปรโตคอล (ถ้ามี)..."
+                placeholder="ค้นหาโปรโตคอล (ถ้ามี)..."
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">สามารถกำหนดภายหลังได้</p>

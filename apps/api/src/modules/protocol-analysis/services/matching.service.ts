@@ -4,6 +4,7 @@ import { ImportService } from './import.service';
 import { SsoProtocolDrugsService } from '../../sso-protocol-drugs/sso-protocol-drugs.service';
 import {
   FormularyCompliance,
+  MatchResponse,
   MatchResult,
   StageInference,
   TreatmentModality,
@@ -173,9 +174,9 @@ export class MatchingService {
   }
 
   /**
-   * Calculate modality match score
-   * When radiation signal (Z510/9224) is present, radiation protocols get max boost
-   * and non-radiation protocols are heavily penalized.
+   * Calculate modality match score.
+   * When BOTH radiation and chemo signals are present, chemo protocols win.
+   * When radiation-only, radiation protocols dominate.
    */
   private modalityScore(
     modality: TreatmentModality,
@@ -186,7 +187,15 @@ export class MatchingService {
 
     if (!hasSignal) return 5; // neutral — no modality info available
 
-    // Radiation signal (Z510/9224) — radiation protocols always dominate
+    // BOTH radiation AND chemotherapy — chemo protocols win, no penalty for either
+    if (modality.isRadiation && modality.isChemotherapy) {
+      if (treatmentIntent === 'concurrent_crt') return 40;
+      if (protocolType === 'treatment') return 5;
+      if (protocolType === 'radiation') return 0;
+      return 3;
+    }
+
+    // Radiation-only signal — radiation protocols dominate
     if (modality.isRadiation) {
       if (protocolType === 'radiation') return 50;
       if (treatmentIntent === 'concurrent_crt') return 40;
@@ -205,7 +214,7 @@ export class MatchingService {
   /**
    * Match a visit against all protocols and return ranked results
    */
-  async matchVisit(vn: string): Promise<{ results: MatchResult[]; stageInference: StageInference }> {
+  async matchVisit(vn: string): Promise<MatchResponse> {
     const visit = await this.prisma.patientVisit.findUnique({
       where: { vn },
       include: {
@@ -219,7 +228,7 @@ export class MatchingService {
     const emptyModality: TreatmentModality = { isRadiation: false, isChemotherapy: false, isImmunotherapy: false };
     const emptyInference: StageInference = { inferredStage: null, hasDistantMets: false, hasNodeInvolvement: false, treatmentModality: emptyModality, reasons: [] };
 
-    if (!visit) return { results: [], stageInference: emptyInference };
+    if (!visit) return { results: [], stageInference: emptyInference, nonProtocolChemoDrugs: [] };
 
     // Step 1: Infer stage from secondary diagnoses
     const stageInference = this.inferStage(visit.secondaryDiagnoses);
@@ -246,6 +255,7 @@ export class MatchingService {
     if (!siteId) {
       return {
         stageInference,
+        nonProtocolChemoDrugs: [],
         results: [{
           protocolId: 0,
           protocolCode: '',
@@ -279,9 +289,14 @@ export class MatchingService {
     }
 
     // Step 3b: Collect resolved drug generic names for formulary checking
+    // Exclude supportive drugs (e.g. filgrastim, ondansetron) — they're not in SSO
+    // protocol formulary and would unfairly reduce the compliance percentage
     const visitResolvedDrugNames = new Set<string>();
     for (const med of visit.medications) {
-      if (med.resolvedDrug?.genericName) {
+      if (
+        med.resolvedDrug?.genericName &&
+        med.resolvedDrug.drugCategory?.toLowerCase() !== 'supportive'
+      ) {
         visitResolvedDrugNames.add(med.resolvedDrug.genericName.toLowerCase());
       }
     }
@@ -310,6 +325,7 @@ export class MatchingService {
       return {
         stageInference,
         results: [],
+        nonProtocolChemoDrugs: [],
       };
     }
 
@@ -543,8 +559,12 @@ export class MatchingService {
       }
     }
 
-    // Step 7: Add non-protocol result if unmatched chemotherapy drugs found
-    if (nonProtocolChemoDrugs.length > 0) {
+    // Step 7: Insert non-protocol sentinel ONLY if ALL resolved chemo drugs are outside every protocol
+    const resolvedChemoDrugsCount = chemoDrugs.filter((m) => m.resolvedDrugId).length;
+    const allChemoIsNonProtocol =
+      resolvedChemoDrugsCount > 0 && nonProtocolChemoDrugs.length === resolvedChemoDrugsCount;
+
+    if (allChemoIsNonProtocol) {
       results.unshift({
         protocolId: 0,
         protocolCode: 'NON-PROTOCOL',
@@ -552,7 +572,7 @@ export class MatchingService {
         cancerSiteName: siteName,
         protocolType: 'non_protocol',
         treatmentIntent: null,
-        score: 100, // High score to appear first
+        score: 100,
         matchedRegimen: {
           regimenId: 0,
           regimenCode: '',
@@ -566,7 +586,7 @@ export class MatchingService {
         reasons: [
           `ตรงกับตำแหน่งมะเร็ง: ${siteName}`,
           `พบยาเคมีบำบัดนอกโปรโตคอล: ${nonProtocolChemoDrugs.join(', ')}`,
-          'ยาเหล่านี้ไม่อยู่ในสูตรการรักษามาตรฐานของตำแหน่งมะเร็งนี้',
+          'ยาเคมีบำบัดทั้งหมดในการเยี่ยมนี้ไม่อยู่ในสูตรการรักษามาตรฐาน',
         ],
         stageMatch: null,
         inferredStage: stageInference.inferredStage,
@@ -576,6 +596,6 @@ export class MatchingService {
     }
 
     results.sort((a, b) => b.score - a.score);
-    return { results: results.slice(0, 10), stageInference };
+    return { results: results.slice(0, 10), stageInference, nonProtocolChemoDrugs };
   }
 }

@@ -67,14 +67,15 @@ interface CancerSite {
 
 export default function ProtocolsPage() {
   const router = useRouter();
-  const [page, setPage] = usePersistedState('sso-protocols-page', 1);
-  const [search, setSearch] = usePersistedState('sso-protocols-search', '');
-  const [protocolType, setProtocolType] = usePersistedState('sso-protocols-type', '');
-  const [treatmentIntent, setTreatmentIntent] = usePersistedState('sso-protocols-intent', '');
-  const [cancerSiteId, setCancerSiteId] = usePersistedState('sso-protocols-site', '');
-  const [sortBy, setSortBy] = usePersistedState('sso-protocols-sortBy', 'protocolCode');
-  const [sortOrder, setSortOrder] = usePersistedState<'asc' | 'desc'>('sso-protocols-sortOrder', 'asc');
+  const [page, setPage, h1] = usePersistedState('sso-protocols-page', 1);
+  const [search, setSearch, h2] = usePersistedState('sso-protocols-search', '');
+  const [protocolType, setProtocolType, h3] = usePersistedState('sso-protocols-type', '');
+  const [treatmentIntent, setTreatmentIntent, h4] = usePersistedState('sso-protocols-intent', '');
+  const [cancerSiteId, setCancerSiteId, h5] = usePersistedState('sso-protocols-site', '');
+  const [sortBy, setSortBy, h6] = usePersistedState('sso-protocols-sortBy', 'protocolCode');
+  const [sortOrder, setSortOrder, h7] = usePersistedState<'asc' | 'desc'>('sso-protocols-sortOrder', 'asc');
   const [cancerSites, setCancerSites] = usePersistedState<CancerSite[]>('sso-protocols-sites-cache', []);
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7;
 
   useEffect(() => {
     apiClient
@@ -97,7 +98,7 @@ export default function ProtocolsPage() {
     cancerSiteId: cancerSiteId || undefined,
     sortBy,
     sortOrder,
-  });
+  }, { enabled: filtersHydrated });
 
   const handleSort = useCallback((key: string) => {
     if (sortBy === key) {

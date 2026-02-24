@@ -4,7 +4,7 @@
   "private": true,
   "description": "SSO Cancer Care - Next.js Frontend",
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "next dev --port 47001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

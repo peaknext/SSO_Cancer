@@ -30,7 +30,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/sso_cancer?schema=public
-      PORT: 4000
+      API_PORT: 4000
     ports:
       - '4000:4000'
     depends_on:

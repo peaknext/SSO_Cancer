@@ -37,6 +37,7 @@ export function useApi<T>(path: string, options: UseApiOptions = {}) {
 export function usePaginatedApi<T>(
   basePath: string,
   params: Record<string, string | number | undefined>,
+  options?: UseApiOptions,
 ) {
   const query = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== '')
@@ -44,5 +45,5 @@ export function usePaginatedApi<T>(
     .join('&');
 
   const path = query ? `${basePath}?${query}` : basePath;
-  return useApi<T>(path);
+  return useApi<T>(path, options);
 }

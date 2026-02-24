@@ -77,9 +77,10 @@ function MetadataView({ metadata }: { metadata: string }) {
 
 export default function AuditLogsPage() {
   const user = useAuthStore((s) => s.user);
-  const [page, setPage] = usePersistedState('sso-audit-page', 1);
-  const [action, setAction] = usePersistedState('sso-audit-action', '');
-  const [entityType, setEntityType] = usePersistedState('sso-audit-entity', '');
+  const [page, setPage, h1] = usePersistedState('sso-audit-page', 1);
+  const [action, setAction, h2] = usePersistedState('sso-audit-action', '');
+  const [entityType, setEntityType, h3] = usePersistedState('sso-audit-entity', '');
+  const filtersHydrated = h1 && h2 && h3;
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const { data: response, isLoading } = usePaginatedApi<AuditLogsResponse>('/audit-logs', {
@@ -87,7 +88,7 @@ export default function AuditLogsPage() {
     limit: 20,
     action: action || undefined,
     entityType: entityType || undefined,
-  });
+  }, { enabled: filtersHydrated });
 
   const entityTypeOptions = [
     { value: 'User', label: 'User' },
