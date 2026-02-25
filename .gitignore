@@ -48,3 +48,9 @@ deploy/nginx/ssl/*.crt
 .agents/
 .claude/
 skills-lock.json
+
+# Misc files
+.xlsx
+.xlsm
+.xls
+.gz
