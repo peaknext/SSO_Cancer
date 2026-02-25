@@ -70,6 +70,7 @@ interface VisitMedication {
   resolvedDrug: {
     id: number;
     genericName: string;
+    drugCategory: string | null;
     tradeNames: { tradeName: string | null; drugCode: string }[];
   } | null;
   aipnPricing: {
@@ -193,6 +194,31 @@ interface AiSuggestionResponse {
   status: string;
   createdAt: string;
 }
+
+// ─── Drug category config ─────────────────────────────────────
+
+const DRUG_CATEGORY_CONFIG: Record<string, { label: string; chipCls: string }> = {
+  chemotherapy: {
+    label: 'เคมีบำบัด',
+    chipCls: 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400',
+  },
+  hormonal: {
+    label: 'ฮอร์โมน',
+    chipCls: 'bg-pink-50 dark:bg-pink-950/50 text-pink-700 dark:text-pink-400',
+  },
+  'targeted therapy': {
+    label: 'มุ่งเป้า',
+    chipCls: 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400',
+  },
+  immunotherapy: {
+    label: 'ภูมิคุ้มกัน',
+    chipCls: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-500',
+  },
+  supportive: {
+    label: 'ช่วยเหลือ',
+    chipCls: 'bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400',
+  },
+};
 
 // ─── Stage labels ────────────────────────────────────────────
 
@@ -980,23 +1006,42 @@ export default function ProtocolAnalysisPage() {
                                 const isNonProtocol = nonProtocolDrugSet.has(
                                   med.resolvedDrug!.genericName.toLowerCase(),
                                 );
+                                const isSupportive = med.resolvedDrug!.drugCategory === 'supportive';
+                                const catCfg = DRUG_CATEGORY_CONFIG[med.resolvedDrug!.drugCategory ?? ''];
                                 return (
-                                  <div className="flex items-center gap-1">
-                                    {isNonProtocol ? (
-                                      <AlertTriangle className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400 shrink-0" />
-                                    ) : (
-                                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" />
-                                    )}
-                                    <span className={cn(
-                                      isNonProtocol
-                                        ? 'text-rose-600 dark:text-rose-400 font-semibold'
-                                        : 'text-green-700 dark:text-green-400',
-                                    )}>
-                                      {med.resolvedDrug!.genericName}
-                                    </span>
-                                    {isNonProtocol && (
-                                      <span className="text-[9px] text-rose-500/80 dark:text-rose-400/70 whitespace-nowrap">
-                                        (นอกโปรโตคอล)
+                                  <div className="flex flex-col gap-0.5">
+                                    <div className="flex items-center gap-1">
+                                      {isNonProtocol ? (
+                                        <AlertTriangle className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400 shrink-0" />
+                                      ) : (
+                                        <CheckCircle2 className={cn(
+                                          'h-3.5 w-3.5 shrink-0',
+                                          isSupportive
+                                            ? 'text-slate-400 dark:text-slate-500'
+                                            : 'text-green-600 dark:text-green-400',
+                                        )} />
+                                      )}
+                                      <span className={cn(
+                                        isNonProtocol
+                                          ? 'text-rose-600 dark:text-rose-400 font-semibold'
+                                          : isSupportive
+                                            ? 'text-slate-500 dark:text-slate-400'
+                                            : 'text-green-700 dark:text-green-400',
+                                      )}>
+                                        {med.resolvedDrug!.genericName}
+                                      </span>
+                                      {isNonProtocol && (
+                                        <span className="text-[9px] text-rose-500/80 dark:text-rose-400/70 whitespace-nowrap">
+                                          (นอกโปรโตคอล)
+                                        </span>
+                                      )}
+                                    </div>
+                                    {catCfg && (
+                                      <span className={cn(
+                                        'inline-flex self-start items-center text-[9px] font-medium px-1.5 py-px rounded-sm',
+                                        catCfg.chipCls,
+                                      )}>
+                                        {catCfg.label}
                                       </span>
                                     )}
                                   </div>

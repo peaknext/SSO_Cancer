@@ -22,6 +22,12 @@ export class QueryPatientsDto extends PaginationQueryDto {
   @IsInt()
   sourceHospitalId?: number;
 
+  @ApiPropertyOptional({ description: 'กรองตามชื่อยา generic (partial match)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  drugName?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Boolean)

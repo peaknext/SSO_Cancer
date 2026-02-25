@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Plus, Download } from 'lucide-react';
+import { Users, Plus, Download, Pill, X } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { SearchInput } from '@/components/shared/search-input';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { CodeBadge } from '@/components/shared/code-badge';
 import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/shared/loading-skeleton';
@@ -68,8 +70,26 @@ export default function CancerPatientsPage() {
   const [sortBy, setSortBy, h4] = usePersistedState('cp-sortBy', 'hn');
   const [sortOrder, setSortOrder, h5] = usePersistedState<'asc' | 'desc'>('cp-sortOrder', 'asc');
   const [sourceHospitalId, setSourceHospitalId, h6] = usePersistedState('cp-sourceHospitalId', '');
+  const [drugName, setDrugName, h7] = usePersistedState('cp-drugName', '');
+  const [drugNameLocal, setDrugNameLocal] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
-  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6;
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7;
+
+  // Sync local drug input from persisted state after hydration
+  useEffect(() => {
+    if (h7) setDrugNameLocal(drugName);
+  }, [h7]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounce drug name → persisted value
+  const drugDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleDrugNameChange = useCallback((v: string) => {
+    setDrugNameLocal(v);
+    if (drugDebounceRef.current) clearTimeout(drugDebounceRef.current);
+    drugDebounceRef.current = setTimeout(() => {
+      setDrugName(v);
+      setPage(1);
+    }, 350);
+  }, [setDrugName, setPage]);
 
   const { data: response, isLoading } = usePaginatedApi<PatientsResponse>('/cancer-patients', {
     page,
@@ -77,6 +97,7 @@ export default function CancerPatientsPage() {
     search: search || undefined,
     cancerSiteId: cancerSiteId || undefined,
     sourceHospitalId: sourceHospitalId || undefined,
+    drugName: drugName || undefined,
     sortBy,
     sortOrder,
   }, { enabled: filtersHydrated });
@@ -144,7 +165,7 @@ export default function CancerPatientsPage() {
               {activeCase.caseNumber}
             </Badge>
             {activeCase.protocol && (
-              <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+              <span className="text-xs text-muted-foreground truncate max-w-45">
                 {activeCase.protocol.nameThai}
               </span>
             )}
@@ -242,7 +263,7 @@ export default function CancerPatientsPage() {
           onChange={(v) => { setCancerSiteId(v); setPage(1); }}
           options={siteOptions}
           placeholder="ตำแหน่งมะเร็งทั้งหมด"
-          className="w-full sm:w-[240px]"
+          className="w-full sm:w-60"
         />
         <Select
           value={sourceHospitalId}
@@ -251,6 +272,27 @@ export default function CancerPatientsPage() {
           placeholder="รพ.ต้นทางทั้งหมด"
           className="w-full sm:w-70"
         />
+        <div className="relative w-full sm:w-55">
+          <Pill className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/60 pointer-events-none" />
+          <Input
+            value={drugNameLocal}
+            onChange={(e) => handleDrugNameChange(e.target.value)}
+            placeholder="กรองตามชื่อยา..."
+            className={cn(
+              'pl-9 pr-8',
+              drugNameLocal && 'ring-1 ring-primary/30 border-primary/40',
+            )}
+          />
+          {drugNameLocal && (
+            <button
+              onClick={() => handleDrugNameChange('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              type="button"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (

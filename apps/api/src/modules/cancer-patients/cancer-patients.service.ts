@@ -51,6 +51,7 @@ export class CancerPatientsService {
       cancerSiteId,
       sourceHospitalId,
       isActive,
+      drugName,
     } = query;
 
     const where: Prisma.PatientWhereInput = {};
@@ -73,6 +74,23 @@ export class CancerPatientsService {
 
     if (isActive !== undefined) {
       where.isActive = isActive;
+    }
+
+    // Filter by drug name: find HNs that have visits with matching resolved drug
+    if (drugName) {
+      const pattern = `%${drugName}%`;
+      const rows = await this.prisma.$queryRaw<{ hn: string }[]>`
+        SELECT DISTINCT pv.hn
+        FROM patient_visits pv
+        JOIN visit_medications vm ON vm.visit_id = pv.id
+        JOIN drugs d ON d.id = vm.resolved_drug_id
+        WHERE d.generic_name ILIKE ${pattern}
+          AND d.is_active = true
+      `;
+      if (rows.length === 0) {
+        return { data: [], total: 0, page, limit };
+      }
+      where.hn = { in: rows.map((r) => r.hn) };
     }
 
     const [patients, total] = await Promise.all([

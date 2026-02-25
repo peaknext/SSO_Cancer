@@ -290,6 +290,7 @@ export class ProtocolAnalysisController {
               select: {
                 id: true,
                 genericName: true,
+                drugCategory: true,
                 tradeNames: {
                   select: { tradeName: true, drugCode: true },
                   take: 3,
