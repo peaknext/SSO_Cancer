@@ -14,9 +14,10 @@
 3. [เตรียม server โรงพยาบาล (ทำครั้งเดียว)](#3-เตรียม-server-โรงพยาบาล-ทำครั้งเดียว)
 4. [วิธี A: Deploy ด้วยไฟล์ tar (Offline)](#4-วิธี-a-deploy-ด้วยไฟล์-tar-offline)
 5. [วิธี B: Deploy ผ่าน Docker Hub (Online)](#5-วิธี-b-deploy-ผ่าน-docker-hub-online)
-6. [การอัปเดตเวอร์ชัน](#6-การอัปเดตเวอร์ชัน)
-7. [คำสั่งดูแลระบบ](#7-คำสั่งดูแลระบบ)
-8. [การแก้ปัญหา (Troubleshooting)](#8-การแก้ปัญหา-troubleshooting)
+6. [การนำข้อมูลจากเครื่อง Dev ไป Production](#6-การนำข้อมูลจากเครื่อง-dev-ไป-production)
+7. [การอัปเดตเวอร์ชัน](#7-การอัปเดตเวอร์ชัน)
+8. [คำสั่งดูแลระบบ](#8-คำสั่งดูแลระบบ)
+9. [การแก้ปัญหา (Troubleshooting)](#9-การแก้ปัญหา-troubleshooting)
 
 ---
 
@@ -394,7 +395,272 @@ bash deploy/pull-and-run.sh v1.0.0
 
 ---
 
-## 6. การอัปเดตเวอร์ชัน
+## 6. การนำข้อมูลจากเครื่อง Dev ไป Production
+
+เมื่อ deploy ปกติ (วิธี A หรือ B) ระบบจะรัน Prisma migration เพื่อสร้าง schema + seed ข้อมูลพื้นฐาน (~1,700 rows: รหัสยา, โปรโตคอล, staging ฯลฯ) ให้อัตโนมัติ
+
+แต่ถ้าต้องการนำ **ข้อมูลจริง** ที่มีอยู่ในเครื่อง dev (เช่น ข้อมูลผู้ป่วยที่ import, protocol analysis ที่ทำไปแล้ว, billing claims ฯลฯ) ไปที่ production ด้วย ให้ทำตามขั้นตอนนี้
+
+### เลือกวิธีที่เหมาะสม
+
+| สถานการณ์ | วิธีที่เหมาะ |
+|-----------|-------------|
+| Production ใหม่ ต้องการเฉพาะข้อมูลพื้นฐาน (ยา, โปรโตคอล) | ไม่ต้องทำอะไร — migration + seed ทำให้อัตโนมัติ |
+| ต้องการนำข้อมูลจริงทั้งหมดจาก dev ไป production | **วิธี 1: Full dump/restore** |
+| ต้องการนำเฉพาะข้อมูลบางตาราง (เช่น เฉพาะ patient data) | **วิธี 2: Selective dump** |
+| ต้องการย้ายข้อมูลจาก production เก่าไป production ใหม่ | **วิธี 1: Full dump/restore** (ทำจาก production เก่า) |
+
+### วิธี 1: Full Database Dump/Restore
+
+#### ขั้นตอน 1: Export จากเครื่อง Dev
+
+**กรณี PostgreSQL รันบนเครื่อง dev โดยตรง (localhost:5432):**
+
+```bash
+cd SSO_Cancer
+
+# Dump ทั้ง database เป็นไฟล์ custom format (มีขนาดเล็กกว่า SQL)
+pg_dump -U postgres -F c -d sso_cancer -f backups/sso_cancer_export.dump
+
+# หรือ dump เป็น plain SQL (อ่านเข้าใจได้ง่ายกว่า)
+pg_dump -U postgres -d sso_cancer > backups/sso_cancer_export.sql
+```
+
+**กรณี PostgreSQL รันใน Docker (dev full-stack):**
+
+```bash
+cd SSO_Cancer
+
+# Dump จาก Docker container (custom format)
+docker compose exec db pg_dump -U postgres -F c sso_cancer > backups/sso_cancer_export.dump
+
+# หรือ plain SQL
+docker compose exec db pg_dump -U postgres sso_cancer > backups/sso_cancer_export.sql
+```
+
+> **ขนาดไฟล์**: ประมาณ 1–5 MB สำหรับข้อมูลพื้นฐาน + ข้อมูลผู้ป่วย 1,000–5,000 visits
+
+#### ขั้นตอน 2: โอนไฟล์ dump ไป server
+
+```bash
+# ผ่าน SCP
+scp backups/sso_cancer_export.dump user@192.168.1.100:/home/user/SSO_Cancer/backups/
+
+# หรือคัดลอกผ่าน USB drive
+```
+
+#### ขั้นตอน 3: Deploy ระบบบน server (ถ้ายังไม่ได้ deploy)
+
+**สำคัญ**: ต้อง deploy ระบบก่อน (วิธี A หรือ B) เพื่อให้ Docker containers ทำงาน + database สร้างโดย migration แล้ว
+
+```bash
+cd SSO_Cancer
+
+# Deploy ตามปกติ (เลือกวิธี A หรือ B)
+bash deploy/import-and-run.sh v1.0.0    # วิธี A
+# หรือ
+bash deploy/pull-and-run.sh v1.0.0      # วิธี B
+```
+
+#### ขั้นตอน 4: Restore ข้อมูลบน server
+
+```bash
+cd SSO_Cancer
+export TAG=v1.0.0
+
+# === วิธี custom format (.dump) ===
+
+# 4a. ล้างข้อมูลเดิม (seed data) แล้ว restore ข้อมูลจาก dev
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec -T db pg_restore -U postgres -d sso_cancer --clean --if-exists < backups/sso_cancer_export.dump
+
+# === วิธี plain SQL (.sql) ===
+
+# 4a. ลบ database เดิม แล้วสร้างใหม่
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec db psql -U postgres -c "DROP DATABASE IF EXISTS sso_cancer;"
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec db psql -U postgres -c "CREATE DATABASE sso_cancer;"
+
+# 4b. Restore จากไฟล์ SQL
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec -T db psql -U postgres -d sso_cancer < backups/sso_cancer_export.sql
+```
+
+#### ขั้นตอน 5: ตรวจสอบและ Restart
+
+```bash
+# ตรวจสอบจำนวนข้อมูลในตารางหลัก
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec db psql -U postgres -d sso_cancer -c "
+    SELECT 'drugs' as table_name, count(*) from drugs
+    UNION ALL SELECT 'protocols', count(*) from protocol_names
+    UNION ALL SELECT 'patients', count(*) from patients
+    UNION ALL SELECT 'patient_visits', count(*) from patient_visits
+    UNION ALL SELECT 'visit_medications', count(*) from visit_medications
+    UNION ALL SELECT 'users', count(*) from users
+    ORDER BY table_name;
+  "
+
+# Restart API เพื่อ reconnect กับ database
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production restart api
+
+# ตรวจ health check
+sleep 10
+curl -sk https://localhost/api/v1/health
+```
+
+### วิธี 2: Selective Dump (เฉพาะบางตาราง)
+
+ถ้าต้องการนำเฉพาะข้อมูลบางส่วน เช่น เฉพาะข้อมูลผู้ป่วยและ protocol analysis โดยยังคงให้ migration + seed สร้างข้อมูลพื้นฐานตามปกติ
+
+#### ตารางข้อมูลผู้ป่วย
+
+```bash
+# Export เฉพาะตารางที่เกี่ยวข้องกับข้อมูลผู้ป่วย
+pg_dump -U postgres -d sso_cancer \
+  -t patient_imports \
+  -t patient_visits \
+  -t visit_medications \
+  -t ai_suggestions \
+  -t patients \
+  -t patient_cases \
+  -t visit_billing_claims \
+  --data-only > backups/patient_data_export.sql
+```
+
+> **`--data-only`**: Export เฉพาะข้อมูล (INSERT statements) ไม่รวม schema — เพราะ migration สร้าง schema ให้แล้ว
+
+#### Restore บน server
+
+```bash
+# Deploy ตามปกติก่อน (migration + seed จะสร้าง schema + ข้อมูลพื้นฐาน)
+bash deploy/import-and-run.sh v1.0.0
+
+# จากนั้น restore ข้อมูลผู้ป่วยทับลงไป
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec -T db psql -U postgres -d sso_cancer < backups/patient_data_export.sql
+```
+
+#### ตารางข้อมูลผู้ใช้ + Audit log
+
+```bash
+# Export ข้อมูลผู้ใช้ (ไม่รวม sessions เพราะจะหมดอายุ)
+pg_dump -U postgres -d sso_cancer \
+  -t users \
+  -t password_history \
+  -t audit_logs \
+  --data-only > backups/user_data_export.sql
+```
+
+> **หมายเหตุ**: ถ้า export ตาราง `users` จะรวม admin ที่ seed สร้างด้วย → อาจเกิด duplicate key ตอน restore ถ้า seed รันก่อนแล้ว ใช้ `--on-conflict-do-nothing` หรือลบ admin row จากไฟล์ก่อน restore
+
+### สิ่งที่ต้องระวัง
+
+#### 1. Password Hash เข้ากันได้
+
+Password hash ใช้ bcrypt ซึ่งไม่ผูกกับ server — hash ที่สร้างบน dev ใช้ได้บน production โดยไม่ต้องแก้ไข
+
+#### 2. JWT Secret ที่ต่างกัน
+
+Production ใช้ JWT secret ต่างจาก dev → **session ทั้งหมดจาก dev จะใช้ไม่ได้** บน production ซึ่งเป็นสิ่งที่ถูกต้อง — ผู้ใช้ต้องล็อกอินใหม่
+
+ล้างตาราง sessions หลัง restore เพื่อความสะอาด:
+
+```bash
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec db psql -U postgres -d sso_cancer -c "DELETE FROM sessions;"
+```
+
+#### 3. Sequence Reset
+
+หลังจาก restore ข้อมูล auto-increment sequences อาจไม่ตรงกับ ID ล่าสุด ทำให้เกิด duplicate key error ตอนสร้างข้อมูลใหม่ แก้โดย:
+
+```bash
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec db psql -U postgres -d sso_cancer -c "
+    -- Reset sequences ของทุกตารางให้ตรงกับ max ID
+    DO \$\$
+    DECLARE
+      r RECORD;
+    BEGIN
+      FOR r IN
+        SELECT c.table_name, c.column_name, pg_get_serial_sequence(c.table_name, c.column_name) AS seq
+        FROM information_schema.columns c
+        WHERE c.column_default LIKE 'nextval%'
+          AND c.table_schema = 'public'
+      LOOP
+        EXECUTE format(
+          'SELECT setval(%L, COALESCE((SELECT MAX(%I) FROM %I), 0) + 1, false)',
+          r.seq, r.column_name, r.table_name
+        );
+      END LOOP;
+    END \$\$;
+  "
+```
+
+#### 4. ขนาดไฟล์ dump
+
+| ปริมาณข้อมูล | ขนาดไฟล์โดยประมาณ |
+|-------------|-------------------|
+| ข้อมูลพื้นฐาน (seed เท่านั้น) | ~800 KB (.dump) / ~3 MB (.sql) |
+| + ผู้ป่วย 1,000 visits | ~2 MB (.dump) / ~8 MB (.sql) |
+| + ผู้ป่วย 10,000 visits | ~10 MB (.dump) / ~40 MB (.sql) |
+| + ผู้ป่วย 100,000 visits | ~80 MB (.dump) / ~300 MB (.sql) |
+
+> แนะนำใช้ custom format (`.dump`) เพราะมีการบีบอัดข้อมูลและ restore ได้เร็วกว่า
+
+### สรุปขั้นตอนแบบรวดเร็ว
+
+```bash
+# === บนเครื่อง Dev ===
+cd SSO_Cancer
+
+# 1. Dump database
+pg_dump -U postgres -F c -d sso_cancer -f backups/sso_cancer_export.dump
+
+# 2. โอนไฟล์ไป server (พร้อมกับ Docker images)
+scp backups/sso_cancer_export.dump user@server:/home/user/SSO_Cancer/backups/
+
+# === บน Server ===
+cd SSO_Cancer
+export TAG=v1.0.0
+
+# 3. Deploy ระบบ (ถ้ายังไม่ได้)
+bash deploy/import-and-run.sh v1.0.0
+
+# 4. Restore ข้อมูล
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec -T db pg_restore -U postgres -d sso_cancer --clean --if-exists < backups/sso_cancer_export.dump
+
+# 5. Reset sequences
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec db psql -U postgres -d sso_cancer -c "
+    DO \$\$
+    DECLARE r RECORD;
+    BEGIN
+      FOR r IN
+        SELECT c.table_name, c.column_name, pg_get_serial_sequence(c.table_name, c.column_name) AS seq
+        FROM information_schema.columns c
+        WHERE c.column_default LIKE 'nextval%' AND c.table_schema = 'public'
+      LOOP
+        EXECUTE format('SELECT setval(%L, COALESCE((SELECT MAX(%I) FROM %I), 0) + 1, false)', r.seq, r.column_name, r.table_name);
+      END LOOP;
+    END \$\$;
+  "
+
+# 6. ล้าง sessions เก่า + Restart API
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec db psql -U postgres -d sso_cancer -c "DELETE FROM sessions;"
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production restart api
+
+# 7. ตรวจสอบ
+sleep 10 && curl -sk https://localhost/api/v1/health
+```
+
+---
+
+## 7. การอัปเดตเวอร์ชัน
 
 ### อัปเดตด้วยไฟล์ tar (วิธี A)
 
@@ -446,7 +712,7 @@ bash deploy/pull-and-run.sh v1.0.0      # วิธี B
 
 ---
 
-## 7. คำสั่งดูแลระบบ
+## 8. คำสั่งดูแลระบบ
 
 คำสั่งทั้งหมดรันจาก root directory ของ project บน server:
 
@@ -531,7 +797,7 @@ docker image prune -a      # ลบ image ที่ไม่ได้ใช้ (
 
 ---
 
-## 8. การแก้ปัญหา (Troubleshooting)
+## 9. การแก้ปัญหา (Troubleshooting)
 
 ### ปัญหา: เข้าเว็บไม่ได้ (Connection refused)
 

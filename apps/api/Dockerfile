@@ -15,8 +15,9 @@ RUN npm ci
 # Generate Prisma client
 RUN npx prisma generate --config prisma/prisma.config.ts
 
-# Copy API source
+# Copy API source + seed data
 COPY apps/api/ apps/api/
+COPY database/ database/
 
 # Build NestJS (TypeScript compilation)
 RUN cd apps/api && npm run build
@@ -86,6 +87,14 @@ COPY --from=builder /app/apps/api/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 # Prisma generated client must be at ./dist/prisma/ to match compiled import paths
 COPY --from=builder /app/prisma ./dist/prisma
+# Seed support: create paths matching seed.ts expectations
+# seed.ts uses path.join(__dirname, '..', 'database', 'seeds') → needs /app/database/seeds/
+# seed.ts imports from './generated/...' → needs /app/prisma/generated/ → symlink to dist
+COPY --from=builder /app/prisma/seed.ts ./prisma/seed.ts
+COPY --from=builder /app/database/seeds ./database/seeds
+
+# Symlink generated client so seed.ts imports resolve correctly
+RUN ln -s /app/dist/prisma/generated ./prisma/generated
 
 # Set ownership
 RUN chown -R nestjs:nodejs /app

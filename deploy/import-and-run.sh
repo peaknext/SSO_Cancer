@@ -105,6 +105,13 @@ IMAGE_TAG="${TAG}" docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" 
     echo "initialize the database schema manually. Check logs above for details."
   }
 
+echo "Running database seed..."
+IMAGE_TAG="${TAG}" docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" \
+  run --rm api npx ts-node --transpile-only prisma/seed.ts || {
+    echo ""
+    echo "WARNING: Seed failed. Check logs above for details."
+  }
+
 # ── Step 4: Start all services ──────────────────────────────────────────────
 echo ""
 echo "4/4 — Starting all services..."
