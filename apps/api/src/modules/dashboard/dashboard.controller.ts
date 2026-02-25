@@ -24,8 +24,14 @@ export class DashboardController {
 
   @Get('top-drugs')
   @ApiOperation({ summary: 'Top 10 most used drugs by visit count' })
-  async getTopDrugsByVisits() {
-    return this.dashboardService.getTopDrugsByVisits();
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    enum: ['all', 'protocol', 'chemotherapy', 'hormonal', 'immunotherapy', 'targeted therapy'],
+    description: 'Filter by drug category or "protocol" for drugs in regimens',
+  })
+  async getTopDrugsByVisits(@Query('category') category?: string) {
+    return this.dashboardService.getTopDrugsByVisits(category);
   }
 
   @Get('confirmation-rate')

@@ -1,4 +1,4 @@
-import { IsString, MaxLength, IsOptional, IsInt } from 'class-validator';
+import { IsString, MaxLength, IsOptional, IsInt, IsDateString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCaseDto {
@@ -19,4 +19,19 @@ export class CreateCaseDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ description: 'วันที่ลงทะเบียนส่งต่อ', example: '2025-01-15' })
+  @IsOptional()
+  @IsDateString()
+  referralDate?: string;
+
+  @ApiPropertyOptional({ description: 'วันที่ลงทะเบียนรับเข้า', example: '2025-01-20' })
+  @IsOptional()
+  @IsDateString()
+  admissionDate?: string;
+
+  @ApiPropertyOptional({ description: 'รหัสสถานพยาบาลต้นทาง (Hospital ID)' })
+  @IsOptional()
+  @IsInt()
+  sourceHospitalId?: number;
 }

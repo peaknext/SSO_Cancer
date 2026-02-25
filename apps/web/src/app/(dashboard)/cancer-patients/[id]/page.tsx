@@ -21,6 +21,7 @@ import {
   ChevronsUpDown,
   AlertTriangle,
   Save,
+  Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/use-api';
@@ -37,6 +38,7 @@ import { Skeleton } from '@/components/shared/loading-skeleton';
 import { Modal } from '@/components/ui/modal';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { ProtocolCombobox } from '@/components/shared/protocol-combobox';
+import { HospitalCombobox } from '@/components/shared/hospital-combobox';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
@@ -60,6 +62,15 @@ interface PatientCase {
   openedAt: string;
   closedAt: string | null;
   notes: string | null;
+  referralDate: string | null;
+  admissionDate: string | null;
+  sourceHospital: {
+    id: number;
+    hcode5: string | null;
+    hcode9: string;
+    nameThai: string;
+    province: string;
+  } | null;
   protocol: {
     id: number;
     protocolCode: string;
@@ -571,31 +582,44 @@ function CaseCard({
   onComplete: () => void;
   onUpdated: () => void;
 }) {
-  const [editingProtocol, setEditingProtocol] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [selectedProtocolId, setSelectedProtocolId] = useState(
     c.protocol ? String(c.protocol.id) : '',
   );
-  const [savingProtocol, setSavingProtocol] = useState(false);
+  const [refReferralDate, setRefReferralDate] = useState(c.referralDate?.slice(0, 10) ?? '');
+  const [refAdmissionDate, setRefAdmissionDate] = useState(c.admissionDate?.slice(0, 10) ?? '');
+  const [selectedHospitalId, setSelectedHospitalId] = useState(
+    c.sourceHospital ? String(c.sourceHospital.id) : '',
+  );
+  const [saving, setSaving] = useState(false);
 
-  const handleSaveProtocol = async () => {
-    setSavingProtocol(true);
+  const hasReferralData = c.referralDate || c.admissionDate || c.sourceHospital;
+
+  const handleSave = async () => {
+    setSaving(true);
     try {
       await apiClient.patch(`/cancer-patients/${patientId}/cases/${c.id}`, {
         protocolId: selectedProtocolId ? Number(selectedProtocolId) : null,
+        referralDate: refReferralDate || null,
+        admissionDate: refAdmissionDate || null,
+        sourceHospitalId: selectedHospitalId ? Number(selectedHospitalId) : null,
       });
-      toast.success('อัปเดตโปรโตคอลสำเร็จ');
-      setEditingProtocol(false);
+      toast.success('อัปเดตรายละเอียดเคสสำเร็จ');
+      setEditing(false);
       onUpdated();
     } catch {
-      toast.error('ไม่สามารถอัปเดตโปรโตคอลได้');
+      toast.error('ไม่สามารถอัปเดตข้อมูลได้');
     } finally {
-      setSavingProtocol(false);
+      setSaving(false);
     }
   };
 
-  const handleCancelEdit = () => {
+  const handleCancel = () => {
     setSelectedProtocolId(c.protocol ? String(c.protocol.id) : '');
-    setEditingProtocol(false);
+    setRefReferralDate(c.referralDate?.slice(0, 10) ?? '');
+    setRefAdmissionDate(c.admissionDate?.slice(0, 10) ?? '');
+    setSelectedHospitalId(c.sourceHospital ? String(c.sourceHospital.id) : '');
+    setEditing(false);
   };
 
   return (
@@ -610,60 +634,17 @@ function CaseCard({
               <span className="font-mono font-semibold text-sm">{c.caseNumber}</span>
             </div>
 
-            {/* Protocol display / edit */}
-            <div className="mt-1.5 text-sm">
-              {editingProtocol ? (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <ProtocolCombobox
-                    value={selectedProtocolId}
-                    onChange={setSelectedProtocolId}
-                    placeholder="ค้นหาโปรโตคอล..."
-                    className="w-full max-w-sm"
-                    suggestedCancerSiteId={c.protocol?.cancerSite?.id}
-                  />
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={handleSaveProtocol}
-                      disabled={savingProtocol}
-                    >
-                      <Save className="h-3 w-3 mr-1" />
-                      {savingProtocol ? 'บันทึก...' : 'บันทึก'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs"
-                      onClick={handleCancelEdit}
-                      disabled={savingProtocol}
-                    >
-                      ยกเลิก
-                    </Button>
-                  </div>
-                </div>
+            {/* Protocol display (read-only) */}
+            <div className="mt-1.5 text-sm text-muted-foreground">
+              {c.protocol ? (
+                <span>
+                  Protocol: <span className="text-foreground font-medium">{c.protocol.nameThai}</span>
+                  {c.protocol.cancerSite && (
+                    <span className="ml-1 text-xs">({c.protocol.cancerSite.nameThai})</span>
+                  )}
+                </span>
               ) : (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  {c.protocol ? (
-                    <span>
-                      Protocol: <span className="text-foreground font-medium">{c.protocol.nameThai}</span>
-                      {c.protocol.cancerSite && (
-                        <span className="ml-1 text-xs">({c.protocol.cancerSite.nameThai})</span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="italic">ยังไม่ได้กำหนดโปรโตคอล</span>
-                  )}
-                  {c.status === 'ACTIVE' && (
-                    <button
-                      className="text-primary hover:text-primary/80 transition-colors"
-                      onClick={() => setEditingProtocol(true)}
-                      title={c.protocol ? 'เปลี่ยนโปรโตคอล' : 'กำหนดโปรโตคอล'}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
+                <span className="italic">ยังไม่ได้กำหนดโปรโตคอล</span>
               )}
             </div>
 
@@ -675,9 +656,35 @@ function CaseCard({
             {c.notes && (
               <p className="mt-1 text-xs text-muted-foreground line-clamp-1">{c.notes}</p>
             )}
+
+            {/* Referral info (read-only) */}
+            {hasReferralData && (
+              <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                <Building2 className="h-3 w-3 shrink-0" />
+                {c.referralDate && (
+                  <span>ส่งต่อ: {formatThaiDate(c.referralDate)}</span>
+                )}
+                {c.admissionDate && (
+                  <span>รับเข้า: {formatThaiDate(c.admissionDate)}</span>
+                )}
+                {c.sourceHospital && (
+                  <span>
+                    รพ.ต้นทาง:{' '}
+                    {c.sourceHospital.hcode5 && (
+                      <span className="font-mono">{c.sourceHospital.hcode5}</span>
+                    )}{' '}
+                    <span className="text-foreground">{c.sourceHospital.nameThai}</span>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-          {c.status === 'ACTIVE' && (
-            <div className="flex items-center gap-2 shrink-0">
+          {c.status === 'ACTIVE' && !editing && (
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                แก้ไขรายละเอียด
+              </Button>
               <Button size="sm" variant="outline" onClick={onComplete}>
                 <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                 ปิดเคส
@@ -685,6 +692,71 @@ function CaseCard({
             </div>
           )}
         </div>
+
+        {/* Unified edit form */}
+        {editing && (
+          <div className="mt-3 rounded-md border border-primary/20 bg-primary/2 p-3 space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">โปรโตคอล</Label>
+              <ProtocolCombobox
+                value={selectedProtocolId}
+                onChange={setSelectedProtocolId}
+                placeholder="ค้นหาโปรโตคอล..."
+                className="w-full"
+                suggestedCancerSiteId={c.protocol?.cancerSite?.id}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">วันที่ลงทะเบียนส่งต่อ</Label>
+                <Input
+                  type="date"
+                  value={refReferralDate}
+                  onChange={(e) => setRefReferralDate(e.target.value)}
+                  className="h-7 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">วันที่ลงทะเบียนรับเข้า</Label>
+                <Input
+                  type="date"
+                  value={refAdmissionDate}
+                  onChange={(e) => setRefAdmissionDate(e.target.value)}
+                  className="h-7 text-xs"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">สถานพยาบาลต้นทาง</Label>
+              <HospitalCombobox
+                value={selectedHospitalId}
+                onChange={setSelectedHospitalId}
+                placeholder="ค้นหาสถานพยาบาล..."
+                className="w-full"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                <Save className="h-3 w-3 mr-1" />
+                {saving ? 'บันทึก...' : 'บันทึก'}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={handleCancel}
+                disabled={saving}
+              >
+                ยกเลิก
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -1231,6 +1303,9 @@ function CreateCaseModal({
   const [caseNumber, setCaseNumber] = useState('');
   const [protocolId, setProtocolId] = useState('');
   const [notes, setNotes] = useState('');
+  const [referralDate, setReferralDate] = useState('');
+  const [admissionDate, setAdmissionDate] = useState('');
+  const [hospitalId, setHospitalId] = useState('');
   const [saving, setSaving] = useState(false);
   const [closingCaseId, setClosingCaseId] = useState<number | null>(null);
 
@@ -1241,6 +1316,9 @@ function CreateCaseModal({
       setCaseNumber('');
       setProtocolId('');
       setNotes('');
+      setReferralDate('');
+      setAdmissionDate('');
+      setHospitalId('');
     }
   }, [open, activeCases.length]);
 
@@ -1270,11 +1348,17 @@ function CreateCaseModal({
         caseNumber: caseNumber.trim(),
         protocolId: protocolId ? Number(protocolId) : undefined,
         notes: notes || undefined,
+        referralDate: referralDate || undefined,
+        admissionDate: admissionDate || undefined,
+        sourceHospitalId: hospitalId ? Number(hospitalId) : undefined,
       });
       toast.success('สร้างเคสสำเร็จ');
       setCaseNumber('');
       setProtocolId('');
       setNotes('');
+      setReferralDate('');
+      setAdmissionDate('');
+      setHospitalId('');
       onClose();
       onCreated();
     } catch (err: unknown) {
@@ -1383,6 +1467,40 @@ function CreateCaseModal({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
+            </div>
+
+            {/* Referral fields */}
+            <div className="border-t pt-4 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">ข้อมูลส่งต่อ (ถ้ามี)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">วันที่ลงทะเบียนส่งต่อ</Label>
+                  <Input
+                    type="date"
+                    value={referralDate}
+                    onChange={(e) => setReferralDate(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">วันที่ลงทะเบียนรับเข้า</Label>
+                  <Input
+                    type="date"
+                    value={admissionDate}
+                    onChange={(e) => setAdmissionDate(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">สถานพยาบาลต้นทาง</Label>
+                <HospitalCombobox
+                  value={hospitalId}
+                  onChange={setHospitalId}
+                  placeholder="ค้นหาสถานพยาบาล..."
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-3 px-6 pb-6">

@@ -52,6 +52,8 @@ const ALLOWED_SORT_FIELDS = [
   'lastUpdated',
   'aipnCode',
   'formulaCategory',
+  'province',
+  'hcode5',
 ];
 
 export class PaginationQueryDto {

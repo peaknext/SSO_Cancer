@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Plus } from 'lucide-react';
+import { Users, Plus, Download } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/shared/loading-skeleton';
 import { Button } from '@/components/ui/button';
 import { useApi } from '@/hooks/use-api';
+import { ExportModal } from './export-modal';
 
 interface PatientCase {
   id: number;
@@ -66,13 +67,16 @@ export default function CancerPatientsPage() {
   const [cancerSiteId, setCancerSiteId, h3] = usePersistedState('cp-cancerSiteId', '');
   const [sortBy, setSortBy, h4] = usePersistedState('cp-sortBy', 'hn');
   const [sortOrder, setSortOrder, h5] = usePersistedState<'asc' | 'desc'>('cp-sortOrder', 'asc');
-  const filtersHydrated = h1 && h2 && h3 && h4 && h5;
+  const [sourceHospitalId, setSourceHospitalId, h6] = usePersistedState('cp-sourceHospitalId', '');
+  const [exportOpen, setExportOpen] = useState(false);
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6;
 
   const { data: response, isLoading } = usePaginatedApi<PatientsResponse>('/cancer-patients', {
     page,
     limit: 25,
     search: search || undefined,
     cancerSiteId: cancerSiteId || undefined,
+    sourceHospitalId: sourceHospitalId || undefined,
     sortBy,
     sortOrder,
   }, { enabled: filtersHydrated });
@@ -81,9 +85,18 @@ export default function CancerPatientsPage() {
     '/cancer-sites?limit=100&sortBy=siteCode&sortOrder=asc',
   );
 
+  const { data: caseHospitals } = useApi<{ id: number; hcode5: string | null; nameThai: string; province: string }[]>(
+    '/cancer-patients/case-hospitals',
+  );
+
   const siteOptions = (sitesResponse?.data ?? []).map((s) => ({
     value: String(s.id),
     label: `${s.siteCode} — ${s.nameThai}`,
+  }));
+
+  const hospitalOptions = (caseHospitals ?? []).map((h) => ({
+    value: String(h.id),
+    label: `${h.hcode5 ?? '—'} — ${h.nameThai}`,
   }));
 
   const handleSort = useCallback((key: string) => {
@@ -203,12 +216,18 @@ export default function CancerPatientsPage() {
             Cancer Patients — {response?.meta?.total ?? 0} ราย
           </p>
         </div>
-        <Button asChild>
-          <Link href="/cancer-patients/new">
-            <Plus className="h-4 w-4 mr-1" />
-            ลงทะเบียนผู้ป่วย
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setExportOpen(true)}>
+            <Download className="h-4 w-4 mr-1" />
+            ส่งออก Excel
+          </Button>
+          <Button asChild>
+            <Link href="/cancer-patients/new">
+              <Plus className="h-4 w-4 mr-1" />
+              ลงทะเบียนผู้ป่วย
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -224,6 +243,13 @@ export default function CancerPatientsPage() {
           options={siteOptions}
           placeholder="ตำแหน่งมะเร็งทั้งหมด"
           className="w-full sm:w-[240px]"
+        />
+        <Select
+          value={sourceHospitalId}
+          onChange={(v) => { setSourceHospitalId(v); setPage(1); }}
+          options={hospitalOptions}
+          placeholder="รพ.ต้นทางทั้งหมด"
+          className="w-full sm:w-70"
         />
       </div>
 
@@ -246,6 +272,17 @@ export default function CancerPatientsPage() {
           emptyDescription="No patients found matching your criteria"
         />
       )}
+
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        total={response?.meta?.total ?? 0}
+        filters={{
+          search: search || undefined,
+          cancerSiteId: cancerSiteId || undefined,
+          sourceHospitalId: sourceHospitalId || undefined,
+        }}
+      />
     </div>
   );
 }

@@ -20,6 +20,8 @@ import { AiModule } from './modules/ai/ai.module';
 import { CancerPatientsModule } from './modules/cancer-patients/cancer-patients.module';
 import { SsoAipnCatalogModule } from './modules/sso-aipn-catalog/sso-aipn-catalog.module';
 import { SsoProtocolDrugsModule } from './modules/sso-protocol-drugs/sso-protocol-drugs.module';
+import { HospitalsModule } from './modules/hospitals/hospitals.module';
+import { BackupRestoreModule } from './modules/backup-restore/backup-restore.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -56,6 +58,8 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     CancerPatientsModule,
     SsoAipnCatalogModule,
     SsoProtocolDrugsModule,
+    HospitalsModule,
+    BackupRestoreModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

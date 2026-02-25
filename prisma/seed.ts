@@ -25,6 +25,7 @@ const seedFiles = [
   '013_icd10_cancer_site_map.sql',
   '014_sso_aipn_items.sql',
   '015_sso_protocol_drugs.sql',
+  '016_hospitals.sql',
 ];
 
 async function main() {
@@ -105,13 +106,14 @@ async function main() {
     prisma.$queryRawUnsafe<any[]>('SELECT count(*) as c FROM users'),
     prisma.$queryRawUnsafe<any[]>('SELECT count(*) as c FROM sso_aipn_items'),
     prisma.$queryRawUnsafe<any[]>('SELECT count(*) as c FROM sso_protocol_drugs'),
+    prisma.$queryRawUnsafe<any[]>('SELECT count(*) as c FROM hospitals'),
   ]);
 
   const tables = [
     'cancer_sites', 'cancer_stages', 'drugs', 'drug_trade_names',
     'protocol_names', 'regimens', 'regimen_drugs', 'protocol_regimens',
     'protocol_stages', 'cancer_site_stages', 'app_settings', 'users',
-    'sso_aipn_items', 'sso_protocol_drugs',
+    'sso_aipn_items', 'sso_protocol_drugs', 'hospitals',
   ];
 
   console.log('\nRow counts:');

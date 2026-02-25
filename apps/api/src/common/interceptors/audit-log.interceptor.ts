@@ -19,6 +19,7 @@ const ENTITY_TYPE_MAP: Record<string, string> = {
   'cancer-patients': 'Patient',
   'sso-aipn-catalog': 'SsoAipnItem',
   'sso-protocol-drugs': 'SsoProtocolDrug',
+  'backup-restore': 'Database',
 };
 
 const MUTATION_METHODS = new Set(['POST', 'PATCH', 'DELETE']);

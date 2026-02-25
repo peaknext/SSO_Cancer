@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Users, Settings, ScrollText, Brain } from 'lucide-react';
+import { Users, Settings, ScrollText, Brain, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -12,7 +12,8 @@ const settingsTabs = [
   { label: 'ตั้งค่าระบบ', labelEn: 'App Settings', href: '/settings/app', icon: Settings },
   { label: 'AI', labelEn: 'AI Settings', href: '/settings/ai', icon: Brain },
   { label: 'บันทึกกิจกรรม', labelEn: 'Audit Logs', href: '/settings/audit-logs', icon: ScrollText },
-];
+  { label: 'สำรอง/กู้คืน', labelEn: 'Backup', href: '/settings/backup', icon: Database, superAdminOnly: true },
+] as const;
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -39,7 +40,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       {/* Tabs */}
       <div className="border-b">
         <nav className="flex gap-1 -mb-px overflow-x-auto">
-          {settingsTabs.map((tab) => {
+          {settingsTabs
+            .filter((tab) => !('superAdminOnly' in tab && tab.superAdminOnly) || user.role === 'SUPER_ADMIN')
+            .map((tab) => {
             const Icon = tab.icon;
             const active = pathname.startsWith(tab.href);
             return (

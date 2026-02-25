@@ -137,12 +137,41 @@ export class DashboardService {
     });
   }
 
-  async getTopDrugsByVisits() {
-    return this.withCache('top-drugs-by-visits', async () => {
+  async getTopDrugsByVisits(category?: string) {
+    const filter = category && category !== 'all' ? category : 'all';
+    const cacheKey = `top-drugs-by-visits:${filter}`;
+
+    return this.withCache(cacheKey, async () => {
+      let drugIdFilter: number[] | null = null;
+
+      if (filter === 'protocol') {
+        const protocolDrugs = await this.prisma.regimenDrug.findMany({
+          select: { drugId: true },
+          distinct: ['drugId'],
+        });
+        drugIdFilter = protocolDrugs.map((r) => r.drugId);
+      } else if (
+        ['chemotherapy', 'hormonal', 'immunotherapy', 'targeted therapy'].includes(filter)
+      ) {
+        const categoryDrugs = await this.prisma.drug.findMany({
+          where: { drugCategory: filter, isActive: true },
+          select: { id: true },
+        });
+        drugIdFilter = categoryDrugs.map((d) => d.id);
+      }
+
+      const where: { resolvedDrugId: { not?: null; in?: number[] } } = {
+        resolvedDrugId: { not: null },
+      };
+      if (drugIdFilter !== null) {
+        if (drugIdFilter.length === 0) return [];
+        where.resolvedDrugId = { in: drugIdFilter };
+      }
+
       const grouped = await this.prisma.visitMedication.groupBy({
         by: ['resolvedDrugId'],
         _count: { id: true },
-        where: { resolvedDrugId: { not: null } },
+        where,
         orderBy: { _count: { id: 'desc' } },
         take: 10,
       });

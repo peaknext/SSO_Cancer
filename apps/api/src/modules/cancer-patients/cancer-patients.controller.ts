@@ -7,12 +7,15 @@ import {
   Param,
   Query,
   Body,
+  Res,
   ParseIntPipe,
   NotFoundException,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CancerPatientsService } from './cancer-patients.service';
 import { QueryPatientsDto } from './dto/query-patients.dto';
+import { ExportPatientsDto } from './dto/export-patients.dto';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { CreateCaseDto } from './dto/create-case.dto';
@@ -43,6 +46,28 @@ export class CancerPatientsController {
       result.page,
       result.limit,
     );
+  }
+
+  @Get('case-hospitals')
+  @ApiOperation({ summary: 'Distinct hospitals referenced in patient cases' })
+  async findCaseHospitals() {
+    return this.service.findCaseHospitals();
+  }
+
+  @Get('export')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EDITOR)
+  @ApiOperation({ summary: 'Export filtered patients as Excel (.xlsx)' })
+  async exportExcel(@Query() query: ExportPatientsDto, @Res() res: Response) {
+    const buffer = await this.service.exportExcel(query);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=cancer-patients-${Date.now()}.xlsx`,
+    );
+    res.send(buffer);
   }
 
   @Get(':id')

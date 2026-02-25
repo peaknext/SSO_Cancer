@@ -14,6 +14,7 @@ import {
   Legend,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const CHART_COLORS = [
   '#0F766E', '#0D9488', '#14B8A6', '#2DD4BF', '#5EEAD4',
@@ -95,45 +96,96 @@ export function VisitsBySiteChart({ data }: { data: BarChartData[] }) {
 
 // --- Top Drugs by Visits (horizontal bar) ---
 
-export function TopDrugsChart({ data }: { data: BarChartData[] }) {
+const DRUG_FILTERS = [
+  { key: 'all', label: 'ยาทั้งหมด' },
+  { key: 'protocol', label: 'ยา Protocol' },
+  { key: 'chemotherapy', label: 'Chemo' },
+  { key: 'hormonal', label: 'Hormonal' },
+  { key: 'immunotherapy', label: 'Immuno' },
+  { key: 'targeted therapy', label: 'Targeted' },
+] as const;
+
+interface TopDrugsChartProps {
+  data: BarChartData[];
+  activeFilter?: string;
+  onFilterChange?: (filter: string) => void;
+  isLoading?: boolean;
+}
+
+export function TopDrugsChart({
+  data,
+  activeFilter = 'all',
+  onFilterChange,
+  isLoading,
+}: TopDrugsChartProps) {
   return (
-    <ChartCard title="Top 10 ยาที่ใช้บ่อยที่สุด">
-      {data.length === 0 ? (
-        <EmptyState message="ยังไม่มีข้อมูล Visit — No visit data yet" />
-      ) : (
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                horizontal={false}
-                stroke="var(--border)"
-              />
-              <XAxis type="number" tick={{ fontSize: 12, fill: 'var(--muted)' }} />
-              <YAxis
-                dataKey="name"
-                type="category"
-                width={140}
-                tick={{ fontSize: 10, fill: 'var(--muted)' }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'var(--card)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                }}
-                formatter={(value: number) => [
-                  `${value.toLocaleString('th-TH')} ครั้ง`,
-                  'จำนวน',
-                ]}
-              />
-              <Bar dataKey="value" fill="#0D9488" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </ChartCard>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold">
+          Top 10 ยาที่ใช้บ่อยที่สุด
+        </CardTitle>
+        {onFilterChange && (
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            {DRUG_FILTERS.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => onFilterChange(f.key)}
+                className={cn(
+                  'inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                  'border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  activeFilter === f.key
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background text-muted-foreground border-input hover:bg-accent hover:text-accent-foreground',
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="h-[300px] flex items-center justify-center">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+          </div>
+        ) : data.length === 0 ? (
+          <EmptyState message="ไม่พบข้อมูลยาในหมวดนี้ — No drugs found for this filter" />
+        ) : (
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  horizontal={false}
+                  stroke="var(--border)"
+                />
+                <XAxis type="number" tick={{ fontSize: 12, fill: 'var(--muted)' }} />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  width={140}
+                  tick={{ fontSize: 10, fill: 'var(--muted)' }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                  }}
+                  formatter={(value: number) => [
+                    `${value.toLocaleString('th-TH')} ครั้ง`,
+                    'จำนวน',
+                  ]}
+                />
+                <Bar dataKey="value" fill="#0D9488" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -16,6 +16,12 @@ export class QueryPatientsDto extends PaginationQueryDto {
   @IsInt()
   cancerSiteId?: number;
 
+  @ApiPropertyOptional({ description: 'กรองตาม รพ.ต้นทาง (via case sourceHospitalId)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  sourceHospitalId?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Boolean)

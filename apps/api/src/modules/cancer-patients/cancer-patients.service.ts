@@ -7,12 +7,33 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../prisma';
 import { QueryPatientsDto } from './dto/query-patients.dto';
+import { ExportPatientsDto } from './dto/export-patients.dto';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { CreateCaseDto } from './dto/create-case.dto';
 import { UpdateCaseDto } from './dto/update-case.dto';
 import { CreateBillingClaimDto } from './dto/create-billing-claim.dto';
 import { UpdateBillingClaimDto } from './dto/update-billing-claim.dto';
+
+interface ExportRow {
+  citizenId: string;
+  hn: string;
+  fullName: string;
+  caseNumber: string | null;
+  referralDate: Date | null;
+  admissionDate: Date | null;
+  sourceHospitalName: string | null;
+  protocolName: string | null;
+}
+
+function formatThaiDate(d: Date | null): string {
+  if (!d) return '';
+  const date = new Date(d);
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
 
 @Injectable()
 export class CancerPatientsService {
@@ -28,6 +49,7 @@ export class CancerPatientsService {
       sortOrder = 'asc',
       search,
       cancerSiteId,
+      sourceHospitalId,
       isActive,
     } = query;
 
@@ -41,10 +63,12 @@ export class CancerPatientsService {
       ];
     }
 
-    if (cancerSiteId) {
-      where.cases = {
-        some: { protocol: { cancerSiteId } },
-      };
+    // Build combined case filter (cancerSite + sourceHospital)
+    const caseFilter: Prisma.PatientCaseWhereInput = {};
+    if (cancerSiteId) caseFilter.protocol = { cancerSiteId };
+    if (sourceHospitalId) caseFilter.sourceHospitalId = sourceHospitalId;
+    if (Object.keys(caseFilter).length > 0) {
+      where.cases = { some: caseFilter };
     }
 
     if (isActive !== undefined) {
@@ -155,6 +179,137 @@ export class CancerPatientsService {
     return { data, total, page, limit };
   }
 
+  async findCaseHospitals() {
+    const rows = await this.prisma.patientCase.findMany({
+      where: { sourceHospitalId: { not: null }, isActive: true },
+      select: { sourceHospitalId: true },
+      distinct: ['sourceHospitalId'],
+    });
+    const ids = rows.map((r) => r.sourceHospitalId!);
+    if (ids.length === 0) return [];
+    return this.prisma.hospital.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, hcode5: true, nameThai: true, province: true },
+      orderBy: { nameThai: 'asc' },
+    });
+  }
+
+  // ─── Export Excel ───────────────────────────────────────────────────────────
+
+  private static readonly EXPORT_FIELD_MAP: Record<
+    string,
+    { header: string; value: (p: ExportRow) => string }
+  > = {
+    citizenId: {
+      header: 'เลขบัตรประชาชน',
+      value: (p) => p.citizenId,
+    },
+    hn: {
+      header: 'HN',
+      value: (p) => p.hn,
+    },
+    caseNumber: {
+      header: 'เลขที่เคส',
+      value: (p) => p.caseNumber ?? '',
+    },
+    fullName: {
+      header: 'ชื่อ-สกุล',
+      value: (p) => p.fullName,
+    },
+    referralDate: {
+      header: 'วันที่ลงทะเบียนส่งต่อ',
+      value: (p) => formatThaiDate(p.referralDate),
+    },
+    admissionDate: {
+      header: 'วันที่ลงทะเบียนรับเข้า',
+      value: (p) => formatThaiDate(p.admissionDate),
+    },
+    sourceHospital: {
+      header: 'รพ.ต้นทาง',
+      value: (p) => p.sourceHospitalName ?? '',
+    },
+    protocol: {
+      header: 'โปรโตคอล',
+      value: (p) => p.protocolName ?? '',
+    },
+  };
+
+  async exportExcel(query: ExportPatientsDto): Promise<Buffer> {
+    const { search, cancerSiteId, sourceHospitalId, fields } = query;
+
+    // Parse requested fields (default: all)
+    const allKeys = Object.keys(CancerPatientsService.EXPORT_FIELD_MAP);
+    const requestedFields = fields
+      ? fields.split(',').filter((f) => allKeys.includes(f.trim()))
+      : allKeys;
+    if (requestedFields.length === 0) {
+      requestedFields.push(...allKeys);
+    }
+
+    // Build WHERE (same logic as findAll)
+    const where: Prisma.PatientWhereInput = {};
+    if (search) {
+      where.OR = [
+        { hn: { contains: search, mode: 'insensitive' } },
+        { citizenId: { contains: search } },
+        { fullName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    const caseFilter: Prisma.PatientCaseWhereInput = {};
+    if (cancerSiteId) caseFilter.protocol = { cancerSiteId };
+    if (sourceHospitalId) caseFilter.sourceHospitalId = sourceHospitalId;
+    if (Object.keys(caseFilter).length > 0) {
+      where.cases = { some: caseFilter };
+    }
+
+    const patients = await this.prisma.patient.findMany({
+      where,
+      include: {
+        cases: {
+          where: { status: 'ACTIVE', isActive: true },
+          include: {
+            protocol: { select: { nameThai: true } },
+            sourceHospital: { select: { nameThai: true } },
+          },
+          orderBy: { openedAt: 'desc' },
+        },
+      },
+      orderBy: { hn: 'asc' },
+      take: 5000,
+    });
+
+    // Map to flat export rows
+    const fieldMap = CancerPatientsService.EXPORT_FIELD_MAP;
+    const rows = patients.map((p, idx) => {
+      const activeCase = p.cases[0] ?? null;
+      const exportRow: ExportRow = {
+        citizenId: p.citizenId,
+        hn: p.hn,
+        fullName: p.fullName,
+        caseNumber: activeCase?.caseNumber ?? null,
+        referralDate: activeCase?.referralDate ?? null,
+        admissionDate: activeCase?.admissionDate ?? null,
+        sourceHospitalName: activeCase?.sourceHospital?.nameThai ?? null,
+        protocolName: activeCase?.protocol?.nameThai ?? null,
+      };
+
+      const row: Record<string, string | number> = { 'ลำดับที่': idx + 1 };
+      for (const key of requestedFields) {
+        const def = fieldMap[key];
+        if (def) row[def.header] = def.value(exportRow);
+      }
+      return row;
+    });
+
+    // Build Excel workbook
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const XLSX = require('xlsx');
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Patients');
+    return Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }));
+  }
+
   async findById(id: number) {
     // Fetch patient with cases (visits queried separately by HN)
     const patient = await this.prisma.patient.findUnique({
@@ -177,6 +332,15 @@ export class CancerPatientsService {
                     nameEnglish: true,
                   },
                 },
+              },
+            },
+            sourceHospital: {
+              select: {
+                id: true,
+                hcode5: true,
+                hcode9: true,
+                nameThai: true,
+                province: true,
               },
             },
             _count: { select: { visits: true } },
@@ -377,6 +541,9 @@ export class CancerPatientsService {
         patientId,
         protocolId: dto.protocolId ?? null,
         notes: dto.notes ?? null,
+        referralDate: dto.referralDate ? new Date(dto.referralDate) : null,
+        admissionDate: dto.admissionDate ? new Date(dto.admissionDate) : null,
+        sourceHospitalId: dto.sourceHospitalId ?? null,
         createdByUserId: userId,
       },
       include: {
@@ -386,6 +553,15 @@ export class CancerPatientsService {
             protocolCode: true,
             nameThai: true,
             nameEnglish: true,
+          },
+        },
+        sourceHospital: {
+          select: {
+            id: true,
+            hcode5: true,
+            hcode9: true,
+            nameThai: true,
+            province: true,
           },
         },
       },
@@ -423,7 +599,17 @@ export class CancerPatientsService {
     }
 
     // Auto-set closedAt when completing
-    const data: Prisma.PatientCaseUpdateInput = { ...dto };
+    const { referralDate, admissionDate, sourceHospitalId, ...rest } = dto;
+    const data: Prisma.PatientCaseUncheckedUpdateInput = { ...rest };
+    if (referralDate !== undefined) {
+      data.referralDate = referralDate ? new Date(referralDate) : null;
+    }
+    if (admissionDate !== undefined) {
+      data.admissionDate = admissionDate ? new Date(admissionDate) : null;
+    }
+    if (sourceHospitalId !== undefined) {
+      data.sourceHospitalId = sourceHospitalId;
+    }
     if (dto.status === 'COMPLETED' && !patientCase.closedAt) {
       data.closedAt = new Date();
     }
@@ -438,6 +624,15 @@ export class CancerPatientsService {
             protocolCode: true,
             nameThai: true,
             nameEnglish: true,
+          },
+        },
+        sourceHospital: {
+          select: {
+            id: true,
+            hcode5: true,
+            hcode9: true,
+            nameThai: true,
+            province: true,
           },
         },
         _count: { select: { visits: true } },

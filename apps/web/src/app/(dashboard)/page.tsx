@@ -144,7 +144,10 @@ export default function DashboardPage() {
     useApi<Z51BillingStats>('/dashboard/z51-billing-stats');
   const { data: visitsBySite } =
     useApi<VisitBySite[]>('/dashboard/visits-by-site');
-  const { data: topDrugs } = useApi<TopDrug[]>('/dashboard/top-drugs');
+  const [drugFilter, setDrugFilter] = useState('all');
+  const { data: topDrugs, isLoading: loadingTopDrugs } = useApi<TopDrug[]>(
+    `/dashboard/top-drugs?category=${encodeURIComponent(drugFilter)}`,
+  );
   const { data: confirmationRate } =
     useApi<ConfirmationRate>('/dashboard/confirmation-rate');
   const { data: emptyRegimens } =
@@ -314,6 +317,9 @@ export default function DashboardPage() {
             name: d.genericName,
             value: d.visitCount,
           }))}
+          activeFilter={drugFilter}
+          onFilterChange={setDrugFilter}
+          isLoading={loadingTopDrugs}
         />
         <BillingApprovalRateChart
           data={{

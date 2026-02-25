@@ -75,7 +75,32 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 ```
 
-Production deploy script: `deploy/deploy.sh` — checks `.env.production`, generates self-signed SSL certs, runs migrations via Docker, starts services.
+Four deployment scripts in `deploy/`:
+
+```bash
+# Local/CI build-in-place (checks .env.production, generates self-signed SSL, runs migrations)
+bash deploy/deploy.sh
+
+# Build Docker images and export to tar for offline (air-gapped) hospital deployment
+bash deploy/build-and-export.sh [TAG]    # → sso-cancer-images-[TAG].tar
+
+# Import tar images on hospital server and run (no internet required)
+bash deploy/import-and-run.sh [TAG]
+
+# Pull images from Docker Hub and run (requires registry access)
+bash deploy/pull-and-run.sh [TAG]
+```
+
+A fourth compose file `docker-compose.deploy.yml` is used by the deployment scripts for pre-built image deployment (uses `IMAGE_REGISTRY` and `IMAGE_TAG` env vars).
+
+### CI/CD
+
+`.github/workflows/build-and-push.yml` — triggers on git tags (`v*`) or manual dispatch. Builds and pushes Docker images to Docker Hub. Requires GitHub secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`.
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0   # Triggers auto-build
+bash deploy/pull-and-run.sh v1.0.0          # Deploy on hospital server
+```
 
 ### Environment Variables
 
@@ -96,7 +121,7 @@ apps/api/       NestJS 11 REST API (dev port 48002, Docker port 4000, prefix /ap
 apps/web/       Next.js 15 frontend (dev port 47001, Docker port 3000)
 prisma/         Schema, config, migrations, generated client
 database/seeds/ Numbered SQL files (001–015) executed by prisma/seed.ts
-deploy/         Production deploy script + nginx config (SSL, reverse proxy)
+deploy/         4 deploy scripts + nginx config + docker-compose.deploy.yml
 docs/           SPECIFICATION.md (full app spec, 113KB)
 ```
 
@@ -110,7 +135,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - **PrismaService** at `apps/api/src/prisma/prisma.service.ts` wraps PrismaClient in a `@Global()` NestJS module
 - **Barrel export** at `apps/api/src/prisma/index.ts` — services import `Prisma` namespace via `import { Prisma } from '../../prisma'`
 
-### Data Model (25 tables)
+### Data Model (26 tables)
 
 **Core medical entities (6):** Drug, DrugTradeName, CancerSite, CancerStage, ProtocolName, Regimen
 
@@ -120,13 +145,15 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 
 **Patient management (3):** Patient, PatientCase, VisitBillingClaim
 
+**Reference data (1):** Hospital (1,218 MOPH hospitals with hcode5, hcode9, name, level, province, address)
+
 **SSO formulary (2):** SsoAipnItem (national drug/equipment catalog with billing rates), SsoProtocolDrug (per-protocol approved drug formulary)
 
 **Auth/system tables (5):** User, Session, PasswordHistory, AuditLog, AppSetting
 
 ### NestJS API Architecture
 
-**17 feature modules** in `apps/api/src/modules/`:
+**18 feature modules** in `apps/api/src/modules/`:
 - `health` — GET /health
 - `auth` — login, refresh, logout, change-password, me (JWT + refresh cookie)
 - `users` — full admin CRUD, sessions, password reset (ADMIN+)
@@ -142,6 +169,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
 - `sso-aipn-catalog` — Read-only SSO AIPN drug/equipment catalog with search, stats, code lookup
 - `sso-protocol-drugs` — SSO protocol drug formulary: list, stats, per-protocol lookup, compliance checking. `getFormularyDrugNames()` extracts generic names from descriptions for name-based formulary matching
+- `hospitals` — Read-only MOPH hospital reference data (1,218 hospitals). GET /hospitals with search (name, hcode5, province), GET /hospitals/:id
 
 **Global guards** (registered via `APP_GUARD` in `app.module.ts`):
 1. `JwtAuthGuard` — all endpoints require auth unless `@Public()` decorator
@@ -196,7 +224,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `useTranslation()` hook in `hooks/use-translation.ts` — fetches `/locales/{locale}.json` at runtime, module-level cache, `t(key)` with dot notation
 - `apiClient` singleton in `lib/api-client.ts` — Bearer token injection, auto-refresh on 401, redirect to /login on session expiry. Also has `upload<T>(path, formData)` for multipart uploads.
 - `middleware.ts` — Route protection checking `sso-cancer-auth-flag` cookie, redirects to `/login?redirect=pathname`
-- Shared components in `components/shared/` — DataTable, SearchInput, StatusBadge, CodeBadge, PriceBadge, EmptyState, LoadingSkeleton, ProtocolCombobox (searchable grouped protocol picker)
+- Shared components in `components/shared/` — DataTable, SearchInput, StatusBadge, CodeBadge, PriceBadge, EmptyState, LoadingSkeleton, ProtocolCombobox (searchable grouped protocol picker), HospitalCombobox (searchable hospital picker with server-side search)
 - UI primitives in `components/ui/` — shadcn/ui pattern (Button, Card, Input, Label, Select, Badge, Separator, Modal)
 - `ProtocolCombobox` in `components/shared/protocol-combobox.tsx` — searchable dropdown with protocols grouped by cancer site (sticky headers), module-level 5-min cache, fetches all ~170 protocols via two parallel paginated requests. Drop-in replacement for `<Select>` (same `value`/`onChange` API). Accepts `suggestedCancerSiteId` prop to float a relevant group to the top.
 - i18n: locale JSON files in `public/locales/th.json` and `en.json`
@@ -314,7 +342,7 @@ CSV/Excel import expects these column headers (Thai or English):
 
 ### Seed System
 
-Seeds in `database/seeds/` as 15 numbered SQL files (001–015). The seeder (`prisma/seed.ts`) has a **hardcoded `seedFiles` array** — new seed files must be added to this array. Strips comments, splits by semicolons (quote-aware), executes via `$executeRawUnsafe`, and skips duplicates via `ON CONFLICT DO NOTHING`. Seed data: 23 cancer sites, 98 drugs, ~380 trade names, 169 protocols, ~63 regimens, 10 AI settings, ~1,200 SSO AIPN items (014), ~1,700 SSO protocol drug formulary entries (015).
+Seeds in `database/seeds/` as 16 numbered SQL files (001–016). The seeder (`prisma/seed.ts`) has a **hardcoded `seedFiles` array** — new seed files must be added to this array. Strips comments, splits by semicolons (quote-aware), executes via `$executeRawUnsafe`, and skips duplicates via `ON CONFLICT DO NOTHING`. Seed data: 23 cancer sites, 98 drugs, ~380 trade names, 169 protocols, ~63 regimens, 10 AI settings, ~1,200 SSO AIPN items (014), ~1,700 SSO protocol drug formulary entries (015), 1,218 MOPH hospitals (016).
 
 ### TypeScript Path Aliases
 
@@ -361,6 +389,7 @@ The `TransformInterceptor` wraps all API responses in `{ success: true, data: <p
 - When restarting dev servers, always kill old processes first (`npx kill-port 47001 48002`) to avoid port conflicts
 - Docker builds for API require a complex Prisma client compilation step (TS→CJS, sed fixes for `import.meta.url`/extensions) — see `apps/api/Dockerfile`
 - Docker `docker-compose.yml` uses `.env.docker` (NOT `.env`) — don't confuse them
+- API port in Docker uses `PORT: 4000` (not `API_PORT: 48002`) — local dev uses `API_PORT`, production compose files use `PORT`
 - Web Dockerfile sets `NEXT_TELEMETRY_DISABLED=1` and `HOSTNAME="0.0.0.0"` (required for standalone in Docker)
 - Nginx in production: `client_max_body_size 50M` for file uploads, TLS 1.2/1.3
 - `backdrop-filter` (e.g. `backdrop-blur-sm`) creates a new containing block for `position: fixed` descendants — use `createPortal` to render modals/dialogs to `document.body` instead of placing them inside such elements

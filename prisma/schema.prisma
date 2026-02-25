@@ -501,16 +501,20 @@ model PatientCase {
   status          String    @default("ACTIVE") @map("status") @db.VarChar(20)
   openedAt        DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
   closedAt        DateTime? @map("closed_at") @db.Timestamptz(6)
-  notes           String?   @db.Text
-  createdByUserId Int?      @map("created_by_user_id")
-  isActive        Boolean   @default(true) @map("is_active")
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  notes                String?   @db.Text
+  referralDate         DateTime? @map("referral_date") @db.Date
+  admissionDate        DateTime? @map("admission_date") @db.Date
+  sourceHospitalId     Int?      @map("source_hospital_id")
+  createdByUserId      Int?      @map("created_by_user_id")
+  isActive             Boolean   @default(true) @map("is_active")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  protocol      ProtocolName? @relation(fields: [protocolId], references: [id], onDelete: SetNull)
-  createdByUser User?         @relation("caseCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  visits        PatientVisit[]
+  patient         Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  protocol        ProtocolName? @relation(fields: [protocolId], references: [id], onDelete: SetNull)
+  sourceHospital  Hospital?     @relation(fields: [sourceHospitalId], references: [id], onDelete: SetNull)
+  createdByUser   User?         @relation("caseCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  visits          PatientVisit[]
 
   @@index([patientId], map: "idx_patient_cases_patient_id")
   @@index([protocolId], map: "idx_patient_cases_protocol_id")
@@ -542,6 +546,33 @@ model VisitBillingClaim {
   @@index([visitId], map: "idx_visit_billing_claims_visit_id")
   @@index([status], map: "idx_visit_billing_claims_status")
   @@map("visit_billing_claims")
+}
+
+// =============================================================================
+// Hospitals — สถานพยาบาล (MOPH reference data)
+// =============================================================================
+model Hospital {
+  id              Int       @id @default(autoincrement())
+  hcode9          String    @unique @map("hcode_9") @db.VarChar(9)
+  hcode5          String?   @unique @map("hcode_5") @db.VarChar(5)
+  nameThai        String    @map("name_thai") @db.VarChar(200)
+  hospitalLevel   String?   @map("hospital_level") @db.VarChar(60)
+  address         String?   @db.VarChar(200)
+  province        String    @db.VarChar(100)
+  district        String?   @db.VarChar(100)
+  subdistrict     String?   @db.VarChar(100)
+  moo             String?   @db.VarChar(10)
+  postalCode      String?   @map("postal_code") @db.VarChar(5)
+  parentNetwork   String?   @map("parent_network") @db.VarChar(200)
+  dataUpdatedAt   String?   @map("data_updated_at") @db.VarChar(20)
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patientCases    PatientCase[]
+
+  @@index([province], map: "idx_hospitals_province")
+  @@map("hospitals")
 }
 
 // =============================================================================
