@@ -28,13 +28,11 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    this.maxFailedAttempts = this.configService.get<number>(
-      'MAX_FAILED_LOGIN_ATTEMPTS',
-      5,
+    this.maxFailedAttempts = Number(
+      this.configService.get('MAX_FAILED_LOGIN_ATTEMPTS', 5),
     );
-    this.lockoutDuration = this.configService.get<number>(
-      'LOCKOUT_DURATION_SECONDS',
-      900,
+    this.lockoutDuration = Number(
+      this.configService.get('LOCKOUT_DURATION_SECONDS', 900),
     );
     this.accessTokenTtl = this.configService.get<string>(
       'JWT_ACCESS_TTL',
@@ -47,13 +45,11 @@ export class AuthService {
     const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
     if (!refreshSecret) throw new Error('JWT_REFRESH_SECRET environment variable is required');
     this.refreshSecret = refreshSecret;
-    this.passwordHistoryCount = this.configService.get<number>(
-      'PASSWORD_HISTORY_COUNT',
-      5,
+    this.passwordHistoryCount = Number(
+      this.configService.get('PASSWORD_HISTORY_COUNT', 5),
     );
-    this.maxConcurrentSessions = this.configService.get<number>(
-      'MAX_CONCURRENT_SESSIONS',
-      5,
+    this.maxConcurrentSessions = Number(
+      this.configService.get('MAX_CONCURRENT_SESSIONS', 5),
     );
   }
 
