@@ -60,7 +60,7 @@ async function bootstrap() {
     SwaggerModule.setup('api/v1/docs', app, document);
   }
 
-  const port = process.env.API_PORT || 48002;
+  const port = process.env.PORT || process.env.API_PORT || 48002;
   await app.listen(port);
   logger.log(`SSO Cancer API running on http://localhost:${port}/api/v1`);
   if (!isProduction) {
