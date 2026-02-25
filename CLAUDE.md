@@ -120,7 +120,7 @@ No test framework (Jest/Vitest) is configured yet.
 apps/api/       NestJS 11 REST API (dev port 48002, Docker port 4000, prefix /api/v1)
 apps/web/       Next.js 15 frontend (dev port 47001, Docker port 3000)
 prisma/         Schema, config, migrations, generated client
-database/seeds/ Numbered SQL files (001–015) executed by prisma/seed.ts
+database/seeds/ Numbered SQL files (001–016) executed by prisma/seed.ts
 deploy/         4 deploy scripts + nginx config + docker-compose.deploy.yml
 docs/           SPECIFICATION.md (full app spec, 113KB)
 ```
@@ -153,7 +153,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 
 ### NestJS API Architecture
 
-**18 feature modules** in `apps/api/src/modules/`:
+**19 feature modules** in `apps/api/src/modules/`:
 - `health` — GET /health
 - `auth` — login, refresh, logout, change-password, me (JWT + refresh cookie)
 - `users` — full admin CRUD, sessions, password reset (ADMIN+)
@@ -170,6 +170,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `sso-aipn-catalog` — Read-only SSO AIPN drug/equipment catalog with search, stats, code lookup
 - `sso-protocol-drugs` — SSO protocol drug formulary: list, stats, per-protocol lookup, compliance checking. `getFormularyDrugNames()` extracts generic names from descriptions for name-based formulary matching
 - `hospitals` — Read-only MOPH hospital reference data (1,218 hospitals). GET /hospitals with search (name, hcode5, province), GET /hospitals/:id
+- `backup-restore` — Full database backup/restore (SUPER_ADMIN only). `GET /backup-restore/status` (table row counts), `GET /backup-restore/backup?includeAuditLogs=` (download `.json.gz` with SHA256 checksum), `POST /backup-restore/restore/preview` (validate uploaded file, compare row counts, no DB write), `POST /backup-restore/restore/confirm` (full restore: disable FK → TRUNCATE → INSERT in dependency order → reset sequences → verify). Backup format: `{ metadata, data: { [table]: rows[] } }`. Restore handles both `.json.gz` and `.json` uploads (50 MB limit). Frontend at `/settings/backup`.
 
 **Global guards** (registered via `APP_GUARD` in `app.module.ts`):
 1. `JwtAuthGuard` — all endpoints require auth unless `@Public()` decorator
@@ -212,6 +213,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
   - `/settings/app` — App settings with inline editing (SUPER_ADMIN to edit)
   - `/settings/ai` — AI provider configuration (SUPER_ADMIN to edit)
   - `/settings/audit-logs` — Audit log viewer with expandable diff (ADMIN+)
+  - `/settings/backup` — Database backup download + restore upload with preview/confirm state machine (SUPER_ADMIN)
 - Error boundaries at root and dashboard level, custom 404
 
 **State management** (Zustand with `persist` middleware):
@@ -394,3 +396,5 @@ The `TransformInterceptor` wraps all API responses in `{ success: true, data: <p
 - Nginx in production: `client_max_body_size 50M` for file uploads, TLS 1.2/1.3
 - `backdrop-filter` (e.g. `backdrop-blur-sm`) creates a new containing block for `position: fixed` descendants — use `createPortal` to render modals/dialogs to `document.body` instead of placing them inside such elements
 - `usePaginatedApi` accepts optional third arg `{ enabled: boolean }` — always gate on `filtersHydrated` when using `usePersistedState` (see Key Patterns above)
+- GitHub Actions Docker builds get `403 Forbidden` from npm registry due to Ubuntu's `systemd-resolved` setting `/etc/resolv.conf` to `127.0.0.53` (loopback) — Docker containers can't reach it. Fix: `driver-opts: network=host` in `docker/setup-buildx-action@v3` step makes BuildKit use the host network namespace with working DNS.
+- `zustand` is pinned to `5.0.10` in `apps/web/package.json` (not `^5.0.x`) because `5.0.11` returns 403 from npm CDN on GitHub Actions. Do not bump to `^` range or a newer patch until the registry issue is resolved.
