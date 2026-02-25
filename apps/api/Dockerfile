@@ -10,7 +10,8 @@ COPY apps/web/package.json apps/web/
 COPY prisma/ prisma/
 
 # Install all dependencies (root + workspaces, devDeps needed for build + Prisma)
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --cache /root/.npm
 
 # Generate Prisma client
 RUN npx prisma generate --config prisma/prisma.config.ts
