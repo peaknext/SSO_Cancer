@@ -50,7 +50,8 @@ deploy/nginx/ssl/*.crt
 skills-lock.json
 
 # Misc files
-.xlsx
-.xlsm
-.xls
-.gz
+*.xlsx
+*.xlsm
+*.xls
+*.gz
+*.backup
