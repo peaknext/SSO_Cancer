@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Plus, Download, Pill, X } from 'lucide-react';
+import { Users, Plus, Download, Pill, X, FileArchive } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
@@ -238,6 +238,12 @@ export default function CancerPatientsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/ssop-export">
+              <FileArchive className="h-4 w-4 mr-1" />
+              ส่งออก SSOP
+            </Link>
+          </Button>
           <Button variant="outline" onClick={() => setExportOpen(true)}>
             <Download className="h-4 w-4 mr-1" />
             ส่งออก Excel

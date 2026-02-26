@@ -91,7 +91,7 @@ bash deploy/import-and-run.sh [TAG]
 bash deploy/pull-and-run.sh [TAG]
 ```
 
-A fourth compose file `docker-compose.deploy.yml` is used by the deployment scripts for pre-built image deployment (uses `IMAGE_REGISTRY` and `IMAGE_TAG` env vars).
+A fourth compose file `docker-compose.deploy.yml` (at repo root, not inside `deploy/`) is used by the deployment scripts for pre-built image deployment (uses `IMAGE_REGISTRY` and `IMAGE_TAG` env vars).
 
 ### CI/CD
 
@@ -121,7 +121,7 @@ apps/api/       NestJS 11 REST API (dev port 48002, Docker port 4000, prefix /ap
 apps/web/       Next.js 15 frontend (dev port 47001, Docker port 3000)
 prisma/         Schema, config, migrations, generated client
 database/seeds/ Numbered SQL files (001–016) executed by prisma/seed.ts
-deploy/         4 deploy scripts + nginx config + docker-compose.deploy.yml
+deploy/         4 deploy scripts + nginx config
 docs/           SPECIFICATION.md (full app spec, 113KB), DEPLOYMENT.md (Thai-language deploy guide)
 scripts/        Seed generation utilities (export-seeds.ts, generate-aipn-seed.ts, etc.)
 ```
@@ -162,12 +162,12 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `protocols` — CRUD + link/unlink regimens and stages, deep nested view
 - `regimens` — CRUD + add/update/remove drugs with dosing
 - `drugs`, `drug-trade-names` — CRUD with category/price filters
-- `dashboard` — aggregation stats with 5-min in-memory cache (8 cached endpoints, `getRecentActivity` uncached)
+- `dashboard` — aggregation stats with 5-min in-memory cache (12 cached endpoints; `getRecentActivity` and `getZ51ActionableVisits` uncached)
 - `audit-logs` — paginated query + CSV export (ADMIN+)
 - `app-settings` — grouped key-value config (SUPER_ADMIN to edit)
 - `protocol-analysis` — CSV/Excel import of hospital visit data, drug resolution (3-tier: exact→startsWith→contains), protocol matching with scoring, protocol confirmation (PATCH confirm/DELETE unconfirm per visit). Import service auto-links visits to existing Patient records by HN during import.
 - `ai` — multi-provider AI suggestion engine (see AI Module below)
-- `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking), Excel export (ADMIN+). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
+- `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking), Excel export (EDITOR+). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
 - `sso-aipn-catalog` — Read-only SSO AIPN drug/equipment catalog with search, stats, code lookup
 - `sso-protocol-drugs` — SSO protocol drug formulary: list, stats, per-protocol lookup, compliance checking. `getFormularyDrugNames()` extracts generic names from descriptions for name-based formulary matching
 - `hospitals` — Read-only MOPH hospital reference data (1,218 hospitals). GET /hospitals with search (name, hcode5, province), GET /hospitals/:id
@@ -179,8 +179,8 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 3. `ThrottlerGuard` — 60 requests/minute
 
 **Global interceptors**:
-1. `TransformInterceptor` — wraps responses in `{ success, data }` (registered in `main.ts` via `useGlobalInterceptors`)
-2. `TimeoutInterceptor` — 30s timeout (registered in `main.ts` via `useGlobalInterceptors`)
+1. `TimeoutInterceptor` — 30s timeout (registered in `main.ts` via `useGlobalInterceptors`)
+2. `TransformInterceptor` — wraps responses in `{ success, data }` (registered in `main.ts` via `useGlobalInterceptors`)
 3. `AuditLogInterceptor` — auto-logs all POST/PATCH/DELETE mutations to `AuditLog` table (strips sensitive fields: password, apiKey, secret, settingValue). Skips auth endpoints (handled by AuthService directly). Registered via `APP_INTERCEPTOR` in `app.module.ts` (has DI access to PrismaService).
 
 **Security middleware** in `main.ts`: `helmet()`, `cookieParser()`, CORS (`CORS_ORIGIN` unset → `origin: false` denies all cross-origin; dev fallback `http://localhost:47001`). Port resolution: `PORT || API_PORT || 48002` — production compose sets `PORT: 4000`, local dev uses `API_PORT: 48002`.
@@ -396,7 +396,7 @@ The `TransformInterceptor` wraps all API responses in `{ success: true, data: <p
 - When restarting dev servers, always kill old processes first (`npx kill-port 47001 48002`) to avoid port conflicts
 - Docker builds for API require a complex Prisma client compilation step (TS→CJS, sed fixes for `import.meta.url`/extensions) — see `apps/api/Dockerfile`
 - Docker `docker-compose.yml` uses `.env.docker` (NOT `.env`) — don't confuse them
-- API port in Docker uses `PORT: 4000` (not `API_PORT: 48002`) — local dev uses `API_PORT`, production compose files use `PORT`
+- `docker-compose.yml` uses `API_PORT: 4000`; production compose files (`docker-compose.prod.yml`, `docker-compose.deploy.yml`) use `PORT: 4000` — local dev uses `API_PORT: 48002`
 - Web Dockerfile sets `NEXT_TELEMETRY_DISABLED=1` and `HOSTNAME="0.0.0.0"` (required for standalone in Docker)
 - Nginx in production: `client_max_body_size 50M` for file uploads, TLS 1.2/1.3
 - `backdrop-filter` (e.g. `backdrop-blur-sm`) creates a new containing block for `position: fixed` descendants — use `createPortal` to render modals/dialogs to `document.body` instead of placing them inside such elements

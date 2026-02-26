@@ -26,6 +26,7 @@ const seedFiles = [
   '014_sso_aipn_items.sql',
   '015_sso_protocol_drugs.sql',
   '016_hospitals.sql',
+  '017_hospital_settings.sql',
 ];
 
 async function main() {

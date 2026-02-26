@@ -7,6 +7,7 @@ const SENSITIVE_KEYS = new Set([
   'ai_gemini_api_key',
   'ai_claude_api_key',
   'ai_openai_api_key',
+  'his_api_key',
 ]);
 
 function maskValue(value: string): string {

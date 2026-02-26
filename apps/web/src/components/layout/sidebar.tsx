@@ -12,6 +12,7 @@ import {
   Microscope,
   SearchCheck,
   Receipt,
+  FileArchive,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -72,6 +73,12 @@ const navItems: NavItem[] = [
     labelThai: 'วิเคราะห์โปรโตคอล',
     href: '/protocol-analysis',
     icon: SearchCheck,
+  },
+  {
+    label: 'SSOP Export',
+    labelThai: 'ส่งออก SSOP',
+    href: '/ssop-export',
+    icon: FileArchive,
   },
   {
     label: 'Billing',

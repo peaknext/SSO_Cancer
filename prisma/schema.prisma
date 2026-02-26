@@ -252,6 +252,7 @@ model User {
   aiSuggestions   AiSuggestion[] @relation("aiSuggestions")
   createdCases    PatientCase[]       @relation("caseCreatedBy")
   createdClaims   VisitBillingClaim[] @relation("claimCreatedBy")
+  exportBatches   BillingExportBatch[] @relation("exportCreatedBy")
 
   @@index([role], map: "idx_users_role")
   @@map("users")
@@ -364,6 +365,7 @@ model PatientImport {
   importedById  Int?      @map("imported_by_id")
   status        String    @default("COMPLETED") @db.VarChar(20)
   errorLog      String?   @map("error_log") @db.Text
+  source        String    @default("EXCEL") @db.VarChar(20)
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   importedBy    User?     @relation(fields: [importedById], references: [id], onDelete: SetNull)
@@ -387,6 +389,10 @@ model PatientVisit {
   hpi                 String?   @db.Text
   doctorNotes         String?   @map("doctor_notes") @db.Text
   medicationsRaw      String?   @map("medications_raw") @db.Text
+  serviceStartTime    DateTime? @map("service_start_time") @db.Timestamptz(6)
+  serviceEndTime      DateTime? @map("service_end_time") @db.Timestamptz(6)
+  physicianLicenseNo  String?   @map("physician_license_no") @db.VarChar(20)
+  clinicCode          String?   @map("clinic_code") @db.VarChar(5)
   resolvedSiteId      Int?      @map("resolved_site_id")
   confirmedProtocolId Int?      @map("confirmed_protocol_id")
   confirmedRegimenId  Int?      @map("confirmed_regimen_id")
@@ -406,6 +412,7 @@ model PatientVisit {
   medications        VisitMedication[]
   aiSuggestions      AiSuggestion[]
   billingClaims      VisitBillingClaim[]
+  visitBillingItems  VisitBillingItem[]
 
   @@index([hn], map: "idx_patient_visits_hn")
   @@index([importId], map: "idx_patient_visits_import_id")
@@ -475,13 +482,19 @@ model AiSuggestion {
 // 21. patients — ผู้ป่วยมะเร็ง
 // =============================================================================
 model Patient {
-  id        Int      @id @default(autoincrement())
-  hn        String   @unique @db.VarChar(20)
-  citizenId String   @unique @map("citizen_id") @db.VarChar(13)
-  fullName  String   @map("full_name") @db.VarChar(200)
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               Int       @id @default(autoincrement())
+  hn               String    @unique @db.VarChar(20)
+  citizenId        String    @unique @map("citizen_id") @db.VarChar(13)
+  fullName         String    @map("full_name") @db.VarChar(200)
+  titleName        String?   @map("title_name") @db.VarChar(30)
+  gender           String?   @db.VarChar(10)
+  dateOfBirth      DateTime? @map("date_of_birth") @db.Date
+  address          String?   @db.Text
+  phoneNumber      String?   @map("phone_number") @db.VarChar(20)
+  mainHospitalCode String?   @map("main_hospital_code") @db.VarChar(5)
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   cases  PatientCase[]
   visits PatientVisit[]
@@ -502,6 +515,7 @@ model PatientCase {
   openedAt        DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
   closedAt        DateTime? @map("closed_at") @db.Timestamptz(6)
   notes                String?   @db.Text
+  vcrCode              String?   @map("vcr_code") @db.VarChar(20)
   referralDate         DateTime? @map("referral_date") @db.Date
   admissionDate        DateTime? @map("admission_date") @db.Date
   sourceHospitalId     Int?      @map("source_hospital_id")
@@ -620,4 +634,53 @@ model SsoProtocolDrug {
   @@index([protocolCode], map: "idx_sso_protocol_drugs_protocol_code")
   @@index([aipnCode], map: "idx_sso_protocol_drugs_aipn_code")
   @@map("sso_protocol_drugs")
+}
+
+// =============================================================================
+// Visit Billing Items — รายการค่าใช้จ่ายต่อ visit (จาก HIS)
+// =============================================================================
+model VisitBillingItem {
+  id             Int      @id @default(autoincrement())
+  visitId        Int      @map("visit_id")
+  hospitalCode   String   @map("hospital_code") @db.VarChar(20)
+  aipnCode       String?  @map("aipn_code") @db.VarChar(20)
+  billingGroup   String   @map("billing_group") @db.VarChar(5)
+  description    String   @db.Text
+  quantity       Decimal  @default(1) @db.Decimal(10, 2)
+  unitPrice      Decimal  @map("unit_price") @db.Decimal(12, 2)
+  claimUnitPrice Decimal? @map("claim_unit_price") @db.Decimal(12, 2)
+  claimCategory  String   @default("OP1") @map("claim_category") @db.VarChar(5)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  visit PatientVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@index([visitId], map: "idx_visit_billing_items_visit_id")
+  @@index([aipnCode], map: "idx_visit_billing_items_aipn_code")
+  @@map("visit_billing_items")
+}
+
+// =============================================================================
+// Billing Export Batches — ประวัติการ export SSOP billing
+// =============================================================================
+model BillingExportBatch {
+  id              Int      @id @default(autoincrement())
+  sessionNo       Int      @map("session_no")
+  hcode           String   @db.VarChar(5)
+  subUnit         String   @default("01") @map("sub_unit") @db.VarChar(2)
+  exportDate      DateTime @default(now()) @map("export_date") @db.Timestamptz(6)
+  visitCount      Int      @map("visit_count")
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(12, 2)
+  fileName        String   @map("file_name") @db.VarChar(200)
+  visitIds        Int[]    @map("visit_ids")
+  fileData        Bytes?   @map("file_data")
+  createdByUserId Int?     @map("created_by_user_id")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdByUser User? @relation("exportCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@map("billing_export_batches")
 }

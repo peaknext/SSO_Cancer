@@ -98,6 +98,12 @@ interface VisitDetail {
   resolvedSite: { id: number; siteCode: string; nameThai: string; nameEnglish: string } | null;
   medications: VisitMedication[];
   import: { id: number; filename: string; createdAt: string } | null;
+  patient: { id: number; fullName: string; titleName: string | null } | null;
+  case: {
+    id: number;
+    caseNumber: string;
+    sourceHospital: { id: number; hcode5: string; nameThai: string } | null;
+  } | null;
   confirmedProtocolId: number | null;
   confirmedRegimenId: number | null;
   confirmedAt: string | null;
@@ -194,31 +200,6 @@ interface AiSuggestionResponse {
   status: string;
   createdAt: string;
 }
-
-// ─── Drug category config ─────────────────────────────────────
-
-const DRUG_CATEGORY_CONFIG: Record<string, { label: string; chipCls: string }> = {
-  chemotherapy: {
-    label: 'เคมีบำบัด',
-    chipCls: 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400',
-  },
-  hormonal: {
-    label: 'ฮอร์โมน',
-    chipCls: 'bg-pink-50 dark:bg-pink-950/50 text-pink-700 dark:text-pink-400',
-  },
-  'targeted therapy': {
-    label: 'มุ่งเป้า',
-    chipCls: 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400',
-  },
-  immunotherapy: {
-    label: 'ภูมิคุ้มกัน',
-    chipCls: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-500',
-  },
-  supportive: {
-    label: 'ช่วยเหลือ',
-    chipCls: 'bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400',
-  },
-};
 
 // ─── Stage labels ────────────────────────────────────────────
 
@@ -832,8 +813,14 @@ export default function ProtocolAnalysisPage() {
                     </Badge>
                   )}
                 </div>
+                {visitDetail.patient && (
+                  <p className="text-sm font-medium text-foreground mb-1">{visitDetail.patient.fullName}</p>
+                )}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground/60">
                   <span>HN: <span className="font-mono text-foreground/80">{visitDetail.hn}</span></span>
+                  {visitDetail.case?.sourceHospital && (
+                    <span>รพ.ต้นทาง: <span className="text-foreground/80">{visitDetail.case.sourceHospital.nameThai}</span></span>
+                  )}
                   <span>วันที่: {new Date(visitDetail.visitDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                   <span>วินิจฉัยหลัก: <span className="font-mono text-foreground">{visitDetail.primaryDiagnosis}</span></span>
                 </div>
@@ -1007,41 +994,31 @@ export default function ProtocolAnalysisPage() {
                                   med.resolvedDrug!.genericName.toLowerCase(),
                                 );
                                 const isSupportive = med.resolvedDrug!.drugCategory === 'supportive';
-                                const catCfg = DRUG_CATEGORY_CONFIG[med.resolvedDrug!.drugCategory ?? ''];
                                 return (
-                                  <div className="flex flex-col gap-0.5">
-                                    <div className="flex items-center gap-1">
-                                      {isNonProtocol ? (
-                                        <AlertTriangle className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400 shrink-0" />
-                                      ) : (
-                                        <CheckCircle2 className={cn(
-                                          'h-3.5 w-3.5 shrink-0',
-                                          isSupportive
-                                            ? 'text-slate-400 dark:text-slate-500'
-                                            : 'text-green-600 dark:text-green-400',
-                                        )} />
-                                      )}
-                                      <span className={cn(
-                                        isNonProtocol
-                                          ? 'text-rose-600 dark:text-rose-400 font-semibold'
-                                          : isSupportive
-                                            ? 'text-slate-500 dark:text-slate-400'
-                                            : 'text-green-700 dark:text-green-400',
-                                      )}>
-                                        {med.resolvedDrug!.genericName}
-                                      </span>
-                                      {isNonProtocol && (
-                                        <span className="text-[9px] text-rose-500/80 dark:text-rose-400/70 whitespace-nowrap">
-                                          (นอกโปรโตคอล)
-                                        </span>
-                                      )}
-                                    </div>
-                                    {catCfg && (
-                                      <span className={cn(
-                                        'inline-flex self-start items-center text-[9px] font-medium px-1.5 py-px rounded-sm',
-                                        catCfg.chipCls,
-                                      )}>
-                                        {catCfg.label}
+                                  <div className="flex items-center gap-1">
+                                    {isNonProtocol ? (
+                                      <AlertTriangle className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400 shrink-0" />
+                                    ) : (
+                                      <CheckCircle2 className={cn(
+                                        'h-3.5 w-3.5 shrink-0',
+                                        isSupportive
+                                          ? 'text-slate-400 dark:text-slate-500'
+                                          : 'text-green-600 dark:text-green-400',
+                                      )} />
+                                    )}
+                                    <span className={cn(
+                                      'font-semibold',
+                                      isNonProtocol
+                                        ? 'text-rose-600 dark:text-rose-400'
+                                        : isSupportive
+                                          ? 'text-slate-500 dark:text-slate-400'
+                                          : 'text-green-700 dark:text-green-400',
+                                    )}>
+                                      {med.resolvedDrug!.genericName}
+                                    </span>
+                                    {isNonProtocol && (
+                                      <span className="text-[9px] text-rose-500/80 dark:text-rose-400/70 whitespace-nowrap">
+                                        (นอกโปรโตคอล)
                                       </span>
                                     )}
                                   </div>
@@ -1060,18 +1037,9 @@ export default function ProtocolAnalysisPage() {
                                     ฿{med.aipnPricing.rate.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                                   </span>
                                   <span className="text-[9px] text-foreground/40">/{med.aipnPricing.unit}</span>
-                                  {med.formularyStatus && (
-                                    <span className={cn(
-                                      'inline-flex items-center gap-0.5 text-[9px] font-medium px-1 py-0 rounded',
-                                      med.formularyStatus.inFormulary
-                                        ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40'
-                                        : 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40',
-                                    )}>
-                                      {med.formularyStatus.inFormulary ? (
-                                        <><ClipboardCheck className="h-2.5 w-2.5" />ในบัญชี</>
-                                      ) : (
-                                        <><XCircle className="h-2.5 w-2.5" />นอกบัญชี</>
-                                      )}
+                                  {med.formularyStatus?.inFormulary && (
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1 py-0 rounded text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40">
+                                      <ClipboardCheck className="h-2.5 w-2.5" />ในบัญชี
                                     </span>
                                   )}
                                 </div>

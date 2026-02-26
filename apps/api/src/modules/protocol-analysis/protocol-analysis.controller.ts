@@ -302,29 +302,82 @@ export class ProtocolAnalysisController {
         import: {
           select: { id: true, filename: true, createdAt: true },
         },
+        patient: { select: { id: true, fullName: true, titleName: true } },
+        case: {
+          select: {
+            id: true,
+            caseNumber: true,
+            sourceHospital: { select: { id: true, hcode5: true, nameThai: true } },
+          },
+        },
         confirmedProtocol: { select: { id: true, protocolCode: true, nameEnglish: true, nameThai: true } },
         confirmedRegimen: { select: { id: true, regimenCode: true, regimenName: true } },
         confirmedByUser: { select: { id: true, fullName: true, fullNameThai: true } },
+        visitBillingItems: {
+          where: { isActive: true },
+          select: { hospitalCode: true, aipnCode: true },
+        },
       },
     });
 
     if (!visit) throw new NotFoundException('VISIT_NOT_FOUND');
 
-    // Enrich medications with AIPN pricing
-    const hospitalCodes = visit.medications
-      .map((m) => m.hospitalCode)
-      .filter(Boolean)
-      .map((c) => parseInt(c!, 10))
-      .filter((c) => !isNaN(c));
+    // ── Resolve AIPN codes for each medication ──────────────────────
+    // Two strategies in priority order:
+    //  1. Billing items: hospitalCode → aipnCode (HIS import)
+    //  2. Name match: resolvedDrug.genericName → SsoAipnItem.description ILIKE
+    // Note: hospitalCode (hospital internal, 1500000+) ≠ AIPN code (national, 55825–1353186)
 
-    let aipnPriceMap = new Map<
+    const medAipnCodes = new Map<number, number>(); // med.id → aipnCode
+
+    // Strategy 1: billing items (HIS import provides explicit aipnCode per hospitalCode)
+    const hospToAipn = new Map<string, number>();
+    for (const item of visit.visitBillingItems) {
+      if (item.hospitalCode && item.aipnCode) {
+        const parsed = parseInt(item.aipnCode, 10);
+        if (!isNaN(parsed)) hospToAipn.set(item.hospitalCode, parsed);
+      }
+    }
+    for (const med of visit.medications) {
+      if (med.hospitalCode && hospToAipn.has(med.hospitalCode)) {
+        medAipnCodes.set(med.id, hospToAipn.get(med.hospitalCode)!);
+      }
+    }
+
+    // Strategy 2: match resolved drug generic name → SsoAipnItem description
+    const needsNameLookup: { medId: number; genericName: string }[] = [];
+    for (const med of visit.medications) {
+      if (medAipnCodes.has(med.id)) continue;
+      if (med.resolvedDrug?.genericName) {
+        needsNameLookup.push({ medId: med.id, genericName: med.resolvedDrug.genericName });
+      }
+    }
+    if (needsNameLookup.length > 0) {
+      const uniqueNames = [...new Set(needsNameLookup.map((m) => m.genericName))];
+      const nameToAipn = new Map<string, number>();
+      for (const name of uniqueNames) {
+        const match = await this.prisma.ssoAipnItem.findFirst({
+          where: { description: { contains: name, mode: 'insensitive' } },
+          select: { code: true },
+        });
+        if (match) nameToAipn.set(name, match.code);
+      }
+      for (const { medId, genericName } of needsNameLookup) {
+        const code = nameToAipn.get(genericName);
+        if (code) medAipnCodes.set(medId, code);
+      }
+    }
+
+    // ── Batch query AIPN items + formulary ────────────────────────
+    const aipnCodes = [...new Set(medAipnCodes.values())];
+
+    const aipnPriceMap = new Map<
       number,
       { rate: number; unit: string; description: string }
     >();
-    if (hospitalCodes.length > 0) {
-      const uniqueCodes = [...new Set(hospitalCodes)];
+    if (aipnCodes.length > 0) {
       const aipnItems = await this.prisma.ssoAipnItem.findMany({
-        where: { code: { in: uniqueCodes } },
+        where: { code: { in: aipnCodes } },
         select: { code: true, rate: true, unit: true, description: true },
       });
       for (const item of aipnItems) {
@@ -337,21 +390,20 @@ export class ProtocolAnalysisController {
     }
 
     // Enrich with formulary data if visit has a confirmed protocol
-    let formularyMap = new Map<
+    const formularyMap = new Map<
       number,
       { rate: number; unit: string; category: string }
     >();
-    if (visit.confirmedProtocolId && hospitalCodes.length > 0) {
+    if (visit.confirmedProtocolId && aipnCodes.length > 0) {
       const confirmedProtocol = await this.prisma.protocolName.findUnique({
         where: { id: visit.confirmedProtocolId },
         select: { protocolCode: true },
       });
       if (confirmedProtocol) {
-        const uniqueCodes = [...new Set(hospitalCodes)];
         const formularyItems = await this.prisma.ssoProtocolDrug.findMany({
           where: {
             protocolCode: confirmedProtocol.protocolCode,
-            aipnCode: { in: uniqueCodes },
+            aipnCode: { in: aipnCodes },
             isActive: true,
           },
           select: {
@@ -371,15 +423,11 @@ export class ProtocolAnalysisController {
       }
     }
 
-    // Map medications with pricing
+    // ── Map medications with pricing ──────────────────────────────
     const enrichedMedications = visit.medications.map((med) => {
-      const code = med.hospitalCode
-        ? parseInt(med.hospitalCode, 10)
-        : null;
-      const aipnPrice =
-        code && !isNaN(code) ? aipnPriceMap.get(code) : null;
-      const formularyEntry =
-        code && !isNaN(code) ? formularyMap.get(code) : null;
+      const aipnCode = medAipnCodes.get(med.id) ?? null;
+      const aipnPrice = aipnCode ? aipnPriceMap.get(aipnCode) : null;
+      const formularyEntry = aipnCode ? formularyMap.get(aipnCode) : null;
 
       return {
         ...med,
@@ -396,14 +444,32 @@ export class ProtocolAnalysisController {
               formularyRate: formularyEntry.rate,
               category: formularyEntry.category,
             }
-          : code && !isNaN(code)
+          : aipnCode
             ? { inFormulary: false }
             : null,
       };
     });
 
+    // Fallback: if visit has no direct case link, look up patient's first case for sourceHospital
+    let caseData = visit.case;
+    if (!caseData && visit.patient) {
+      const firstCase = await this.prisma.patientCase.findFirst({
+        where: { patientId: visit.patient.id, isActive: true },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          caseNumber: true,
+          sourceHospital: { select: { id: true, hcode5: true, nameThai: true } },
+        },
+      });
+      if (firstCase) caseData = firstCase;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { visitBillingItems: _billing, ...visitData } = visit;
     return {
-      ...visit,
+      ...visitData,
+      case: caseData,
       medications: enrichedMedications,
     };
   }
@@ -554,7 +620,13 @@ export class ProtocolAnalysisController {
     const visit = await this.prisma.patientVisit.findUnique({
       where: { vn },
       include: {
-        medications: true,
+        medications: {
+          include: { resolvedDrug: { select: { genericName: true } } },
+        },
+        visitBillingItems: {
+          where: { isActive: true },
+          select: { hospitalCode: true, aipnCode: true },
+        },
         confirmedProtocol: {
           select: { protocolCode: true, nameEnglish: true },
         },
@@ -568,11 +640,43 @@ export class ProtocolAnalysisController {
       );
     }
 
-    const aipnCodes = visit.medications
-      .map((m) =>
-        m.hospitalCode ? parseInt(m.hospitalCode, 10) : null,
-      )
-      .filter((c): c is number => c !== null && !isNaN(c));
+    // Resolve AIPN codes: billing items first, then name-based fallback
+    const billingAipnMap = new Map<string, number>();
+    for (const item of visit.visitBillingItems) {
+      if (item.hospitalCode && item.aipnCode) {
+        const parsed = parseInt(item.aipnCode, 10);
+        if (!isNaN(parsed)) billingAipnMap.set(item.hospitalCode, parsed);
+      }
+    }
+    const seen = new Set<number>();
+    const aipnCodes: number[] = [];
+    const needsNameLookup: string[] = [];
+    for (const med of visit.medications) {
+      // Strategy 1: billing items
+      if (med.hospitalCode && billingAipnMap.has(med.hospitalCode)) {
+        const code = billingAipnMap.get(med.hospitalCode)!;
+        if (!seen.has(code)) { seen.add(code); aipnCodes.push(code); }
+        continue;
+      }
+      // Collect for name-based matching
+      if (med.resolvedDrug?.genericName) {
+        needsNameLookup.push(med.resolvedDrug.genericName);
+      }
+    }
+    // Strategy 2: name-based matching
+    if (needsNameLookup.length > 0) {
+      const uniqueNames = [...new Set(needsNameLookup)];
+      for (const name of uniqueNames) {
+        const match = await this.prisma.ssoAipnItem.findFirst({
+          where: { description: { contains: name, mode: 'insensitive' } },
+          select: { code: true },
+        });
+        if (match && !seen.has(match.code)) {
+          seen.add(match.code);
+          aipnCodes.push(match.code);
+        }
+      }
+    }
 
     const compliance = await this.formularyService.checkFormularyCompliance(
       visit.confirmedProtocol.protocolCode,

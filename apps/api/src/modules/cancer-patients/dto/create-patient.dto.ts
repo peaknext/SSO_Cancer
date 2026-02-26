@@ -1,5 +1,5 @@
-import { IsString, MaxLength, Length, Matches } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, MaxLength, Length, Matches, IsOptional, IsDateString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePatientDto {
   @ApiProperty({ example: '1234567', description: 'Hospital Number' })
@@ -23,4 +23,38 @@ export class CreatePatientDto {
   @IsString()
   @MaxLength(200)
   fullName: string;
+
+  @ApiPropertyOptional({ example: 'นาย', description: 'คำนำหน้า' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  titleName?: string;
+
+  @ApiPropertyOptional({ example: 'M', description: 'เพศ (M/F)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  gender?: string;
+
+  @ApiPropertyOptional({ example: '1980-05-15', description: 'วันเกิด (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsDateString()
+  dateOfBirth?: string;
+
+  @ApiPropertyOptional({ description: 'ที่อยู่' })
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiPropertyOptional({ example: '0891234567', description: 'เบอร์โทร' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  phoneNumber?: string;
+
+  @ApiPropertyOptional({ example: '10711', description: 'รหัส รพ.หลักตามสิทธิ (hcode5)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(5)
+  mainHospitalCode?: string;
 }

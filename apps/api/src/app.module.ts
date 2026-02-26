@@ -22,6 +22,8 @@ import { SsoAipnCatalogModule } from './modules/sso-aipn-catalog/sso-aipn-catalo
 import { SsoProtocolDrugsModule } from './modules/sso-protocol-drugs/sso-protocol-drugs.module';
 import { HospitalsModule } from './modules/hospitals/hospitals.module';
 import { BackupRestoreModule } from './modules/backup-restore/backup-restore.module';
+import { HisIntegrationModule } from './modules/his-integration/his-integration.module';
+import { SsopExportModule } from './modules/ssop-export/ssop-export.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -60,6 +62,8 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     SsoProtocolDrugsModule,
     HospitalsModule,
     BackupRestoreModule,
+    HisIntegrationModule,
+    SsopExportModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

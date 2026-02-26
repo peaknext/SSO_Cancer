@@ -36,8 +36,10 @@ const TABLE_ORDER = [
   'patient_cases',
   'patient_visits',
   'visit_medications',
+  'visit_billing_items',
   'ai_suggestions',
   'visit_billing_claims',
+  'billing_export_batches',
   // Phase 6 — Auth/System
   'password_history',
   'audit_logs',

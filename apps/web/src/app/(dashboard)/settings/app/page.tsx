@@ -28,6 +28,7 @@ interface GroupedSettings {
 const groupLabels: Record<string, string> = {
   auth: 'การยืนยันตัวตน (Authentication)',
   display: 'การแสดงผล (Display)',
+  hospital: 'สถานพยาบาล / HIS (Hospital & HIS Integration)',
   system: 'ระบบ (System)',
 };
 

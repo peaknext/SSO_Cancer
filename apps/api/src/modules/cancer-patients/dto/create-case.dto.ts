@@ -20,6 +20,12 @@ export class CreateCaseDto {
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({ description: 'รหัส Protocol QR Code จากระบบ SSO Cancer Care' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  vcrCode?: string;
+
   @ApiPropertyOptional({ description: 'วันที่ลงทะเบียนส่งต่อ', example: '2025-01-15' })
   @IsOptional()
   @IsDateString()
