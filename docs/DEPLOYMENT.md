@@ -100,8 +100,9 @@ docker compose version    # Docker Compose version v2.x+
 ├── docker-compose.deploy.yml
 ├── .env.production
 ├── deploy/
-│   ├── import-and-run.sh
-│   ├── pull-and-run.sh
+│   ├── import-and-run.sh        # วิธี A: import จาก .tar
+│   ├── pull-and-run.sh          # วิธี B: pull จาก Docker Hub
+│   ├── build-and-export.sh      # (ใช้บนเครื่อง dev เท่านั้น — สร้าง .tar)
 │   └── nginx/
 │       ├── nginx.conf
 │       └── ssl/
@@ -137,6 +138,14 @@ nano .env.production    # หรือใช้ vi / notepad
 | `JWT_SECRET` | Secret สำหรับ access token | สร้างด้วยคำสั่งด้านล่าง |
 | `JWT_REFRESH_SECRET` | Secret สำหรับ refresh token | สร้างด้วยคำสั่งด้านล่าง |
 | `CORS_ORIGIN` | URL ของระบบ (ตรงกับ hostname) | `https://192.168.1.100` |
+| `IMAGE_REGISTRY` | Docker Hub username ตามด้วย `/` (วิธี B) | `peaknext/` |
+
+ค่าตัวแปรเสริม (optional):
+
+| ตัวแปร | ค่าเริ่มต้น | คำอธิบาย |
+|--------|------------|---------|
+| `NGINX_HTTP_PORT` | `80` | port HTTP ของ nginx (เปลี่ยนถ้า 80 ไม่ว่าง) |
+| `NGINX_HTTPS_PORT` | `443` | port HTTPS ของ nginx |
 
 #### สร้าง JWT secrets
 
@@ -337,7 +346,7 @@ Default admin login:
 
 #### C. กำหนด `IMAGE_REGISTRY` บน server
 
-แก้ไข `.env.production` บน server เพิ่มบรรทัด:
+ค่า `IMAGE_REGISTRY` มีอยู่ใน `.env.production.example` แล้ว ตรวจสอบให้ตรงกับ Docker Hub username ของคุณ:
 
 ```ini
 # ใส่ Docker Hub username ตามด้วย / (trailing slash)
@@ -418,6 +427,7 @@ bash deploy/pull-and-run.sh v1.0.0
 
 ```bash
 cd SSO_Cancer
+mkdir -p backups
 
 # Dump ทั้ง database เป็นไฟล์ custom format (มีขนาดเล็กกว่า SQL)
 pg_dump -U postgres -F c -d sso_cancer -f backups/sso_cancer_export.dump
@@ -430,6 +440,7 @@ pg_dump -U postgres -d sso_cancer > backups/sso_cancer_export.sql
 
 ```bash
 cd SSO_Cancer
+mkdir -p backups
 
 # Dump จาก Docker container (custom format)
 docker compose exec db pg_dump -U postgres -F c sso_cancer > backups/sso_cancer_export.dump
@@ -777,14 +788,25 @@ IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.produ
 
 ### สำรองข้อมูล (Backup)
 
+#### วิธีที่ 1: ผ่าน UI ของระบบ (แนะนำ)
+
+ระบบมีหน้า **Backup & Restore** ในตัว เข้าถึงได้ที่ **Settings → Backup** (ต้องใช้ role ADMIN ขึ้นไป):
+
+- **Download backup** — ดาวน์โหลดไฟล์ `.json.gz` ที่มีข้อมูลทุกตาราง
+- **Restore** — อัปโหลดไฟล์ backup เพื่อดูตัวอย่าง (preview) ก่อน แล้วยืนยันการ restore
+
+#### วิธีที่ 2: pg_dump (command line)
+
 ```bash
+mkdir -p backups
+
 # Backup database เป็นไฟล์ SQL
 IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
-  exec db pg_dump -U postgres sso_cancer > backup_$(date +%Y%m%d_%H%M%S).sql
+  exec db pg_dump -U postgres sso_cancer > backups/backup_$(date +%Y%m%d_%H%M%S).sql
 
 # Restore จากไฟล์ backup
 IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
-  exec -T db psql -U postgres sso_cancer < backup_20260225_143000.sql
+  exec -T db psql -U postgres sso_cancer < backups/backup_20260225_143000.sql
 ```
 
 ### ดูพื้นที่ Docker
@@ -849,6 +871,37 @@ IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.produ
   exec db psql -U postgres -d sso_cancer -c "SELECT 1"
 ```
 
+### ปัญหา: Seed ล้มเหลว (TSError: moduleResolution)
+
+deploy script รัน seed ด้วย `ts-node` ซึ่งอาจล้มเหลวด้วย error:
+```
+TSError: Option 'moduleResolution' must be set to 'NodeNext' when option 'module' is set to 'NodeNext'
+```
+
+สัญญาณ: log แสดง `WARNING: Seed failed` แต่ deploy ยังเสร็จ services ทำงานปกติ
+ผลกระทบ: ข้อมูลพื้นฐาน (ยา, โปรโตคอล, รพ. ฯลฯ) อาจไม่ถูก seed
+
+**ตรวจสอบว่า seed ทำงานแล้วหรือยัง:**
+
+```bash
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+  exec db psql -U postgres -d sso_cancer -c "SELECT count(*) FROM drugs;"
+# ควรได้ค่ามากกว่า 0 (ประมาณ 98 rows)
+```
+
+**แก้ไข — seed ผ่าน database โดยตรง** (ไม่พึ่ง ts-node):
+
+```bash
+# เข้า psql แล้ว seed แต่ละไฟล์ด้วยตนเอง
+for f in database/seeds/*.sql; do
+  echo "Seeding $f..."
+  IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production \
+    exec -T db psql -U postgres -d sso_cancer < "$f"
+done
+```
+
+> **หมายเหตุ**: SQL seed ใช้ `ON CONFLICT DO NOTHING` จึงรัน ซ้ำได้อย่างปลอดภัย
+
 ### ปัญหา: หน้าเว็บแสดง 502 Bad Gateway
 
 nginx เชื่อมต่อกับ api หรือ web ไม่ได้:
@@ -903,5 +956,6 @@ IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.produ
 | ดูสถานะ | `IMAGE_TAG=v1.0.0 docker compose -f docker-compose.deploy.yml --env-file .env.production ps` |
 | ดู logs | `IMAGE_TAG=v1.0.0 docker compose -f docker-compose.deploy.yml --env-file .env.production logs -f` |
 | หยุดระบบ | `IMAGE_TAG=v1.0.0 docker compose -f docker-compose.deploy.yml --env-file .env.production down` |
-| Backup DB | `... exec db pg_dump -U postgres sso_cancer > backup.sql` |
+| Backup DB (CLI) | `... exec db pg_dump -U postgres sso_cancer > backups/backup.sql` |
+| Backup DB (UI) | เข้า Settings → Backup แล้วกด Download |
 | เข้าสู่ระบบ | `admin@sso-cancer.local` / `Admin@1234` |
