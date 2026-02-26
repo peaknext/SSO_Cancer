@@ -14,6 +14,7 @@ export interface HisPatientSearchResult {
   insuranceType?: string;
   mainHospitalCode?: string;
   totalVisitCount?: number;
+  matchingVisitCount?: number;
 }
 
 export interface HisMedication {

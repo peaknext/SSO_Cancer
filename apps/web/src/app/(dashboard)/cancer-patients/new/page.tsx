@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +15,6 @@ import {
   X,
   CheckCircle2,
   UserPlus,
-  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -25,24 +24,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { PatientSearchResults, HisPatient } from './patient-search-results';
+import { HisAdvancedSearch } from './his-advanced-search';
 
 // =====================================================
 // Types
 // =====================================================
-
-interface HisPatient {
-  hn: string;
-  citizenId: string;
-  titleName?: string;
-  fullName: string;
-  gender?: string;
-  dateOfBirth?: string;
-  address?: string;
-  phoneNumber?: string;
-  insuranceType?: string;
-  mainHospitalCode?: string;
-  totalVisitCount?: number;
-}
 
 interface PreviewResult {
   patient: HisPatient;
@@ -87,6 +74,7 @@ export default function PatientCreatePage() {
 
   // Step machine
   const [step, setStep] = useState<Step>('search');
+  const [searchTab, setSearchTab] = useState<'simple' | 'advanced'>('simple');
 
   // HIS search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -259,9 +247,36 @@ export default function PatientCreatePage() {
       )}
 
       {/* ==================== STEP: SEARCH ==================== */}
-      {(step === 'search') && (
-        <>
-          {/* Search from HIS */}
+      {/* Use CSS hiding instead of conditional rendering to preserve search state */}
+      <div className={cn('space-y-6', step !== 'search' && 'hidden')}>
+        {/* Tab bar */}
+        <div className="flex border-b">
+          <button
+            className={cn(
+              'px-4 py-2.5 text-sm font-medium transition-colors -mb-px',
+              searchTab === 'simple'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+            onClick={() => setSearchTab('simple')}
+          >
+            ค้นหาผู้ป่วย
+          </button>
+          <button
+            className={cn(
+              'px-4 py-2.5 text-sm font-medium transition-colors -mb-px',
+              searchTab === 'advanced'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+            onClick={() => setSearchTab('advanced')}
+          >
+            ค้นหาขั้นสูงจาก HIS
+          </button>
+        </div>
+
+        {/* Tab: Simple search */}
+        <div className={cn(searchTab !== 'simple' && 'hidden')}>
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -298,41 +313,11 @@ export default function PatientCreatePage() {
               )}
 
               {/* Search results */}
-              {searchResults.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    พบ {searchResults.length} ผลลัพธ์
-                  </p>
-                  <div className="divide-y rounded-lg border">
-                    {searchResults.map((p) => (
-                      <button
-                        key={p.hn}
-                        className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex items-center justify-between gap-4"
-                        onClick={() => handleSelectPatient(p)}
-                        disabled={previewing}
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">{p.fullName}</span>
-                            {p.gender && (
-                              <Badge variant="outline" className="text-xs">
-                                {p.gender === 'M' ? 'ชาย' : 'หญิง'}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                            <span>HN: {p.hn}</span>
-                            {p.citizenId && <span>ID: {p.citizenId}</span>}
-                            {p.dateOfBirth && <span>อายุ {calculateAge(p.dateOfBirth)} ปี</span>}
-                            {p.totalVisitCount != null && <span>{p.totalVisitCount} visits</span>}
-                          </div>
-                        </div>
-                        <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90 shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <PatientSearchResults
+                results={searchResults}
+                onSelect={handleSelectPatient}
+                disabled={previewing}
+              />
 
               {/* No results */}
               {hasSearched && !searching && searchResults.length === 0 && !searchError && (
@@ -350,18 +335,26 @@ export default function PatientCreatePage() {
               )}
             </CardContent>
           </Card>
+        </div>
 
-          {/* Manual registration link */}
-          <div className="text-center">
-            <button
-              className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
-              onClick={() => setStep('manual')}
-            >
-              ลงทะเบียนด้วยตนเอง (ไม่ใช้ HIS)
-            </button>
-          </div>
-        </>
-      )}
+        {/* Tab: Advanced search — always mounted to preserve state */}
+        <div className={cn(searchTab !== 'advanced' && 'hidden')}>
+          <HisAdvancedSearch
+            onSelectPatient={handleSelectPatient}
+            previewing={previewing}
+          />
+        </div>
+
+        {/* Manual registration link */}
+        <div className="text-center">
+          <button
+            className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
+            onClick={() => setStep('manual')}
+          >
+            ลงทะเบียนด้วยตนเอง (ไม่ใช้ HIS)
+          </button>
+        </div>
+      </div>
 
       {/* ==================== STEP: PREVIEW ==================== */}
       {step === 'preview' && preview && selectedPatient && (

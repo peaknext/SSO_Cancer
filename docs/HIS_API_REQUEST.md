@@ -1,17 +1,19 @@
-## 11. HIS API Specification (เอกสารสำหรับทีม HIS)
+## 1. HIS API Specification (เอกสารสำหรับทีม HIS)
 
 > **เอกสารนี้จะถูกส่งให้ทีม HIS ของโรงพยาบาล** เพื่อให้พัฒนา API ตามที่ระบบเราต้องการ
 
-### 11.1 Overview
+### 1.1 Overview
 
-ระบบ SSO Cancer Care ต้องเรียกใช้ API จากระบบ HIS ของโรงพยาบาล 2 endpoints:
+กรองเฉพาะผู้ป่วยสิทธิ์ประกันสังคมเท่านั้น
+ระบบ SSO Cancer Care ต้องเรียกใช้ API จากระบบ HIS ของโรงพยาบาล 3 endpoints:
 
-| #   | Endpoint               | วัตถุประสงค์                                       | เรียกเมื่อ                  |
-| --- | ---------------------- | -------------------------------------------------- | --------------------------- |
-| 1   | **Patient Search**     | ค้นหาผู้ป่วยจาก HN/Citizen ID/ชื่อ                 | ผู้ใช้กดปุ่ม "ค้นหาจาก HIS" |
-| 2   | **Patient Visit Data** | ดึงข้อมูล visits + ค่ารักษาพยาบาลทั้งหมดของผู้ป่วย | ผู้ใช้กดปุ่ม "นำเข้าข้อมูล" |
+| #   | Endpoint                    | วัตถุประสงค์                                          | เรียกเมื่อ                         |
+| --- | --------------------------- | ----------------------------------------------------- | ---------------------------------- |
+| 1   | **Patient Search**          | ค้นหาผู้ป่วยจาก HN/Citizen ID/ชื่อ                    | ผู้ใช้กดปุ่ม "ค้นหาจาก HIS"        |
+| 2   | **Patient Visit Data**      | ดึงข้อมูล visits + ค่ารักษาพยาบาลทั้งหมดของผู้ป่วย    | ผู้ใช้กดปุ่ม "นำเข้าข้อมูล"        |
+| 3   | **Advanced Patient Search** | ค้นหาผู้ป่วยจากเงื่อนไขทางคลินิก (วันที่/วินิจฉัย/ยา) | ผู้ใช้กดปุ่ม "ค้นหาขั้นสูงจาก HIS" |
 
-### 11.2 Authentication
+### 1.2 Authentication
 
 | Item         | รายละเอียด                                                                         |
 | ------------ | ---------------------------------------------------------------------------------- |
@@ -19,7 +21,7 @@
 | IP Whitelist | จำกัดเฉพาะ IP ของ server SSO Cancer Care                                           |
 | Rate Limit   | ≥ 10 requests/minute ต่อ IP                                                        |
 
-### 11.3 Endpoint 1: Patient Search
+### 1.3 Endpoint 1: Patient Search
 
 ```
 GET /api/patients/search?q={searchTerm}&type={searchType}
@@ -77,7 +79,7 @@ GET /api/patients/search?q={searchTerm}&type={searchType}
 | `mainHospitalCode` | string | ❌       | รหัส รพ.หลักตามสิทธิ (hcode5) | BILLTRAN.HMain (#15)               |
 | `totalVisitCount`  | number | ❌       | จำนวน visit ทั้งหมดใน HIS     | แสดง UI เท่านั้น                   |
 
-### 11.4 Endpoint 2: Patient Visit Data (Full Import)
+### 1.4 Endpoint 2: Patient Visit Data (Full Import)
 
 ```
 GET /api/patients/{hn}/visits?from={startDate}&to={endDate}
@@ -193,7 +195,7 @@ GET /api/patients/{hn}/visits?from={startDate}&to={endDate}
 | Field            | Type   | Required | คำอธิบาย                                   | ใช้ใน SSOP               |
 | ---------------- | ------ | -------- | ------------------------------------------ | ------------------------ |
 | `hospitalCode`   | string | ✅       | Local Code ของ รพ.                         | BillItems.LCCode (#4)    |
-| `aipnCode`       | string | ✅       | รหัส AIPN มาตรฐาน (เช่น "55021")          | BillItems.STDCode (#5)   |
+| `aipnCode`       | string | ✅       | รหัส AIPN มาตรฐาน (เช่น "55021")           | BillItems.STDCode (#5)   |
 | `billingGroup`   | string | ✅       | หมวดค่ารักษา (3/8/B/C/G/etc.)              | BillItems.BillMuad (#3)  |
 | `description`    | string | ✅       | คำอธิบาย                                   | BillItems.Desc (#6)      |
 | `quantity`       | number | ✅       | จำนวน                                      | BillItems.QTY (#7)       |
@@ -203,7 +205,91 @@ GET /api/patients/{hn}/visits?from={startDate}&to={endDate}
 
 > **สำคัญ**: `aipnCode` เป็น string (alphanumeric) และต้องส่งจาก HIS ทุกรายการ — ถ้าไม่มีค่า ระบบจะแสดง validation warning ตอน SSOP export preview
 
-### 11.5 Error Response Format
+### 1.5 Endpoint 3: Advanced Patient Search (Clinical Criteria)
+
+```
+POST /api/patients/search/advanced
+```
+
+> ใช้ POST เพราะ request body มี arrays (icdPrefixes, drugKeywords) ที่ไม่เหมาะกับ GET query string
+
+**Request Body (JSON):**
+
+```json
+{
+  "from": "2026-02-01",
+  "to": "2026-02-27",
+  "icdPrefixes": ["C50", "C509"],
+  "secondaryDiagnosisCodes": ["Z510"],
+  "drugKeywords": ["paclitaxel", "cisplatin"]
+}
+```
+
+**Request Fields:**
+
+| Field                     | Type     | Required | คำอธิบาย                                                                                                          |
+| ------------------------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `from`                    | string   | ✅       | วันเริ่มต้น (YYYY-MM-DD)                                                                                          |
+| `to`                      | string   | ✅       | วันสิ้นสุด (YYYY-MM-DD) — ห่างจาก `from` ไม่เกิน 30 วัน                                                           |
+| `icdPrefixes`             | string[] | ❌       | ICD-10 prefixes สำหรับ primaryDiagnosis (เช่น `["C50"]` → match C500-C509). ถ้าไม่ส่ง = ค้นหาทุกการวินิจฉัยมะเร็ง |
+| `secondaryDiagnosisCodes` | string[] | ❌       | ICD-10 codes ที่ต้องพบใน secondaryDiagnoses (เช่น `["Z510", "Z511"]`). ถ้าไม่ส่ง = ไม่กรองวินิจฉัยรอง             |
+| `drugKeywords`            | string[] | ❌       | ชื่อยา generic สำหรับ substring match (case-insensitive). ถ้าไม่ส่ง = ไม่กรองยา                                   |
+
+**Matching logic (ฝั่ง HIS):**
+
+1. **กรองเฉพาะผู้ป่วยสิทธิ์ประกันสังคมเท่านั้น** (`insuranceType` = ประกันสังคม / SSO)
+2. กรอง visits ที่ `visitDate BETWEEN from AND to`
+3. ถ้า `icdPrefixes` มีค่า → `primaryDiagnosis` STARTS WITH อย่างน้อย 1 prefix
+4. ถ้า `secondaryDiagnosisCodes` มีค่า → `secondaryDiagnoses` มีอย่างน้อย 1 code ที่ starts with อย่างน้อย 1 prefix ที่ส่งมา
+5. ถ้า `drugKeywords` มีค่า → มีอย่างน้อย 1 medication ที่ `medicationName` CONTAINS (case-insensitive) อย่างน้อย 1 keyword
+6. ค้นหา **distinct patients** ที่มี ≥1 matching visit
+7. เรียงตาม matching visit ล่าสุด, **จำกัดไม่เกิน 200 ผลลัพธ์**
+
+> **สำคัญ**: Endpoint นี้ใช้สำหรับระบบ SSO Cancer Care โดยเฉพาะ — ต้องกรอง **เฉพาะผู้ป่วยสิทธิ์ประกันสังคม** เท่านั้น ไม่รวมผู้ป่วยสิทธิ์อื่น (บัตรทอง, ข้าราชการ, ฯลฯ)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "hn": "0012345",
+      "citizenId": "1234567890123",
+      "titleName": "นาย",
+      "fullName": "สมชาย ใจดี",
+      "gender": "M",
+      "dateOfBirth": "1980-05-15",
+      "address": "123/4 ม.5 ต.ในเมือง อ.เมือง จ.ขอนแก่น 40000",
+      "phoneNumber": "0891234567",
+      "insuranceType": "ประกันสังคม",
+      "mainHospitalCode": "10711",
+      "matchingVisitCount": 3
+    }
+  ]
+}
+```
+
+**Response Fields:**
+
+เหมือน Endpoint 1 (§11.3) ยกเว้น:
+
+| Field                | Type   | Required | คำอธิบาย                               |
+| -------------------- | ------ | -------- | -------------------------------------- |
+| `matchingVisitCount` | number | ✅       | จำนวน visits ที่ตรงตามเงื่อนไขที่กำหนด |
+
+> **Note**: `totalVisitCount` (Endpoint 1) นับ visits ทั้งหมดใน HIS, ส่วน `matchingVisitCount` (Endpoint 3) นับเฉพาะ visits ที่ตรงกับเกณฑ์ค้นหา
+
+**Error codes เพิ่มเติม:**
+
+| Code                  | HTTP Status | Description                   |
+| --------------------- | ----------- | ----------------------------- |
+| `DATE_RANGE_EXCEEDED` | 400         | ช่วงวันที่เกิน 30 วัน         |
+| `DATE_RANGE_INVALID`  | 400         | วันเริ่มต้นอยู่หลังวันสิ้นสุด |
+
+---
+
+### 1.6 Error Response Format
 
 ```json
 {

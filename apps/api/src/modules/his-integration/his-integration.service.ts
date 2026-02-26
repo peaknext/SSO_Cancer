@@ -8,6 +8,7 @@ import {
   HisVisit,
   isCancerRelatedIcd10,
 } from './types/his-api.types';
+import { AdvancedSearchDto } from './dto/advanced-search.dto';
 
 type TxClient = Parameters<Parameters<PrismaService['$transaction']>[0]>[0];
 
@@ -309,6 +310,77 @@ export class HisIntegrationService {
         },
       });
     }
+  }
+
+  /** Advanced search — search patients from HIS by clinical criteria */
+  async advancedSearch(dto: AdvancedSearchDto): Promise<HisPatientSearchResult[]> {
+    // 1. Validate date range
+    const fromDate = new Date(dto.from);
+    const toDate = new Date(dto.to);
+    const diffDays = (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24);
+    if (diffDays < 0) {
+      throw new BadRequestException('วันเริ่มต้นต้องก่อนวันสิ้นสุด');
+    }
+    if (diffDays > 31) {
+      throw new BadRequestException('ช่วงวันที่ต้องไม่เกิน 31 วัน');
+    }
+
+    // 2. Map cancerSiteIds → ICD-10 prefixes (flatten + deduplicate)
+    let icdPrefixes: string[] | undefined;
+    if (dto.cancerSiteIds && dto.cancerSiteIds.length > 0) {
+      const siteIds = dto.cancerSiteIds.map((id) => {
+        const num = parseInt(id, 10);
+        if (isNaN(num)) throw new BadRequestException('cancerSiteIds แต่ละค่าต้องเป็นตัวเลข');
+        return num;
+      });
+      const mappings = await this.prisma.icd10CancerSiteMap.findMany({
+        where: { cancerSiteId: { in: siteIds }, isActive: true },
+        select: { icdPrefix: true },
+      });
+      if (mappings.length === 0) {
+        throw new BadRequestException('ไม่พบ ICD-10 mapping สำหรับตำแหน่งมะเร็งที่เลือก');
+      }
+      icdPrefixes = [...new Set(mappings.map((m) => m.icdPrefix))];
+    }
+
+    // 3. Call HIS API
+    const results = await this.hisClient.advancedSearchPatients({
+      from: dto.from,
+      to: dto.to,
+      icdPrefixes,
+      secondaryDiagnosisCodes: dto.secondaryDiagCodes,
+      drugKeywords: dto.drugNames,
+    });
+
+    // Map matchingVisitCount → totalVisitCount for frontend compatibility
+    return results.map((p) => ({
+      ...p,
+      totalVisitCount: p.matchingVisitCount ?? p.totalVisitCount,
+    }));
+  }
+
+  /** Get drug generic names used in protocols — for advanced search filter dropdown */
+  async getProtocolDrugNames(): Promise<
+    { id: number; genericName: string; drugCategory: string | null }[]
+  > {
+    return this.prisma.drug.findMany({
+      where: {
+        isActive: true,
+        regimenDrugs: {
+          some: {
+            regimen: {
+              protocolRegimens: { some: {} },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        genericName: true,
+        drugCategory: true,
+      },
+      orderBy: { genericName: 'asc' },
+    });
   }
 
   /** Health check for HIS API connectivity */
