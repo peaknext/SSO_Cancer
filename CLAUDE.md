@@ -16,7 +16,7 @@ The data covers 23 cancer sites with treatment protocols, drug regimens, staging
 npx prisma generate --config prisma/prisma.config.ts
 npx prisma migrate dev --config prisma/prisma.config.ts --name <name>
 npx prisma db seed --config prisma/prisma.config.ts
-npx prisma migrate reset --config prisma/prisma.config.ts
+npx prisma migrate reset --config prisma/prisma.config.ts   # requires PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=yes when non-interactive
 npx prisma studio --config prisma/prisma.config.ts
 ```
 
@@ -122,7 +122,8 @@ apps/web/       Next.js 15 frontend (dev port 47001, Docker port 3000)
 prisma/         Schema, config, migrations, generated client
 database/seeds/ Numbered SQL files (001–016) executed by prisma/seed.ts
 deploy/         4 deploy scripts + nginx config + docker-compose.deploy.yml
-docs/           SPECIFICATION.md (full app spec, 113KB)
+docs/           SPECIFICATION.md (full app spec, 113KB), DEPLOYMENT.md (Thai-language deploy guide)
+scripts/        Seed generation utilities (export-seeds.ts, generate-aipn-seed.ts, etc.)
 ```
 
 Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspace has its own tsconfig.
@@ -166,7 +167,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `app-settings` — grouped key-value config (SUPER_ADMIN to edit)
 - `protocol-analysis` — CSV/Excel import of hospital visit data, drug resolution (3-tier: exact→startsWith→contains), protocol matching with scoring, protocol confirmation (PATCH confirm/DELETE unconfirm per visit). Import service auto-links visits to existing Patient records by HN during import.
 - `ai` — multi-provider AI suggestion engine (see AI Module below)
-- `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
+- `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking), Excel export (ADMIN+). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
 - `sso-aipn-catalog` — Read-only SSO AIPN drug/equipment catalog with search, stats, code lookup
 - `sso-protocol-drugs` — SSO protocol drug formulary: list, stats, per-protocol lookup, compliance checking. `getFormularyDrugNames()` extracts generic names from descriptions for name-based formulary matching
 - `hospitals` — Read-only MOPH hospital reference data (1,218 hospitals). GET /hospitals with search (name, hcode5, province), GET /hospitals/:id
@@ -177,10 +178,12 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 2. `RolesGuard` — checks `@Roles(UserRole.ADMIN, ...)` metadata
 3. `ThrottlerGuard` — 60 requests/minute
 
-**Global interceptors** (registered via `APP_INTERCEPTOR`):
-1. `TransformInterceptor` — wraps responses in `{ success, data }`
-2. `TimeoutInterceptor` — 30s timeout
-3. `AuditLogInterceptor` — auto-logs all POST/PATCH/DELETE mutations to `AuditLog` table (strips sensitive fields: password, apiKey, secret, settingValue). Skips auth endpoints (handled by AuthService directly).
+**Global interceptors**:
+1. `TransformInterceptor` — wraps responses in `{ success, data }` (registered in `main.ts` via `useGlobalInterceptors`)
+2. `TimeoutInterceptor` — 30s timeout (registered in `main.ts` via `useGlobalInterceptors`)
+3. `AuditLogInterceptor` — auto-logs all POST/PATCH/DELETE mutations to `AuditLog` table (strips sensitive fields: password, apiKey, secret, settingValue). Skips auth endpoints (handled by AuthService directly). Registered via `APP_INTERCEPTOR` in `app.module.ts` (has DI access to PrismaService).
+
+**Security middleware** in `main.ts`: `helmet()`, `cookieParser()`, CORS (`CORS_ORIGIN` unset → `origin: false` denies all cross-origin; dev fallback `http://localhost:47001`). Port resolution: `PORT || API_PORT || 48002` — production compose sets `PORT: 4000`, local dev uses `API_PORT: 48002`.
 
 **ValidationPipe** in `main.ts`: `whitelist: true` + `forbidNonWhitelisted: true` (unknown properties throw 400), `transform: true` with `enableImplicitConversion: true` (query param string→number coercion).
 
@@ -217,7 +220,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - Error boundaries at root and dashboard level, custom 404
 
 **State management** (Zustand with `persist` middleware):
-- `auth-store.ts` — user + isAuthenticated persisted; **accessToken is NOT persisted** (security). On page reload, `onRehydrateStorage` calls `/auth/refresh` to get a new token via httpOnly refresh cookie. Cookie `sso-cancer-auth-flag` set as `SameSite=Strict; Secure` with 7-day max-age.
+- `auth-store.ts` — user + isAuthenticated persisted; **accessToken is NOT persisted** (security). On page reload, `onRehydrateStorage` calls `/auth/refresh` to get a new token via httpOnly refresh cookie. Cookie `sso-cancer-auth-flag` set as `SameSite=Lax` with 7-day max-age (`Secure` only when HTTPS). Store has `isHydrating` state + `refreshInFlight` mutex — dashboard layout checks `isHydrating` to prevent flash-redirect to `/login` before token refresh completes.
 - `language-store.ts` — locale ('th' | 'en')
 
 **Key patterns:**
@@ -263,13 +266,13 @@ async findAll(query: QueryDto) {
 }
 ```
 
-Controllers return `createPaginatedResponse(data, total, page, limit)` → `{ success, data, meta: { total, page, limit, totalPages } }`.
+Controllers return `createPaginatedResponse(data, total, page, limit)` → `{ success, data, meta: { total, page, limit, totalPages } }`. `sortBy` is validated via `@IsIn(ALLOWED_SORT_FIELDS)` whitelist to prevent arbitrary column access.
 
 ### Key Schema Patterns
 
 - All entities: `isActive` soft-delete, `createdAt`/`updatedAt` with `@db.Timestamptz(6)`
 - `updatedAt` must have **both** `@default(now())` and `@updatedAt` (former required for raw SQL INSERTs)
-- All foreign keys cascade delete (except AuditLog → User uses SetNull)
+- Core medical entity FKs cascade delete. Operational/audit FKs use SetNull to preserve history: AuditLog→User, PatientImport→User, PatientVisit→Patient, PatientCase→Protocol/Hospital/User, VisitMedication→Drug, VisitBillingClaim→User, AiSuggestion→Protocol/Regimen/User
 - Bilingual fields: `nameThai` + `nameEnglish` on CancerSite, CancerStage, ProtocolName
 - Unique constraints on all code fields; composite uniques on junction tables
 
@@ -379,6 +382,8 @@ The `TransformInterceptor` wraps all API responses in `{ success: true, data: <p
 
 **Pagination max limit**: API validates `limit` ≤ 100 via `@Max(100)` in `PaginationQueryDto`. Exceeding this returns 400 silently.
 
+**Error responses**: `HttpExceptionFilter` returns `{ success: false, error: { code, message, messageThai?, statusCode, timestamp, path, details? } }`. Bilingual error map covers ~10 HTTP error codes.
+
 ### Gotchas
 
 - `nest-cli.json` entryFile is `apps/api/src/main` (not `main`) because Prisma import path goes outside `src/`, causing tsc to set rootDir to repo root. Build uses `tsconfig.build.json` (excludes `**/*.spec.ts`).
@@ -398,3 +403,5 @@ The `TransformInterceptor` wraps all API responses in `{ success: true, data: <p
 - `usePaginatedApi` accepts optional third arg `{ enabled: boolean }` — always gate on `filtersHydrated` when using `usePersistedState` (see Key Patterns above)
 - GitHub Actions Docker builds get `403 Forbidden` from npm registry due to Ubuntu's `systemd-resolved` setting `/etc/resolv.conf` to `127.0.0.53` (loopback) — Docker containers can't reach it. Fix: `driver-opts: network=host` in `docker/setup-buildx-action@v3` step makes BuildKit use the host network namespace with working DNS.
 - `zustand` is pinned to `5.0.10` in `apps/web/package.json` (not `^5.0.x`) because `5.0.11` returns 403 from npm CDN on GitHub Actions. Do not bump to `^` range or a newer patch until the registry issue is resolved.
+- `eslint-config-next` is `^16.1.6` while Next.js is `^15.3.3` — this version mismatch is intentional but may cause confusion
+- `ConfigModule.forRoot` in API uses `envFilePath: '../../.env'` — API always reads from repo root `.env` regardless of where `node` is launched
