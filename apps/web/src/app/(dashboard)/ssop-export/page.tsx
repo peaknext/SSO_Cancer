@@ -20,6 +20,7 @@ import { usePersistedState } from '@/hooks/use-persisted-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { Badge } from '@/components/ui/badge';
 import { CodeBadge } from '@/components/shared/code-badge';
 import { TableSkeleton } from '@/components/shared/loading-skeleton';
@@ -429,20 +430,18 @@ function SelectVisitsStep({
       <div className="flex flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-          <Input
-            type="date"
+          <ThaiDatePicker
             value={dateFrom}
-            onChange={(e) => onDateFromChange(e.target.value)}
-            className="h-9 w-40 text-sm"
+            onChange={onDateFromChange}
             placeholder="จากวันที่"
+            className="h-9 w-52 text-sm"
           />
           <span className="text-muted-foreground text-sm">—</span>
-          <Input
-            type="date"
+          <ThaiDatePicker
             value={dateTo}
-            onChange={(e) => onDateToChange(e.target.value)}
-            className="h-9 w-40 text-sm"
+            onChange={onDateToChange}
             placeholder="ถึงวันที่"
+            className="h-9 w-52 text-sm"
           />
         </div>
         <div className="relative w-full sm:w-72">

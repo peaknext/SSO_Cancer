@@ -3,8 +3,8 @@
 import { useState, useMemo } from 'react';
 import { Search, AlertCircle, Calendar, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CancerSiteMultiSelect } from '@/components/shared/cancer-site-multi-select';
 import { DrugMultiSelect } from '@/components/shared/drug-multi-select';
@@ -131,17 +131,17 @@ export function HisAdvancedSearch({ onSelectPatient, previewing }: HisAdvancedSe
             ช่วงวันที่รับบริการ <span className="text-destructive">*</span>
           </Label>
           <div className="flex items-center gap-2">
-            <Input
-              type="date"
+            <ThaiDatePicker
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={setDateFrom}
+              placeholder="วันเริ่มต้น"
               className="flex-1"
             />
             <span className="text-sm text-muted-foreground shrink-0">ถึง</span>
-            <Input
-              type="date"
+            <ThaiDatePicker
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={setDateTo}
+              placeholder="วันสิ้นสุด"
               className="flex-1"
             />
             <Button

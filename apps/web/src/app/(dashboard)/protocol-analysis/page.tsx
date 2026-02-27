@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
@@ -631,20 +632,20 @@ export default function ProtocolAnalysisPage() {
         </label>
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground shrink-0">จาก:</span>
-          <input
-            type="date"
+          <ThaiDatePicker
             value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
-            className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+            onChange={setFilterDateFrom}
+            placeholder="จากวันที่"
+            className="h-7 text-xs w-44"
           />
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground shrink-0">ถึง:</span>
-          <input
-            type="date"
+          <ThaiDatePicker
             value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
-            className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+            onChange={setFilterDateTo}
+            placeholder="ถึงวันที่"
+            className="h-7 text-xs w-44"
           />
         </div>
         {hasActiveFilters && (

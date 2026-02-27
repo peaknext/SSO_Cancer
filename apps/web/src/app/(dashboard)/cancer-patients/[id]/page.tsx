@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CodeBadge } from '@/components/shared/code-badge';
@@ -709,19 +710,19 @@ function CaseCard({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">วันที่ลงทะเบียนส่งต่อ</Label>
-                <Input
-                  type="date"
+                <ThaiDatePicker
                   value={refReferralDate}
-                  onChange={(e) => setRefReferralDate(e.target.value)}
+                  onChange={setRefReferralDate}
+                  placeholder="เลือกวันที่"
                   className="h-7 text-xs"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">วันที่ลงทะเบียนรับเข้า</Label>
-                <Input
-                  type="date"
+                <ThaiDatePicker
                   value={refAdmissionDate}
-                  onChange={(e) => setRefAdmissionDate(e.target.value)}
+                  onChange={setRefAdmissionDate}
+                  placeholder="เลือกวันที่"
                   className="h-7 text-xs"
                 />
               </div>
@@ -1101,21 +1102,21 @@ function BillingClaimRow({
           />
           <div className="flex items-center gap-1.5">
             <Label className="text-[10px] text-muted-foreground shrink-0">ส่ง:</Label>
-            <Input
-              type="date"
+            <ThaiDatePicker
               value={claimSubmittedAt}
-              onChange={(e) => setClaimSubmittedAt(e.target.value)}
-              className="h-7 text-xs w-32.5"
+              onChange={setClaimSubmittedAt}
+              placeholder="วันที่ส่ง"
+              className="h-7 text-xs w-44"
             />
           </div>
           {status !== 'PENDING' && (
             <div className="flex items-center gap-1.5">
               <Label className="text-[10px] text-muted-foreground shrink-0">ผล:</Label>
-              <Input
-                type="date"
+              <ThaiDatePicker
                 value={claimDecidedAt}
-                onChange={(e) => setClaimDecidedAt(e.target.value)}
-                className="h-7 text-xs w-32.5"
+                onChange={setClaimDecidedAt}
+                placeholder="วันที่ผล"
+                className="h-7 text-xs w-44"
               />
             </div>
           )}
@@ -1242,10 +1243,10 @@ function AddBillingClaimForm({
         </div>
         <div className="space-y-1">
           <Label className="text-xs">วันที่ส่ง</Label>
-          <Input
-            type="date"
+          <ThaiDatePicker
             value={submittedAt}
-            onChange={(e) => setSubmittedAt(e.target.value)}
+            onChange={setSubmittedAt}
+            placeholder="เลือกวันที่"
             className="h-8 text-xs"
           />
         </div>
@@ -1475,19 +1476,19 @@ function CreateCaseModal({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">วันที่ลงทะเบียนส่งต่อ</Label>
-                  <Input
-                    type="date"
+                  <ThaiDatePicker
                     value={referralDate}
-                    onChange={(e) => setReferralDate(e.target.value)}
+                    onChange={setReferralDate}
+                    placeholder="เลือกวันที่"
                     className="h-8 text-xs"
                   />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">วันที่ลงทะเบียนรับเข้า</Label>
-                  <Input
-                    type="date"
+                  <ThaiDatePicker
                     value={admissionDate}
-                    onChange={(e) => setAdmissionDate(e.target.value)}
+                    onChange={setAdmissionDate}
+                    placeholder="เลือกวันที่"
                     className="h-8 text-xs"
                   />
                 </div>

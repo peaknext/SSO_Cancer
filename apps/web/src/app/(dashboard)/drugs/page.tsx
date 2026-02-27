@@ -30,21 +30,19 @@ interface DrugsResponse {
 }
 
 const categoryOptions = [
-  { value: 'CHEMOTHERAPY', label: 'Chemotherapy' },
-  { value: 'TARGETED_THERAPY', label: 'Targeted Therapy' },
-  { value: 'IMMUNOTHERAPY', label: 'Immunotherapy' },
-  { value: 'HORMONAL_THERAPY', label: 'Hormonal Therapy' },
-  { value: 'SUPPORTIVE', label: 'Supportive' },
-  { value: 'OTHER', label: 'Other' },
+  { value: 'chemotherapy', label: 'Chemotherapy' },
+  { value: 'targeted therapy', label: 'Targeted Therapy' },
+  { value: 'immunotherapy', label: 'Immunotherapy' },
+  { value: 'hormonal', label: 'Hormonal' },
+  { value: 'supportive', label: 'Supportive' },
 ];
 
 const categoryVariant: Record<string, 'default' | 'success' | 'warning' | 'accent' | 'secondary'> = {
-  CHEMOTHERAPY: 'default',
-  TARGETED_THERAPY: 'accent',
-  IMMUNOTHERAPY: 'success',
-  HORMONAL_THERAPY: 'warning',
-  SUPPORTIVE: 'secondary',
-  OTHER: 'secondary',
+  chemotherapy: 'default',
+  'targeted therapy': 'accent',
+  immunotherapy: 'success',
+  hormonal: 'warning',
+  supportive: 'secondary',
 };
 
 export default function DrugsPage() {
