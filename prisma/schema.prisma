@@ -644,6 +644,7 @@ model VisitBillingItem {
   visitId        Int      @map("visit_id")
   hospitalCode   String   @map("hospital_code") @db.VarChar(20)
   aipnCode       String?  @map("aipn_code") @db.VarChar(20)
+  tmtCode        String?  @map("tmt_code") @db.VarChar(20)
   billingGroup   String   @map("billing_group") @db.VarChar(5)
   description    String   @db.Text
   quantity       Decimal  @default(1) @db.Decimal(10, 2)

@@ -21,6 +21,7 @@ export function generateOpServicesXml(
   hname: string,
   sessNo: string,
   svidMap: Map<string, string>,
+  careAccount: string = '1',
 ): string {
   const serviceRecords: string[] = [];
   const dxRecords: string[] = [];
@@ -47,7 +48,7 @@ export function generateOpServicesXml(
       hcode,
       hn: visit.patientHn,
       pid: visit.patientCitizenId,
-      careAccount: '1',
+      careAccount,
       typeServ: '03',
       typeIn: '9',
       typeOut: '9',

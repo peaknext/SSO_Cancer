@@ -301,6 +301,7 @@ export class HisIntegrationService {
           visitId: createdVisit.id,
           hospitalCode: item.hospitalCode,
           aipnCode: item.aipnCode ? String(item.aipnCode) : null,
+          tmtCode: item.tmtCode ? String(item.tmtCode) : null,
           billingGroup: item.billingGroup,
           description: item.description,
           quantity: item.quantity,

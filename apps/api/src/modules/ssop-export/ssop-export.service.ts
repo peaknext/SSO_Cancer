@@ -96,10 +96,19 @@ export class SsopExportService {
       billingItems: v.billingItems,
     }));
 
-    // Generate XML content
-    const billtranXml = generateBilltranXml(ssopVisits, hcode, hname, sessNoStr, svidMap);
-    const billdispXml = generateBilldispXml(hcode, hname, sessNoStr);
-    const opservicesXml = generateOpServicesXml(ssopVisits, hcode, hname, sessNoStr, svidMap);
+    // Get CareAccount setting for OPServices
+    const careAccount = await this.getCareAccountSetting();
+
+    // Generate XML content — billdisp first to get dispIdMap for billtran
+    const { xml: billdispXml, dispIdMap } = generateBilldispXml(
+      ssopVisits, hcode, hname, sessNoStr, svidMap,
+    );
+    const billtranXml = generateBilltranXml(
+      ssopVisits, hcode, hname, sessNoStr, svidMap, dispIdMap,
+    );
+    const opservicesXml = generateOpServicesXml(
+      ssopVisits, hcode, hname, sessNoStr, svidMap, careAccount,
+    );
 
     // Encode to windows-874
     const now = new Date();
@@ -307,6 +316,7 @@ export class SsopExportService {
       billingItems: v.visitBillingItems.map((item) => ({
         hospitalCode: item.hospitalCode,
         aipnCode: item.aipnCode,
+        tmtCode: item.tmtCode ?? null,
         billingGroup: item.billingGroup,
         description: item.description,
         quantity: Number(item.quantity),
@@ -402,6 +412,14 @@ export class SsopExportService {
     }
 
     return { hcode: hospital.hcode5, hname: hospital.nameThai };
+  }
+
+  /** Get CareAccount setting from AppSetting (default "1") */
+  private async getCareAccountSetting(): Promise<string> {
+    const setting = await this.prisma.appSetting.findUnique({
+      where: { settingKey: 'ssop_care_account' },
+    });
+    return setting?.settingValue || '1';
   }
 
   /** Reserve next session number scoped by hcode (atomic via transaction) */

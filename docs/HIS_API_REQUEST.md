@@ -4,7 +4,8 @@
 
 ### 1.1 Overview
 
-กรองเฉพาะผู้ป่วยสิทธิ์ประกันสังคมเท่านั้น
+**สำคัญ**: Endpoint นี้ใช้สำหรับระบบ SSO Cancer Care โดยเฉพาะ — ต้องกรอง **เฉพาะผู้ป่วยสิทธิ์ประกันสังคม** เท่านั้น ไม่รวมผู้ป่วยสิทธิ์อื่น (บัตรทอง, ข้าราชการ, ฯลฯ)
+
 ระบบ SSO Cancer Care ต้องเรียกใช้ API จากระบบ HIS ของโรงพยาบาล 3 endpoints:
 
 | #   | Endpoint                    | วัตถุประสงค์                                          | เรียกเมื่อ                         |
@@ -69,14 +70,14 @@ GET /api/patients/search?q={searchTerm}&type={searchType}
 | ------------------ | ------ | -------- | ----------------------------- | ---------------------------------- |
 | `hn`               | string | ✅       | เลข HN ของ รพ.                | Patient.hn, OPServices.HN          |
 | `citizenId`        | string | ✅       | เลขบัตรประชาชน 13 หลัก        | Patient.citizenId, BILLTRAN.Pid    |
-| `titleName`        | string | ❌       | คำนำหน้า (นาย/นาง/น.ส.)       | Patient.titleName (แสดง UI)        |
+| `titleName`        | string | ✅       | คำนำหน้า (นาย/นาง/น.ส.)       | Patient.titleName (แสดง UI)        |
 | `fullName`         | string | ✅       | คำนำหน้า+ชื่อ+สกุล            | Patient.fullName, BILLTRAN.Name    |
-| `gender`           | string | ❌       | เพศ: "M" / "F"                | Patient.gender (แสดง UI)           |
-| `dateOfBirth`      | string | ❌       | วันเกิด (YYYY-MM-DD)          | Patient.dateOfBirth (คำนวณอายุ UI) |
-| `address`          | string | ❌       | ที่อยู่                       | Patient.address (แสดง UI)          |
+| `gender`           | string | ✅       | เพศ: "M" / "F"                | Patient.gender (แสดง UI)           |
+| `dateOfBirth`      | string | ✅       | วันเกิด (YYYY-MM-DD)          | Patient.dateOfBirth (คำนวณอายุ UI) |
+| `address`          | string | ✅       | ที่อยู่                       | Patient.address (แสดง UI)          |
 | `phoneNumber`      | string | ❌       | เบอร์โทร                      | Patient.phoneNumber                |
 | `insuranceType`    | string | ❌       | สิทธิ์การรักษา                | แสดง UI เท่านั้น                   |
-| `mainHospitalCode` | string | ❌       | รหัส รพ.หลักตามสิทธิ (hcode5) | BILLTRAN.HMain (#15)               |
+| `mainHospitalCode` | string | ✅       | รหัส รพ.หลักตามสิทธิ (hcode5) | BILLTRAN.HMain (#15)               |
 | `totalVisitCount`  | number | ❌       | จำนวน visit ทั้งหมดใน HIS     | แสดง UI เท่านั้น                   |
 
 ### 1.4 Endpoint 2: Patient Visit Data (Full Import)
@@ -170,14 +171,14 @@ GET /api/patients/{hn}/visits?from={startDate}&to={endDate}
 | -------------------- | ------ | -------- | ------------------------------------------- | ------------------------------------- |
 | `vn`                 | string | ✅       | Visit Number (unique)                       | PatientVisit.vn, BILLTRAN.Invno       |
 | `visitDate`          | string | ✅       | วันที่รับบริการ (YYYY-MM-DD)                | PatientVisit.visitDate                |
-| `serviceStartTime`   | string | ❌       | เวลาเริ่มบริการ (ISO 8601)                  | OPServices.BegDT (#14)                |
-| `serviceEndTime`     | string | ❌       | เวลาสิ้นสุดบริการ (ISO 8601)                | OPServices.EndDT (#15)                |
-| `physicianLicenseNo` | string | ❌       | เลขที่ใบประกอบวิชาชีพแพทย์                  | OPServices.SVPID (#12)                |
-| `clinicCode`         | string | ❌       | รหัสแผนก (01=อายุรกรรม, 10=รังสี, 99=อื่นๆ) | OPServices.Clinic (#13)               |
+| `serviceStartTime`   | string | ✅       | เวลาเริ่มบริการ (ISO 8601)                  | OPServices.BegDT (#14)                |
+| `serviceEndTime`     | string | ✅       | เวลาสิ้นสุดบริการ (ISO 8601)                | OPServices.EndDT (#15)                |
+| `physicianLicenseNo` | string | ✅       | เลขที่ใบประกอบวิชาชีพแพทย์                  | OPServices.SVPID (#12)                |
+| `clinicCode`         | string | ✅       | รหัสแผนก (01=อายุรกรรม, 10=รังสี, 99=อื่นๆ) | OPServices.Clinic (#13)               |
 | `primaryDiagnosis`   | string | ✅       | ICD-10 หลัก                                 | PatientVisit.primaryDiagnosis, OPDx   |
-| `secondaryDiagnoses` | string | ❌       | ICD-10 รอง (comma-separated)                | PatientVisit.secondaryDiagnoses, OPDx |
-| `hpi`                | string | ❌       | History of Present Illness                  | PatientVisit.hpi                      |
-| `doctorNotes`        | string | ❌       | หมายเหตุจากแพทย์                            | PatientVisit.doctorNotes              |
+| `secondaryDiagnoses` | string | ✅       | ICD-10 รอง (comma-separated)                | PatientVisit.secondaryDiagnoses, OPDx |
+| `hpi`                | string | ✅       | History of Present Illness                  | PatientVisit.hpi                      |
+| `doctorNotes`        | string | ✅       | หมายเหตุจากแพทย์                            | PatientVisit.doctorNotes              |
 
 **Medication Fields** (array `medications`):
 
@@ -185,23 +186,24 @@ GET /api/patients/{hn}/visits?from={startDate}&to={endDate}
 | ---------------- | ------ | -------- | --------------------------------- | ------------------------------ |
 | `hospitalCode`   | string | ✅       | รหัสยา/บริการของ รพ. (Local Code) | VisitMedication.hospitalCode   |
 | `medicationName` | string | ✅       | ชื่อยา/บริการ                     | VisitMedication.medicationName |
-| `quantity`       | string | ❌       | จำนวน                             | VisitMedication.quantity       |
-| `unit`           | string | ❌       | หน่วย                             | VisitMedication.unit           |
+| `quantity`       | string | ✅       | จำนวน                             | VisitMedication.quantity       |
+| `unit`           | string | ✅       | หน่วย                             | VisitMedication.unit           |
 
 > **Note**: `medications` ใช้สำหรับ protocol analysis (resolve ไปหา Drug → matching → scoring) — เป็นข้อมูลที่ import.service.ts ปัจจุบันรองรับอยู่แล้ว
 
 **Billing Item Fields** (array `billingItems`):
 
-| Field            | Type   | Required | คำอธิบาย                                   | ใช้ใน SSOP               |
-| ---------------- | ------ | -------- | ------------------------------------------ | ------------------------ |
-| `hospitalCode`   | string | ✅       | Local Code ของ รพ.                         | BillItems.LCCode (#4)    |
-| `aipnCode`       | string | ✅       | รหัส AIPN มาตรฐาน (เช่น "55021")           | BillItems.STDCode (#5)   |
-| `billingGroup`   | string | ✅       | หมวดค่ารักษา (3/8/B/C/G/etc.)              | BillItems.BillMuad (#3)  |
-| `description`    | string | ✅       | คำอธิบาย                                   | BillItems.Desc (#6)      |
-| `quantity`       | number | ✅       | จำนวน                                      | BillItems.QTY (#7)       |
-| `unitPrice`      | number | ✅       | ราคาขายต่อหน่วย                            | BillItems.UP (#8)        |
-| `claimUnitPrice` | number | ❌       | ราคาเบิกต่อหน่วย (default = unitPrice)     | BillItems.ClaimUP (#10)  |
-| `claimCategory`  | string | ❌       | OP1 (ทั่วไป) / OPR (รังสี) — default "OP1" | BillItems.ClaimCat (#13) |
+| Field            | Type   | Required | คำอธิบาย                                   | ใช้ใน SSOP                |
+| ---------------- | ------ | -------- | ------------------------------------------ | ------------------------- |
+| `hospitalCode`   | string | ✅       | Local Code ของ รพ.                         | BillItems.LCCode (#4)     |
+| `aipnCode`       | string | ✅       | รหัส AIPN มาตรฐาน (เช่น "55021")           | BillItems.STDCode (#5)    |
+| `tmtCode`        | string | ✅       | รหัสยา TMT (Thai Medicines Terminology)    | DispensedItems.DrgID (#4) |
+| `billingGroup`   | string | ✅       | หมวดค่ารักษา (3/8/B/C/G/etc.)              | BillItems.BillMuad (#3)   |
+| `description`    | string | ✅       | คำอธิบาย                                   | BillItems.Desc (#6)       |
+| `quantity`       | number | ✅       | จำนวน                                      | BillItems.QTY (#7)        |
+| `unitPrice`      | number | ✅       | ราคาขายต่อหน่วย                            | BillItems.UP (#8)         |
+| `claimUnitPrice` | number | ✅       | ราคาเบิกต่อหน่วย (default = unitPrice)     | BillItems.ClaimUP (#10)   |
+| `claimCategory`  | string | ✅       | OP1 (ทั่วไป) / OPR (รังสี) — default "OP1" | BillItems.ClaimCat (#13)  |
 
 > **สำคัญ**: `aipnCode` เป็น string (alphanumeric) และต้องส่งจาก HIS ทุกรายการ — ถ้าไม่มีค่า ระบบจะแสดง validation warning ตอน SSOP export preview
 
@@ -231,9 +233,9 @@ POST /api/patients/search/advanced
 | ------------------------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
 | `from`                    | string   | ✅       | วันเริ่มต้น (YYYY-MM-DD)                                                                                          |
 | `to`                      | string   | ✅       | วันสิ้นสุด (YYYY-MM-DD) — ห่างจาก `from` ไม่เกิน 30 วัน                                                           |
-| `icdPrefixes`             | string[] | ❌       | ICD-10 prefixes สำหรับ primaryDiagnosis (เช่น `["C50"]` → match C500-C509). ถ้าไม่ส่ง = ค้นหาทุกการวินิจฉัยมะเร็ง |
-| `secondaryDiagnosisCodes` | string[] | ❌       | ICD-10 codes ที่ต้องพบใน secondaryDiagnoses (เช่น `["Z510", "Z511"]`). ถ้าไม่ส่ง = ไม่กรองวินิจฉัยรอง             |
-| `drugKeywords`            | string[] | ❌       | ชื่อยา generic สำหรับ substring match (case-insensitive). ถ้าไม่ส่ง = ไม่กรองยา                                   |
+| `icdPrefixes`             | string[] | ✅       | ICD-10 prefixes สำหรับ primaryDiagnosis (เช่น `["C50"]` → match C500-C509). ถ้าไม่ส่ง = ค้นหาทุกการวินิจฉัยมะเร็ง |
+| `secondaryDiagnosisCodes` | string[] | ✅       | ICD-10 codes ที่ต้องพบใน secondaryDiagnoses (เช่น `["Z510", "Z511"]`). ถ้าไม่ส่ง = ไม่กรองวินิจฉัยรอง             |
+| `drugKeywords`            | string[] | ✅       | ชื่อยา generic สำหรับ substring match (case-insensitive). ถ้าไม่ส่ง = ไม่กรองยา                                   |
 
 **Matching logic (ฝั่ง HIS):**
 

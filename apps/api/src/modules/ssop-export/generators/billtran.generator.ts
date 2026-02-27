@@ -21,6 +21,7 @@ export function generateBilltranXml(
   hname: string,
   sessNo: string,
   svidMap: Map<string, string>,
+  dispIdMap: Map<string, string> = new Map(),
 ): string {
   const tranRecords: string[] = [];
   const itemRecords: string[] = [];
@@ -44,12 +45,12 @@ export function generateBilltranXml(
       hcode,
       invno: visit.vn,
       billno: '',
-      hn: visit.caseNumber,
-      memberNo: visit.vcrCode,
+      hn: visit.patientHn,
+      memberNo: visit.caseNumber,
       amount: formatAmount(claimAmount),
       paid: '0.00',
       verCode: visit.protocolCode,
-      tflag: 'E',
+      tflag: 'A',
       pid: visit.patientCitizenId,
       name: visit.patientFullName,
       hMain: visit.mainHospitalCode,
@@ -69,6 +70,11 @@ export function generateBilltranXml(
       const chargeAmt = item.quantity * item.unitPrice;
       const claimAmt = item.quantity * item.claimUnitPrice;
 
+      // Drug items (BillMuad=3) reference Dispensing.DispID; others reference OPServices.SvID
+      const svRefId = item.billingGroup === '3'
+        ? (dispIdMap.get(visit.vn) || svid)
+        : svid;
+
       const billItem: BillItemRecord = {
         invno: visit.vn,
         svDate,
@@ -81,7 +87,7 @@ export function generateBilltranXml(
         chargeAmt: formatAmount(chargeAmt),
         claimUp: formatAmount(item.claimUnitPrice),
         claimAmount: formatAmount(claimAmt),
-        svRefId: svid,
+        svRefId,
         claimCat: item.claimCategory,
       };
 

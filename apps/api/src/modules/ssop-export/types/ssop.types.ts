@@ -10,12 +10,12 @@ export interface BilltranRecord {
   hcode: string;         // #4: 5-digit hospital code
   invno: string;         // #5: VN (PK)
   billno: string;        // #6: empty
-  hn: string;            // #7: PatientCase.caseNumber (CHI68-A02 override)
-  memberNo: string;      // #8: PatientCase.vcrCode (CHI68-A02 override)
+  hn: string;            // #7: Patient.hn (เลขประจำตัวผู้ป่วย)
+  memberNo: string;      // #8: PatientCase.caseNumber (CHI68-A02: Case No.)
   amount: string;        // #9: total billing amount
   paid: string;          // #10: "0.00"
   verCode: string;       // #11: Protocol code (CHI68-A02 override)
-  tflag: string;         // #12: "E"
+  tflag: string;         // #12: "A" (ขอเบิก)
   pid: string;           // #13: Citizen ID 13 digits
   name: string;          // #14: fullName
   hMain: string;         // #15: main hospital hcode5
@@ -38,7 +38,7 @@ export interface BillItemRecord {
   chargeAmt: string;   // #9: QTY × UP
   claimUp: string;     // #10: claim unit price
   claimAmount: string; // #11: QTY × ClaimUP
-  svRefId: string;     // #12: FK → OPServices.SVID
+  svRefId: string;     // #12: FK → Dispensing.DispID (drug) or OPServices.SVID
   claimCat: string;    // #13: OP1 or OPR
 }
 
@@ -78,6 +78,51 @@ export interface OpDxRecord {
   desc: string;    // #6: empty
 }
 
+/** Dispensing record (18 pipe-delimited fields) */
+export interface DispensingRecord {
+  providerID: string;    // #1: hcode
+  dispId: string;        // #2: PK — generated (VN + "D" + seq)
+  invno: string;         // #3: FK → BILLTRAN.Invno (VN)
+  hn: string;            // #4: patient HN
+  pid: string;           // #5: citizen ID
+  prescdt: string;       // #6: วันเวลาสั่งยา (DT3)
+  dispdt: string;        // #7: วันเวลาจ่ายยา (DT3)
+  prescb: string;        // #8: physician license no (DR1)
+  itemcnt: string;       // #9: จำนวนรายการยา
+  chargeAmt: string;     // #10: รวมราคาจำหน่าย
+  claimAmt: string;      // #11: รวมค่ายาเบิกได้
+  paid: string;          // #12: "0.00"
+  otherPay: string;      // #13: "0.00"
+  reimburser: string;    // #14: "HP"
+  benefitPlan: string;   // #15: "SS"
+  dispeStat: string;     // #16: "1" (รับยาแล้ว)
+  svId: string;          // #17: FK → OPServices.SvID
+  dayCover: string;      // #18: "" (optional)
+}
+
+/** DispensedItems record (19 pipe-delimited fields) */
+export interface DispensedItemRecord {
+  dispId: string;        // #1: FK → Dispensing.DispID
+  prdCat: string;        // #2: "1" (ยาแผนปัจจุบัน)
+  hospdrgid: string;     // #3: hospitalCode (local code)
+  drgId: string;         // #4: TMT code or aipnCode fallback
+  dfsCode: string;       // #5: รหัส dose/form/strength
+  dfsText: string;       // #6: ชื่อยา dose/form
+  packsize: string;      // #7: ขนาดบรรจุ
+  sigCode: string;       // #8: รหัสวิธีใช้ยา
+  sigText: string;       // #9: ข้อความวิธีใช้ยา
+  quantity: string;      // #10: ปริมาณยา
+  unitPrice: string;     // #11: ราคาขายต่อหน่วย
+  chargeAmt: string;     // #12: QTY x UP
+  reimbPrice: string;    // #13: ราคาเบิกต่อหน่วย
+  reimbAmt: string;      // #14: QTY x RP
+  prdSeCode: string;     // #15: "0" (ไม่ต้องจัดยาแทน)
+  claimcont: string;     // #16: "OD" (ไม่มีเงื่อนไข)
+  claimCat: string;      // #17: "OP1" หรือ "OPR" (ยามะเร็ง)
+  multiDisp: string;     // #18: ""
+  supplyFor: string;     // #19: ""
+}
+
 /** Enriched visit data for SSOP export */
 export interface SsopVisitData {
   vn: string;
@@ -98,6 +143,7 @@ export interface SsopVisitData {
   billingItems: {
     hospitalCode: string;
     aipnCode: string | null;
+    tmtCode: string | null;
     billingGroup: string;
     description: string;
     quantity: number;

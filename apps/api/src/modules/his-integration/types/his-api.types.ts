@@ -27,6 +27,7 @@ export interface HisMedication {
 export interface HisBillingItem {
   hospitalCode: string;
   aipnCode?: string;
+  tmtCode?: string;
   billingGroup: string;
   description: string;
   quantity: number;
