@@ -120,9 +120,9 @@ No test framework (Jest/Vitest) is configured yet.
 apps/api/       NestJS 11 REST API (dev port 48002, Docker port 4000, prefix /api/v1)
 apps/web/       Next.js 15 frontend (dev port 47001, Docker port 3000)
 prisma/         Schema, config, migrations, generated client
-database/seeds/ Numbered SQL files (001–016) executed by prisma/seed.ts
+database/seeds/ Numbered SQL files (001–017) executed by prisma/seed.ts
 deploy/         4 deploy scripts + nginx config
-docs/           SPECIFICATION.md (full app spec, 113KB), DEPLOYMENT.md (Thai-language deploy guide)
+docs/           SPECIFICATION.md (full app spec), DEPLOYMENT.md, HIS_API_REQUEST.md, SSOP_EXPORT_FIX_PLAN.md
 scripts/        Seed generation utilities (export-seeds.ts, generate-aipn-seed.ts, etc.)
 ```
 
@@ -136,7 +136,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - **PrismaService** at `apps/api/src/prisma/prisma.service.ts` wraps PrismaClient in a `@Global()` NestJS module
 - **Barrel export** at `apps/api/src/prisma/index.ts` — services import `Prisma` namespace via `import { Prisma } from '../../prisma'`
 
-### Data Model (26 tables)
+### Data Model (29 tables)
 
 **Core medical entities (6):** Drug, DrugTradeName, CancerSite, CancerStage, ProtocolName, Regimen
 
@@ -146,6 +146,8 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 
 **Patient management (3):** Patient, PatientCase, VisitBillingClaim
 
+**HIS billing (2):** VisitBillingItem (per-visit itemized billing from HIS, with hospitalCode/aipnCode/tmtCode/billingGroup/claimCategory), BillingExportBatch (SSOP export audit trail, stores ZIP bytes + session number per hcode)
+
 **Reference data (1):** Hospital (1,218 MOPH hospitals with hcode5, hcode9, name, level, province, address)
 
 **SSO formulary (2):** SsoAipnItem (national drug/equipment catalog with billing rates), SsoProtocolDrug (per-protocol approved drug formulary)
@@ -154,7 +156,8 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 
 ### NestJS API Architecture
 
-**19 feature modules** in `apps/api/src/modules/`:
+**21 feature modules** in `apps/api/src/modules/`:
+
 - `health` — GET /health
 - `auth` — login, refresh, logout, change-password, me (JWT + refresh cookie)
 - `users` — full admin CRUD, sessions, password reset (ADMIN+)
@@ -164,21 +167,25 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `drugs`, `drug-trade-names` — CRUD with category/price filters
 - `dashboard` — aggregation stats with 5-min in-memory cache (12 cached endpoints; `getRecentActivity` and `getZ51ActionableVisits` uncached)
 - `audit-logs` — paginated query + CSV export (ADMIN+)
-- `app-settings` — grouped key-value config (SUPER_ADMIN to edit)
+- `app-settings` — grouped key-value config (SUPER_ADMIN to edit). Settings groups: `ai` (10 keys), `hospital` (4 keys: `hospital_id`, `his_api_base_url`, `his_api_key`, `his_api_timeout`), `ssop` (1 key: `ssop_care_account`). `his_api_key` is in `SENSITIVE_KEYS` (masked in GET responses).
 - `protocol-analysis` — CSV/Excel import of hospital visit data, drug resolution (3-tier: exact→startsWith→contains), protocol matching with scoring, protocol confirmation (PATCH confirm/DELETE unconfirm per visit). Import service auto-links visits to existing Patient records by HN during import.
 - `ai` — multi-provider AI suggestion engine (see AI Module below)
-- `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking), Excel export (EDITOR+). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
+- `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking), Excel export with field picker (EDITOR+). Additional endpoints: `GET /case-hospitals` (distinct hospitals in active cases), `GET /export` (Excel download with configurable fields). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
 - `sso-aipn-catalog` — Read-only SSO AIPN drug/equipment catalog with search, stats, code lookup
 - `sso-protocol-drugs` — SSO protocol drug formulary: list, stats, per-protocol lookup, compliance checking. `getFormularyDrugNames()` extracts generic names from descriptions for name-based formulary matching
 - `hospitals` — Read-only MOPH hospital reference data (1,218 hospitals). GET /hospitals with search (name, hcode5, province), GET /hospitals/:id
+- `his-integration` — HIS (Hospital Information System) REST API integration for pulling patient/visit data directly. See HIS Integration below.
+- `ssop-export` — SSOP 0.93 electronic billing file generation. See SSOP Export below.
 - `backup-restore` — Full database backup/restore (SUPER_ADMIN only). `GET /backup-restore/status` (table row counts), `GET /backup-restore/backup?includeAuditLogs=` (download `.json.gz` with SHA256 checksum), `POST /backup-restore/restore/preview` (validate uploaded file, compare row counts, no DB write), `POST /backup-restore/restore/confirm` (full restore: disable FK → TRUNCATE → INSERT in dependency order → reset sequences → verify). Backup format: `{ metadata, data: { [table]: rows[] } }`. Restore handles both `.json.gz` and `.json` uploads (50 MB limit). Frontend at `/settings/backup`.
 
 **Global guards** (registered via `APP_GUARD` in `app.module.ts`):
+
 1. `JwtAuthGuard` — all endpoints require auth unless `@Public()` decorator
 2. `RolesGuard` — checks `@Roles(UserRole.ADMIN, ...)` metadata
 3. `ThrottlerGuard` — 60 requests/minute
 
 **Global interceptors**:
+
 1. `TimeoutInterceptor` — 30s timeout (registered in `main.ts` via `useGlobalInterceptors`)
 2. `TransformInterceptor` — wraps responses in `{ success, data }` (registered in `main.ts` via `useGlobalInterceptors`)
 3. `AuditLogInterceptor` — auto-logs all POST/PATCH/DELETE mutations to `AuditLog` table (strips sensitive fields: password, apiKey, secret, settingValue). Skips auth endpoints (handled by AuthService directly). Registered via `APP_INTERCEPTOR` in `app.module.ts` (has DI access to PrismaService).
@@ -188,6 +195,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 **ValidationPipe** in `main.ts`: `whitelist: true` + `forbidNonWhitelisted: true` (unknown properties throw 400), `transform: true` with `enableImplicitConversion: true` (query param string→number coercion).
 
 **Common infrastructure** in `apps/api/src/common/`:
+
 - `decorators/` — `@Public()`, `@Roles(...)`, `@CurrentUser()`
 - `dto/` — PaginationQueryDto, PaginatedResponseDto with `createPaginatedResponse()` helper
 - `enums/` — UserRole (SUPER_ADMIN, ADMIN, EDITOR, VIEWER), AuditAction
@@ -199,6 +207,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 ### Next.js Frontend Architecture
 
 **Route structure** (`apps/web/src/app/`):
+
 - `(auth)/login/` — Login page with teal gradient split layout
 - `(dashboard)/` — Protected routes with sidebar + topbar layout:
   - `/` — Dashboard with stat cards (animated counters) and 4 Recharts charts
@@ -211,6 +220,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
   - `/cancer-patients` — Patient list with search, cancer site filter, pagination
   - `/cancer-patients/new` — Patient registration form
   - `/cancer-patients/[id]` — Patient detail: case management (create/close/edit protocol), visit timeline (expand/collapse with persisted state), billing claims per visit (add/edit rounds with dates)
+  - `/ssop-export` — SSOP 0.93 billing export: two-tab page (create export with 3-step select→preview→generate flow using ThaiDatePicker + multi-select checkboxes; export history with re-download). Uses raw `fetch()` for binary ZIP download with `X-Batch-Id` response header.
   - `/revenue` — Placeholder (Coming Soon)
   - `/settings/users`, `/settings/users/[id]` — User management (ADMIN+)
   - `/settings/app` — App settings with inline editing (SUPER_ADMIN to edit)
@@ -220,16 +230,18 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - Error boundaries at root and dashboard level, custom 404
 
 **State management** (Zustand with `persist` middleware):
+
 - `auth-store.ts` — user + isAuthenticated persisted; **accessToken is NOT persisted** (security). On page reload, `onRehydrateStorage` calls `/auth/refresh` to get a new token via httpOnly refresh cookie. Cookie `sso-cancer-auth-flag` set as `SameSite=Lax` with 7-day max-age (`Secure` only when HTTPS). Store has `isHydrating` state + `refreshInFlight` mutex — dashboard layout checks `isHydrating` to prevent flash-redirect to `/login` before token refresh completes.
 - `language-store.ts` — locale ('th' | 'en')
 
 **Key patterns:**
+
 - `useApi<T>(path)` / `usePaginatedApi<T>(basePath, params)` hooks in `hooks/use-api.ts`
 - `usePersistedState<T>(key, default)` hook in `hooks/use-persisted-state.ts` — localStorage-backed state with SSR-safe hydration. Returns `[value, setter, hydrated]` — the third `hydrated` boolean is `false` until localStorage is read in `useEffect`. **All list pages must gate API fetches on hydration** via `usePaginatedApi(path, params, { enabled: filtersHydrated })` where `filtersHydrated = h1 && h2 && h3 ...` (AND of all hydrated flags). Without this, the initial render fires a fetch with default params, ignoring persisted filters.
 - `useTranslation()` hook in `hooks/use-translation.ts` — fetches `/locales/{locale}.json` at runtime, module-level cache, `t(key)` with dot notation
-- `apiClient` singleton in `lib/api-client.ts` — Bearer token injection, auto-refresh on 401, redirect to /login on session expiry. Also has `upload<T>(path, formData)` for multipart uploads.
+- `apiClient` singleton in `lib/api-client.ts` — Bearer token injection, auto-refresh on 401, redirect to /login on session expiry. Also has `upload<T>(path, formData)` for multipart uploads and `getAccessToken()` for raw `fetch()` calls (used by binary download endpoints like SSOP export and Excel export that need Blob responses instead of parsed JSON).
 - `middleware.ts` — Route protection checking `sso-cancer-auth-flag` cookie, redirects to `/login?redirect=pathname`
-- Shared components in `components/shared/` — DataTable, SearchInput, StatusBadge, CodeBadge, PriceBadge, EmptyState, LoadingSkeleton, ProtocolCombobox (searchable grouped protocol picker), HospitalCombobox (searchable hospital picker with server-side search)
+- Shared components in `components/shared/` — DataTable, SearchInput, StatusBadge, CodeBadge, PriceBadge, EmptyState, LoadingSkeleton, ProtocolCombobox (searchable grouped protocol picker), HospitalCombobox (searchable hospital picker with server-side search), ThaiDatePicker (Buddhist calendar date range picker), CancerSiteMultiSelect, DrugMultiSelect, ConfirmDialog, Pagination
 - UI primitives in `components/ui/` — shadcn/ui pattern (Button, Card, Input, Label, Select, Badge, Separator, Modal)
 - `ProtocolCombobox` in `components/shared/protocol-combobox.tsx` — searchable dropdown with protocols grouped by cancer site (sticky headers), module-level 5-min cache, fetches all ~170 protocols via two parallel paginated requests. Drop-in replacement for `<Select>` (same `value`/`onChange` API). Accepts `suggestedCancerSiteId` prop to float a relevant group to the top.
 - i18n: locale JSON files in `public/locales/th.json` and `en.json`
@@ -253,6 +265,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 ### Service Query Pattern
 
 All list endpoints follow:
+
 ```typescript
 async findAll(query: QueryDto) {
   const { page, limit, sortBy, sortOrder, search, ...filters } = query;
@@ -290,6 +303,7 @@ Controllers return `createPaginatedResponse(data, total, page, limit)` → `{ su
 Multi-provider AI suggestion engine in `apps/api/src/modules/ai/`:
 
 **Provider abstraction** (`providers/`):
+
 - `ai-provider.interface.ts` — `AiProvider` interface with `complete()` and `validateApiKey()`
 - `gemini.provider.ts` — Google Gemini REST API, uses `responseMimeType: 'application/json'` for structured output
 - `claude.provider.ts` — Anthropic Claude API, uses **`tool_use` with forced tool choice** for guaranteed structured JSON output (schema-validated via `recommend_protocol` tool definition). 60s timeout for large RAG contexts. Validates keys with Haiku.
@@ -297,11 +311,13 @@ Multi-provider AI suggestion engine in `apps/api/src/modules/ai/`:
 - `provider.factory.ts` — Maps provider name → instance, injectable factory
 
 **Prompt builder** (`prompts/protocol-suggestion.prompt.ts`):
+
 - System prompt: oncology clinical decision support, must recommend from DB protocols only, reasoning in Thai
 - User prompt: cancer site, ICD-10, stage inference, medications, algorithmic top-5, structured RAG context
 - **Privacy by design**: prompt builder never includes HN/VN — only clinical codes and drug generic names
 
 **Service** (`ai.service.ts`):
+
 - `getSuggestion(vn, userId)` — loads visit → runs matching → builds RAG context → calls AI → saves to `AiSuggestion` table. POST always calls AI fresh.
 - `getCachedSuggestion(vn)` — returns latest SUCCESS from DB (GET retrieves from cache)
 - `getSuggestionHistory(vn)` — all suggestions for a visit (ADMIN+)
@@ -309,6 +325,7 @@ Multi-provider AI suggestion engine in `apps/api/src/modules/ai/`:
 - Settings loaded from `AppSetting` (group `ai`) with 60s in-memory cache
 
 **Endpoints** (`ai.controller.ts`):
+
 - `POST /ai/suggest/:vn` (EDITOR+) — call AI provider fresh
 - `GET /ai/suggestions/:vn` (all auth) — cached suggestion from DB
 - `GET /ai/suggestions/:vn/history` (ADMIN+) — full history
@@ -316,9 +333,58 @@ Multi-provider AI suggestion engine in `apps/api/src/modules/ai/`:
 
 **AI settings** stored in `app_settings` table (group `ai`, 10 keys): `ai_enabled`, `ai_provider`, API keys + models for gemini/claude/openai, `ai_max_tokens`, `ai_temperature`.
 
+### HIS Integration Architecture
+
+Module in `apps/api/src/modules/his-integration/` — connects to a hospital's HIS REST API to pull patient/visit data.
+
+**HisApiClient** (`his-api.client.ts`): HTTP client with 60s timeout, retry on 5xx and ECONNREFUSED, Bearer token auth. Settings from AppSetting (group `hospital`) with 60s in-memory cache. Base URL and API key configurable via `/settings/app`.
+
+**Endpoints** (all EDITOR+, prefix `/his-integration`):
+
+- `GET /search?q=&type=` — search patients (auto-detects: `citizen_id`/`hn`/`name`)
+- `GET /preview/:hn?from=&to=` — preview import (totalVisits, cancerRelatedVisits, alreadyImportedVns, newVisitsToImport)
+- `POST /import/:hn?from=&to=` — import cancer-related visits (filters by `CANCER_ICD10_PREFIXES`: `C`, `D0`, `Z51`; upserts Patient by HN or citizenId; creates VisitMedication + VisitBillingItem records; 60s transaction)
+- `POST /search/advanced` — multi-criteria search: date range (max 31 days), ICD-10 prefixes (derived from cancerSiteIds), secondary diagnosis codes, drug keywords
+- `GET /protocol-drug-names` — protocol drug names for filter dropdown
+- `GET /health` (ADMIN+) — test HIS API connectivity
+
+**Data flow**: `PatientImport.source` = `'HIS_API'` (vs `'EXCEL'` for CSV import). Reuses `ImportService.resolveIcd10()` and `ImportService.resolveDrug()` from `protocol-analysis` module. HIS API spec: `docs/HIS_API_REQUEST.md`.
+
+### SSOP Export Architecture
+
+Module in `apps/api/src/modules/ssop-export/` — generates SSOP 0.93 compliant electronic billing files for Thai SSO claims submission.
+
+**Structure**:
+
+- `ssop-export.service.ts` — orchestrates: load visit data, validate, generate 3 XML files, ZIP, store batch
+- `generators/billtran.generator.ts` — BILLTRAN (transactions + bill items, 19+13 fields)
+- `generators/billdisp.generator.ts` — BILLDISP (drug dispensing + dispensed items, 18+19 fields)
+- `generators/opservices.generator.ts` — OPServices (services + diagnoses, 22+6 fields)
+- `generators/encoding.ts` — Windows-874 charset encoding, date/amount formatters
+- `generators/xml-wrapper.ts` — ClaimRec XML wrapper with MD5 checksum
+- `types/ssop.types.ts` — BilltranRecord, BillItemRecord, OpServiceRecord, OpDxRecord, DispensingRecord, DispensedItemRecord, SsopVisitData
+
+**Endpoints** (all EDITOR+, prefix `/ssop-export`):
+
+- `GET /visits` — list visits with VisitBillingItem records (date range + search filters)
+- `POST /preview` — validate visit data, returns valid/invalid split with issues list
+- `POST /generate` — generate ZIP file (uses `@Res()` → manual audit log). ZIP filename: `{hcode5}_SSOPBIL_{sessno4}_{subunit2}_{YYYYMMDD-HHMMSS}.zip`
+- `GET /batches` — export batch history
+- `GET /batches/:id/download` — re-download prior batch ZIP
+
+**Key behaviors**:
+
+- Session number: atomically reserved per `hcode` via transaction
+- BillItems.SvRefID routing: drug items (billingGroup=3) → Dispensing.DispID, non-drug → OPServices.SvID
+- BILLDISP generates from drug items only; dispIdMap returned to billtran generator
+- CareAccount: configurable via `ssop_care_account` AppSetting (default "1", "9" for specialist hospitals)
+- DispensedItems.DrgID: `tmtCode || aipnCode` fallback chain
+- ZIP stored as `Bytes` in `BillingExportBatch.fileData` for re-download
+
 ### Protocol Matching Scoring
 
 Scoring in `matching.service.ts`:
+
 - Base: 20 per protocol
 - Drug match: up to 40 (ratio × 40) + up to 10 drug count bonus
 - Stage match: 25 (matched) / 0 (no match) / 10 (no stages defined)
@@ -332,6 +398,7 @@ Scoring in `matching.service.ts`:
 ### Drug Categories
 
 `Drug.drugCategory` field classifies drugs for scoring logic:
+
 - `chemotherapy` — cisplatin, doxorubicin, paclitaxel, etc. (used for non-protocol chemo detection)
 - `hormonal` — tamoxifen, letrozole, anastrozole
 - `targeted therapy` — imatinib, trastuzumab, bevacizumab
@@ -341,13 +408,14 @@ Scoring in `matching.service.ts`:
 ### Import Service Column Mappings
 
 CSV/Excel import expects these column headers (Thai or English):
+
 - Required: `hn`/`HN`, `vn`/`VN`, `vsdate`/`visitDate`/`visit_date`/`วันที่`, `วินิจฉัยหลัก` (primaryDiagnosis)
 - Optional: `วินิจฉัยรอง` (secondaryDiagnoses), `HPI`/`hpi`, `หมายเหตุจากแพทย์` (doctorNotes), `รายการยาที่ได้รับ` (medicationsRaw)
 - File size limit: 10 MB
 
 ### Seed System
 
-Seeds in `database/seeds/` as 16 numbered SQL files (001–016). The seeder (`prisma/seed.ts`) has a **hardcoded `seedFiles` array** — new seed files must be added to this array. Strips comments, splits by semicolons (quote-aware), executes via `$executeRawUnsafe`, and skips duplicates via `ON CONFLICT DO NOTHING`. Seed data: 23 cancer sites, 98 drugs, ~380 trade names, 169 protocols, ~63 regimens, 10 AI settings, ~1,200 SSO AIPN items (014), ~1,700 SSO protocol drug formulary entries (015), 1,218 MOPH hospitals (016).
+Seeds in `database/seeds/` as 17 numbered SQL files (001–017). The seeder (`prisma/seed.ts`) has a **hardcoded `seedFiles` array** — new seed files must be added to this array. Strips comments, splits by semicolons (quote-aware), executes via `$executeRawUnsafe`, and skips duplicates via `ON CONFLICT DO NOTHING`. Seed data: 23 cancer sites, 98 drugs, ~380 trade names, 169 protocols, ~63 regimens, 10 AI settings, ~1,200 SSO AIPN items (014), ~1,700 SSO protocol drug formulary entries (015), 1,218 MOPH hospitals (016), hospital/SSOP settings (017).
 
 ### TypeScript Path Aliases
 
@@ -405,3 +473,7 @@ The `TransformInterceptor` wraps all API responses in `{ success: true, data: <p
 - `zustand` is pinned to `5.0.10` in `apps/web/package.json` (not `^5.0.x`) because `5.0.11` returns 403 from npm CDN on GitHub Actions. Do not bump to `^` range or a newer patch until the registry issue is resolved.
 - `eslint-config-next` is `^16.1.6` while Next.js is `^15.3.3` — this version mismatch is intentional but may cause confusion
 - `ConfigModule.forRoot` in API uses `envFilePath: '../../.env'` — API always reads from repo root `.env` regardless of where `node` is launched
+
+## Tips
+
+- Always use subagents when you have got a chance

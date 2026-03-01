@@ -517,7 +517,7 @@ export default function ProtocolEditPage({ params }: { params: Promise<{ id: str
             </div>
 
             {regimenSearch && (
-              <div className="relative z-20 max-h-48 overflow-y-auto rounded-lg border bg-card shadow-md">
+              <div className="relative z-20 max-h-48 overflow-y-auto rounded-lg bg-white/80 dark:bg-white/5 backdrop-blur-md border border-glass-border-subtle shadow-md">
                 {filteredRegimens.length === 0 ? (
                   <p className="px-3 py-2 text-sm text-muted-foreground">ไม่พบสูตรยา</p>
                 ) : (

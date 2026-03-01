@@ -105,7 +105,7 @@ export default function CancerSitesPage() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 glass-light rounded-xl p-3">
         <SearchInput
           value={search}
           onChange={(v) => { setSearch(v); setPage(1); }}

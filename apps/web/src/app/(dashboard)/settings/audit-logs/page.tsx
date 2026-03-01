@@ -213,10 +213,10 @@ export default function AuditLogsPage() {
       ) : (
         <>
           {/* Custom table with expandable rows */}
-          <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="glass glass-noise relative overflow-hidden rounded-xl">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/5">
+                <tr className="border-b border-glass-border-subtle bg-white/10 dark:bg-white/5">
                   {columns.map((col) => (
                     <th key={col.key} className={`px-4 py-3 text-left font-medium text-muted-foreground ${col.className || ''}`}>
                       {col.header}
@@ -229,7 +229,7 @@ export default function AuditLogsPage() {
                   <Fragment key={row.id}>
                     <tr
                       onClick={() => setExpandedId(expandedId === row.id ? null : row.id)}
-                      className="border-b cursor-pointer hover:bg-muted/5 transition-colors"
+                      className="border-b cursor-pointer hover:bg-white/10 dark:hover:bg-white/5 transition-colors"
                     >
                       {columns.map((col) => (
                         <td key={col.key} className={`px-4 py-3 ${col.className || ''}`}>
@@ -239,7 +239,7 @@ export default function AuditLogsPage() {
                     </tr>
                     {expandedId === row.id && (row.oldValues || row.newValues || row.metadata) && (
                       <tr key={`${row.id}-diff`}>
-                        <td colSpan={columns.length} className="bg-muted/5 px-4 py-4">
+                        <td colSpan={columns.length} className="bg-white/10 dark:bg-white/5 px-4 py-4">
                           {row.oldValues || row.newValues ? (
                             <AuditDiff oldValues={row.oldValues} newValues={row.newValues} />
                           ) : row.metadata ? (

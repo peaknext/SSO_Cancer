@@ -38,8 +38,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       </div>
 
       {/* Tabs */}
-      <div className="border-b">
-        <nav className="flex gap-1 -mb-px overflow-x-auto">
+      <div className="glass-light rounded-xl p-1 border-glass-border-subtle">
+        <nav className="flex gap-1 overflow-x-auto">
           {settingsTabs
             .filter((tab) => !('superAdminOnly' in tab && tab.superAdminOnly) || user.role === 'SUPER_ADMIN')
             .map((tab) => {
@@ -50,10 +50,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  'flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors',
+                  'flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200',
                   active
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                    ? 'bg-white/50 dark:bg-white/10 text-primary shadow-sm backdrop-blur-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-white/25 dark:hover:bg-white/5',
                 )}
               >
                 <Icon className="h-4 w-4" />

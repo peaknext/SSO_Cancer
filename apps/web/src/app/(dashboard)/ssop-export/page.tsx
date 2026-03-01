@@ -279,7 +279,7 @@ export default function SsopExportPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border glass-light rounded-t-xl px-1">
         <button
           onClick={() => setActiveTab('select')}
           className={cn(
@@ -427,7 +427,7 @@ function SelectVisitsStep({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 glass-light rounded-xl p-3">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
           <ThaiDatePicker

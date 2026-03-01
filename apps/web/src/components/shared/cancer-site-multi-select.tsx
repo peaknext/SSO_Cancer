@@ -182,7 +182,7 @@ export function CancerSiteMultiSelect({
   const dropdownContent = open ? (
     <div
       ref={dropdownRef}
-      className="fixed z-9999 rounded-md border bg-card shadow-lg"
+      className="fixed z-9999 rounded-md glass-heavy shadow-lg"
       style={{
         top: pos.dropUp ? undefined : pos.top,
         bottom: pos.dropUp ? window.innerHeight - pos.top + 4 : undefined,
@@ -200,7 +200,7 @@ export function CancerSiteMultiSelect({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="ค้นหาตำแหน่งมะเร็ง..."
-            className="w-full rounded-md border border-input bg-background pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-md border border-glass-border-subtle bg-white/40 dark:bg-white/5 backdrop-blur-sm pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 setOpen(false);
@@ -286,7 +286,7 @@ export function CancerSiteMultiSelect({
         disabled={disabled || loading}
         onClick={() => setOpen(!open)}
         className={cn(
-          'flex items-center justify-between w-full rounded-md border border-input bg-background px-3 py-2 text-sm',
+          'flex items-center justify-between w-full rounded-md border border-glass-border-subtle bg-white/40 dark:bg-white/5 backdrop-blur-sm px-3 py-2 text-sm',
           'hover:bg-accent/50 transition-colors',
           'disabled:cursor-not-allowed disabled:opacity-50',
           value.length > 0 && 'ring-1 ring-primary/30',

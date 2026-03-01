@@ -72,7 +72,7 @@ export function Pagination({
           <select
             value={page}
             onChange={(e) => onPageChange(Number(e.target.value))}
-            className="h-8 appearance-none rounded-md border bg-card px-3 pr-6 font-mono text-xs tabular-nums text-foreground outline-none focus:ring-1 focus:ring-primary cursor-pointer hover:bg-muted/10 transition-colors"
+            className="h-8 appearance-none rounded-md border border-glass-border-subtle bg-white/40 dark:bg-white/5 backdrop-blur-sm px-3 pr-6 font-mono text-xs tabular-nums text-foreground outline-none focus:ring-1 focus:ring-primary cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
           >
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
               <option key={p} value={p}>

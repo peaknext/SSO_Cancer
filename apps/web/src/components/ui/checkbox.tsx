@@ -32,7 +32,7 @@ export function Checkbox({ checked, onChange, label, disabled, className }: Chec
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           checked
             ? 'border-primary bg-primary text-primary-foreground'
-            : 'border-input bg-background hover:border-primary/50',
+            : 'border-glass-border-subtle bg-white/30 dark:bg-white/5 hover:border-primary/50',
         )}
       >
         {checked && <Check className="h-3.5 w-3.5" />}

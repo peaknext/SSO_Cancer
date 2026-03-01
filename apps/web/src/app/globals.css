@@ -32,12 +32,22 @@
   --color-success-subtle: var(--success-subtle);
   --color-input: var(--input);
 
+  /* Glass design tokens for Tailwind */
+  --color-glass: var(--glass-bg);
+  --color-glass-heavy: var(--glass-bg-heavy);
+  --color-glass-light: var(--glass-bg-light);
+  --color-glass-border: var(--glass-border);
+  --color-glass-border-subtle: var(--glass-border-subtle);
+
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 }
 
+/* ═══════════════════════════════════════════
+   LIGHT MODE TOKENS
+   ═══════════════════════════════════════════ */
 :root {
   --primary: #0f766e;
   --primary-hover: #0d9488;
@@ -63,8 +73,34 @@
   --warning-subtle: #fffbeb;
   --success: #059669;
   --success-subtle: #ecfdf5;
+
+  /* Glass — Light Mode */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-heavy: rgba(255, 255, 255, 0.68);
+  --glass-bg-light: rgba(255, 255, 255, 0.35);
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-border-subtle: rgba(255, 255, 255, 0.25);
+  --glass-shadow: 0 8px 32px rgba(15, 118, 110, 0.04), 0 2px 8px rgba(0, 0, 0, 0.03);
+  --glass-shadow-lg: 0 20px 60px rgba(15, 118, 110, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+  --glass-shadow-xl: 0 32px 80px rgba(15, 118, 110, 0.08), 0 8px 24px rgba(0, 0, 0, 0.05);
+  --glass-highlight: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.15) 40%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  --glass-inner-border: inset 0 0.5px 0 0 rgba(255, 255, 255, 0.7);
+
+  /* Gradient orb palette */
+  --orb-1: #0d9488;
+  --orb-2: #06b6d4;
+  --orb-3: #8b5cf6;
+  --orb-4: #f59e0b;
 }
 
+/* ═══════════════════════════════════════════
+   DARK MODE TOKENS
+   ═══════════════════════════════════════════ */
 .dark {
   --primary: #2dd4bf;
   --primary-hover: #5eead4;
@@ -90,8 +126,33 @@
   --warning-subtle: #451a03;
   --success: #34d399;
   --success-subtle: #022c22;
+
+  /* Glass — Dark Mode */
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-heavy: rgba(255, 255, 255, 0.07);
+  --glass-bg-light: rgba(255, 255, 255, 0.025);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-subtle: rgba(255, 255, 255, 0.05);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+  --glass-shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.20);
+  --glass-shadow-xl: 0 32px 80px rgba(0, 0, 0, 0.40), 0 8px 24px rgba(0, 0, 0, 0.25);
+  --glass-highlight: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.02) 40%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  --glass-inner-border: inset 0 0.5px 0 0 rgba(255, 255, 255, 0.10);
+
+  --orb-1: #14b8a6;
+  --orb-2: #22d3ee;
+  --orb-3: #a78bfa;
+  --orb-4: #fbbf24;
 }
 
+/* ═══════════════════════════════════════════
+   GLOBAL RESETS
+   ═══════════════════════════════════════════ */
 * {
   border-color: var(--border);
 }
@@ -102,10 +163,154 @@ body {
   font-family: var(--font-bai-jamjuree), 'Noto Sans Thai', sans-serif;
 }
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
+
+/* ═══════════════════════════════════════════
+   GLASS SURFACE UTILITY CLASSES
+   Three tiers: light → standard → heavy
+   ═══════════════════════════════════════════ */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-inner-border);
+}
+
+.glass-heavy {
+  background: var(--glass-bg-heavy);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-lg), var(--glass-inner-border);
+}
+
+.glass-light {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--glass-border-subtle);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Glass for inputs — lighter blur to keep text sharp */
+.glass-input {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  border: 1px solid var(--glass-border-subtle);
+}
+
+/* ═══════════════════════════════════════════
+   GLASS DECORATIVE OVERLAYS
+   Pseudo-element effects for depth & realism
+   ═══════════════════════════════════════════ */
+
+/* Subtle noise texture — adds tactile depth to flat glass */
+.glass-noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.4;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: overlay;
+}
+
+/* Top-left light reflection — simulates directional light source */
+.glass-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-highlight);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════
+   GRADIENT ORB ANIMATIONS
+   Slow-drifting colored blobs behind glass
+   ═══════════════════════════════════════════ */
+@keyframes orb-drift-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(40px, -50px) scale(1.08);
+  }
+  50% {
+    transform: translate(-15px, 30px) scale(0.96);
+  }
+  75% {
+    transform: translate(25px, 15px) scale(1.04);
+  }
+}
+
+@keyframes orb-drift-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(-50px, 35px) scale(1.12);
+  }
+  50% {
+    transform: translate(30px, -20px) scale(0.92);
+  }
+  75% {
+    transform: translate(-20px, -40px) scale(1.06);
+  }
+}
+
+@keyframes orb-drift-3 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(20px, 45px) scale(0.94);
+  }
+  50% {
+    transform: translate(-40px, -10px) scale(1.10);
+  }
+  75% {
+    transform: translate(35px, -30px) scale(0.98);
+  }
+}
+
+@keyframes orb-drift-4 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(-30px, -25px) scale(1.06);
+  }
+  50% {
+    transform: translate(45px, 15px) scale(0.94);
+  }
+  75% {
+    transform: translate(-10px, 40px) scale(1.02);
+  }
+}
+
+/* Subtle continuous shimmer on glass panels */
+@keyframes glass-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   EXISTING UTILITY CLASSES
+   ═══════════════════════════════════════════ */
 
 /* Tabular numerals for prices */
 .tabular-nums {
@@ -146,4 +351,27 @@ html {
 }
 .animate-progress {
   animation: progress 1.5s ease-in-out;
+}
+
+/* ═══════════════════════════════════════════
+   ACCESSIBILITY: REDUCED MOTION
+   ═══════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .glass,
+  .glass-heavy,
+  .glass-light,
+  .glass-input {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  [style*="orb-drift"],
+  [class*="animate-orb"] {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .glass-shine::after {
+    display: none;
+  }
 }

@@ -61,7 +61,7 @@ export function Modal({ open, onClose, children, maxWidth = 'md' }: ModalProps) 
       <div
         onClick={handleClose}
         className={cn(
-          'absolute inset-0 bg-black/60 backdrop-blur-[2px] transition-opacity duration-200',
+          'absolute inset-0 bg-black/40 backdrop-blur-md transition-opacity duration-200',
           animateIn ? 'opacity-100' : 'opacity-0',
         )}
       />
@@ -69,7 +69,7 @@ export function Modal({ open, onClose, children, maxWidth = 'md' }: ModalProps) 
       {/* Dialog */}
       <div
         className={cn(
-          'relative z-10 w-full mx-4 rounded-2xl border border-border/60 bg-card shadow-2xl max-h-[90vh] overflow-y-auto',
+          'relative z-10 w-full mx-4 rounded-2xl glass-heavy glass-noise shadow-2xl max-h-[90vh] overflow-y-auto',
           'transition-all duration-200 ease-out',
           maxWidthMap[maxWidth],
           animateIn

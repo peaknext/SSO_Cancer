@@ -43,9 +43,9 @@ export function StatCard({
   }, [value]);
 
   return (
-    <div className="relative rounded-xl border bg-card p-5 overflow-hidden">
-      <div className={cn('absolute left-0 top-0 bottom-0 w-[3px]', accentColor)} />
-      <div className="flex items-start justify-between">
+    <div className="relative rounded-xl glass glass-noise glass-shine p-5 overflow-hidden">
+      <div className={cn('absolute left-0 top-0 bottom-0 w-[3px] z-10', accentColor)} />
+      <div className="flex items-start justify-between relative z-10">
         <div className="min-w-0 flex-1">
           <p className="text-sm text-muted-foreground">{label}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">
@@ -67,7 +67,7 @@ export function StatCard({
             </p>
           )}
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted/10 text-muted shrink-0">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 dark:bg-white/8 text-muted shrink-0 relative z-10">
           {icon}
         </div>
       </div>

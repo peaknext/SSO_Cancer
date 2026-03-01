@@ -26,8 +26,8 @@ export function AuditDiff({ oldValues, newValues }: AuditDiffProps) {
       </p>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Old values */}
-        <div className="rounded-lg border bg-card overflow-hidden">
-          <div className="px-3 py-2 bg-destructive-subtle text-xs font-medium text-destructive border-b">
+        <div className="rounded-lg border border-glass-border-subtle bg-white/40 dark:bg-white/5 backdrop-blur-sm overflow-hidden">
+          <div className="px-3 py-2 bg-destructive-subtle text-xs font-medium text-destructive border-b border-glass-border-subtle">
             ค่าเดิม (Before)
           </div>
           <div className="p-3 space-y-1.5">
@@ -53,8 +53,8 @@ export function AuditDiff({ oldValues, newValues }: AuditDiffProps) {
         </div>
 
         {/* New values */}
-        <div className="rounded-lg border bg-card overflow-hidden">
-          <div className="px-3 py-2 bg-success-subtle text-xs font-medium text-success border-b">
+        <div className="rounded-lg border border-glass-border-subtle bg-white/40 dark:bg-white/5 backdrop-blur-sm overflow-hidden">
+          <div className="px-3 py-2 bg-success-subtle text-xs font-medium text-success border-b border-glass-border-subtle">
             ค่าใหม่ (After)
           </div>
           <div className="p-3 space-y-1.5">

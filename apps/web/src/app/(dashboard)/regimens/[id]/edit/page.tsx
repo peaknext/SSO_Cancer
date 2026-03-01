@@ -434,7 +434,7 @@ export default function RegimenEditPage({ params }: { params: Promise<{ id: stri
           {showDrugForm && (
             <form
               onSubmit={handleDrugSubmit(onDrugFormSubmit)}
-              className="rounded-lg border bg-muted/5 p-4 space-y-4 overflow-visible"
+              className="rounded-lg border border-glass-border-subtle bg-white/10 dark:bg-white/5 p-4 space-y-4 overflow-visible"
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">
@@ -482,7 +482,7 @@ export default function RegimenEditPage({ params }: { params: Promise<{ id: stri
                         className="pl-9"
                       />
                       {drugSearch.trim() && filteredDrugs.length > 0 && (
-                        <div className="absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-xl border border-border/80 bg-card shadow-xl ring-1 ring-black/5 dark:ring-white/5">
+                        <div className="absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-xl bg-white/80 dark:bg-white/5 backdrop-blur-md border border-glass-border-subtle shadow-xl ring-1 ring-black/5 dark:ring-white/5">
                           {filteredDrugs.slice(0, 15).map((d) => {
                             const alreadyAdded = isDrugInRegimen(d.id);
                             return (
@@ -514,7 +514,7 @@ export default function RegimenEditPage({ params }: { params: Promise<{ id: stri
                         </div>
                       )}
                       {drugSearch.trim() && filteredDrugs.length === 0 && (
-                        <div className="absolute z-50 mt-1 w-full rounded-xl border border-border/80 bg-card shadow-xl ring-1 ring-black/5 dark:ring-white/5 p-3 text-center text-sm text-muted-foreground">
+                        <div className="absolute z-50 mt-1 w-full rounded-xl bg-white/80 dark:bg-white/5 backdrop-blur-md border border-glass-border-subtle shadow-xl ring-1 ring-black/5 dark:ring-white/5 p-3 text-center text-sm text-muted-foreground">
                           ไม่พบยา
                         </div>
                       )}
@@ -603,7 +603,7 @@ export default function RegimenEditPage({ params }: { params: Promise<{ id: stri
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-muted/5">
+                  <tr className="border-b border-glass-border-subtle bg-white/10 dark:bg-white/5">
                     <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">ยา</th>
                     <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">ขนาดยา</th>
                     <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">วิธีให้</th>

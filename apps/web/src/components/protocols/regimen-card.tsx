@@ -113,7 +113,7 @@ export function RegimenCard({ protocolRegimen }: RegimenCardProps) {
           <div className="rounded-lg border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-muted/5 border-b">
+                <tr className="bg-white/10 dark:bg-white/5 border-b border-glass-border-subtle">
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">ยา</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">ขนาดยา</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">วิธีให้</th>
@@ -196,7 +196,7 @@ function DrugRow({ regimenDrug }: { regimenDrug: RegimenDrug }) {
       {/* Trade names accordion */}
       {showTradeNames && hasTradeNames && (
         <tr>
-          <td colSpan={5} className="bg-muted/5 px-3 py-3">
+          <td colSpan={5} className="bg-white/10 dark:bg-white/5 px-3 py-3">
             <p className="text-xs font-medium text-muted-foreground mb-2">
               ชื่อการค้า SSO ({drug.tradeNames.length} รายการ)
             </p>
@@ -204,7 +204,7 @@ function DrugRow({ regimenDrug }: { regimenDrug: RegimenDrug }) {
               {drug.tradeNames.filter(tn => tn.isActive).map((tn) => (
                 <div
                   key={tn.id}
-                  className="flex items-center justify-between rounded-md border bg-card px-3 py-2 text-sm"
+                  className="flex items-center justify-between rounded-md border border-glass-border-subtle bg-white/40 dark:bg-white/5 backdrop-blur-sm px-3 py-2 text-sm"
                 >
                   <div className="min-w-0">
                     <p className="font-medium truncate">{tn.tradeName}</p>

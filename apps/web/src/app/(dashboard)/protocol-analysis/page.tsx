@@ -600,7 +600,7 @@ export default function ProtocolAnalysisPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-3 flex-wrap rounded-lg border bg-card px-3 py-2">
+      <div className="flex items-center gap-3 flex-wrap glass-light rounded-xl px-3 py-2">
         <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
         <Select
           value={filterSiteId}
@@ -660,7 +660,7 @@ export default function ProtocolAnalysisPage() {
       </div>
 
       {/* 3-Column layout */}
-      <div className="flex gap-0 border rounded-xl overflow-hidden bg-card" style={{ height: 'calc(100vh - 260px)' }}>
+      <div className="flex gap-0 rounded-xl overflow-hidden glass-light" style={{ height: 'calc(100vh - 260px)' }}>
         {/* Column 1: HN List */}
         <div className="w-[200px] shrink-0 border-r flex flex-col">
           <div className="p-2 border-b">

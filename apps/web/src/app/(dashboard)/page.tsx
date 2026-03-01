@@ -203,7 +203,7 @@ export default function DashboardPage() {
           </p>
         </div>
         {stats?.visitDateRange && (
-          <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground shrink-0">
+          <div className="flex items-center gap-2 rounded-lg bg-white/40 dark:bg-white/5 backdrop-blur-sm border border-glass-border-subtle px-3 py-2 text-xs text-muted-foreground shrink-0">
             <CalendarDays className="h-3.5 w-3.5 text-primary" />
             <span>
               ข้อมูลทั้งหมด จากวันที่{' '}
@@ -345,8 +345,8 @@ export default function DashboardPage() {
 
       {/* Empty Regimens Table */}
       {emptyRegimens && emptyRegimens.length > 0 && (
-        <div className="rounded-xl border bg-card">
-          <div className="p-4 border-b">
+        <div className="glass glass-noise relative overflow-hidden rounded-xl">
+          <div className="p-4 border-b border-glass-border-subtle">
             <h2 className="font-heading text-base font-semibold flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-warning" />
               สูตรยาที่ไม่มียา ({emptyRegimens.length} รายการ)
@@ -361,7 +361,7 @@ export default function DashboardPage() {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/5">
+                <tr className="border-b border-glass-border-subtle bg-white/10 dark:bg-white/5">
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                     รหัส
                   </th>
@@ -428,8 +428,8 @@ export default function DashboardPage() {
 
       {/* Z51x Actionable Visits — work queue */}
       {totalActionable > 0 && (
-        <div className="rounded-xl border bg-card">
-          <div className="p-4 border-b">
+        <div className="glass glass-noise relative overflow-hidden rounded-xl">
+          <div className="p-4 border-b border-glass-border-subtle">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="font-heading text-base font-semibold flex items-center gap-2">
@@ -448,7 +448,7 @@ export default function DashboardPage() {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/5">
+                <tr className="border-b border-glass-border-subtle bg-white/10 dark:bg-white/5">
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground w-24">
                     HN
                   </th>
@@ -473,7 +473,7 @@ export default function DashboardPage() {
                 {allVisits.map((v) => (
                   <tr
                     key={v.vn}
-                    className="border-b last:border-0 transition-colors hover:bg-muted/5 cursor-pointer"
+                    className="border-b last:border-0 transition-colors hover:bg-white/10 dark:hover:bg-white/5 cursor-pointer"
                     onClick={() => {
                       if (v.patientId) {
                         router.push(`/cancer-patients/${v.patientId}`);
@@ -532,7 +532,7 @@ export default function DashboardPage() {
             {allVisits.map((v) => (
               <div
                 key={v.vn}
-                className="p-4 space-y-2 cursor-pointer active:bg-muted/5"
+                className="p-4 space-y-2 cursor-pointer active:bg-white/10 dark:active:bg-white/5"
                 onClick={() => {
                   if (v.patientId) {
                     router.push(`/cancer-patients/${v.patientId}`);
@@ -576,7 +576,7 @@ export default function DashboardPage() {
 
           {/* Load more */}
           {!loadedAll && allVisits.length < totalActionable && (
-            <div className="p-4 border-t flex items-center justify-center">
+            <div className="p-4 border-t border-glass-border-subtle flex items-center justify-center">
               <Button
                 variant="outline"
                 size="sm"

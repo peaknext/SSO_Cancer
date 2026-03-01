@@ -242,7 +242,7 @@ export function ProtocolCombobox({
           onClick={openDropdown}
           disabled={disabled}
           className={cn(
-            'flex h-10 w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-sm text-left',
+            'flex h-10 w-full items-center gap-2 rounded-lg border border-glass-border-subtle bg-white/40 dark:bg-white/5 backdrop-blur-sm px-3 py-2 text-sm text-left transition-colors',
             'ring-offset-background transition-colors',
             'hover:border-primary/40',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
@@ -282,7 +282,7 @@ export function ProtocolCombobox({
         <div
           className={cn(
             'absolute z-50 mt-1 w-full max-h-80 overflow-auto overscroll-contain',
-            'rounded-xl border border-border/80 bg-card',
+            'rounded-xl glass-heavy',
             'shadow-xl ring-1 ring-black/5 dark:ring-white/5',
           )}
         >

@@ -126,13 +126,13 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
   );
 
   const sidebarContent = (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col relative z-10">
       {/* Logo */}
       <div className={cn(
-        'flex h-16 items-center border-b px-4',
+        'flex h-16 items-center border-b border-glass-border-subtle px-4',
         collapsed ? 'justify-center' : 'gap-3',
       )}>
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
             <path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z" />
           </svg>
@@ -160,10 +160,10 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
                     <button
                       onClick={() => setExpandedGroup(isExpanded ? null : item.href)}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                        'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200',
                         active
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent/10 hover:text-foreground',
+                          ? 'bg-primary/15 text-primary font-medium backdrop-blur-sm'
+                          : 'text-sidebar-foreground hover:bg-white/15 dark:hover:bg-white/8 hover:text-foreground',
                         collapsed && 'justify-center px-2',
                       )}
                     >
@@ -206,10 +206,10 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
                     href={item.href}
                     onClick={onMobileClose}
                     className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200',
                       active
-                        ? 'bg-primary/10 text-primary font-medium'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent/10 hover:text-foreground',
+                        ? 'bg-primary/15 text-primary font-medium backdrop-blur-sm'
+                        : 'text-sidebar-foreground hover:bg-white/15 dark:hover:bg-white/8 hover:text-foreground',
                       collapsed && 'justify-center px-2',
                     )}
                     title={collapsed ? item.labelThai : undefined}
@@ -225,10 +225,10 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       </nav>
 
       {/* Collapse toggle (desktop only) */}
-      <div className="hidden lg:flex border-t p-3">
+      <div className="hidden lg:flex border-t border-glass-border-subtle p-3">
         <button
           onClick={onToggle}
-          className="flex w-full items-center justify-center rounded-lg py-2 text-muted hover:bg-sidebar-accent/10 hover:text-foreground transition-colors"
+          className="flex w-full items-center justify-center rounded-lg py-2 text-muted hover:bg-white/15 dark:hover:bg-white/8 hover:text-foreground transition-colors"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
@@ -241,7 +241,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-30 border-r bg-sidebar transition-all duration-200',
+          'hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-30 border-r border-glass-border glass-heavy transition-all duration-200',
           collapsed ? 'lg:w-16' : 'lg:w-[260px]',
         )}
       >
@@ -251,11 +251,11 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-black/50" onClick={onMobileClose} />
-          <aside className="fixed inset-y-0 left-0 z-50 w-[280px] bg-sidebar shadow-xl">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={onMobileClose} />
+          <aside className="fixed inset-y-0 left-0 z-50 w-[280px] glass-heavy shadow-2xl">
             <button
               onClick={onMobileClose}
-              className="absolute right-3 top-4 rounded-md p-1 text-muted hover:text-foreground"
+              className="absolute right-3 top-4 rounded-md p-1 text-muted hover:text-foreground z-10"
             >
               <X className="h-5 w-5" />
             </button>

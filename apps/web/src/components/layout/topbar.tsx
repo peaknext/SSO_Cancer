@@ -84,7 +84,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center border-b bg-card/80 backdrop-blur-sm px-4 lg:px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center border-b border-glass-border-subtle glass-heavy px-4 lg:px-6">
       {/* Mobile menu button */}
       <button
         onClick={onMenuClick}
@@ -139,7 +139,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/10 transition-colors"
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/15 dark:hover:bg-white/8 transition-colors"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
               {user?.fullName?.charAt(0) || 'U'}
@@ -155,8 +155,8 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           </button>
 
           {userMenuOpen && (
-            <div className="absolute right-0 mt-2 w-56 rounded-xl border bg-card shadow-lg py-1 z-50">
-              <div className="px-4 py-3 border-b">
+            <div className="absolute right-0 mt-2 w-56 rounded-xl glass-heavy shadow-xl py-1 z-50">
+              <div className="px-4 py-3 border-b border-glass-border-subtle">
                 <p className="text-sm font-medium">{user?.fullNameThai || user?.fullName}</p>
                 <p className="text-xs text-muted-foreground">{user?.email}</p>
               </div>
@@ -165,7 +165,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   setUserMenuOpen(false);
                   router.push('/settings/users');
                 }}
-                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-sidebar-foreground hover:bg-muted/10 transition-colors"
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-sidebar-foreground hover:bg-white/15 dark:hover:bg-white/8 transition-colors"
               >
                 <User className="h-4 w-4" />
                 โปรไฟล์
@@ -175,7 +175,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   setUserMenuOpen(false);
                   setChangePasswordOpen(true);
                 }}
-                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-sidebar-foreground hover:bg-muted/10 transition-colors"
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-sidebar-foreground hover:bg-white/15 dark:hover:bg-white/8 transition-colors"
               >
                 <KeyRound className="h-4 w-4" />
                 เปลี่ยนรหัสผ่าน

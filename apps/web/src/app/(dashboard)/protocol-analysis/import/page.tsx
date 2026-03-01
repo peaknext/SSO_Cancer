@@ -262,7 +262,7 @@ export default function ImportPage() {
               </span>
             </div>
             {preview.minVisitDate && preview.maxVisitDate && (
-              <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 rounded-lg bg-white/40 dark:bg-white/5 backdrop-blur-sm border border-glass-border-subtle px-3 py-2 text-xs text-muted-foreground">
                 <CalendarDays className="h-3.5 w-3.5 text-primary" />
                 <span>
                   ข้อมูลทั้งหมด จากวันที่{' '}

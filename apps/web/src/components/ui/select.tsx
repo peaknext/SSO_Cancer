@@ -33,7 +33,7 @@ export function Select({
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         className={cn(
-          'flex h-10 w-full appearance-none rounded-lg border border-input bg-background px-3 py-2 pr-8 text-sm ring-offset-background',
+          'flex h-10 w-full appearance-none rounded-lg border border-glass-border-subtle bg-white/40 dark:bg-white/5 backdrop-blur-sm px-3 py-2 pr-8 text-sm ring-offset-background transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           'disabled:cursor-not-allowed disabled:opacity-50',
           !value && 'text-muted-foreground',

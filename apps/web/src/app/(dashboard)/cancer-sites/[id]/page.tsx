@@ -100,7 +100,7 @@ export default function CancerSiteDetailPage({ params }: { params: Promise<{ id:
       </div>
 
       {/* Info card */}
-      <div className="rounded-xl border bg-card p-5">
+      <div className="glass glass-noise relative overflow-hidden rounded-xl p-5">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">รหัส</p>
@@ -160,7 +160,7 @@ export default function CancerSiteDetailPage({ params }: { params: Promise<{ id:
               <Link
                 key={protocol.id}
                 href={`/protocols/${protocol.id}`}
-                className="block rounded-xl border bg-card p-4 hover:border-primary/30 hover:shadow-sm transition-all"
+                className="block rounded-xl glass-light relative overflow-hidden p-4 hover:border-primary/30 hover:shadow-sm transition-all"
               >
                 <div className="flex items-center gap-3 flex-wrap">
                   <CodeBadge code={protocol.protocolCode} />

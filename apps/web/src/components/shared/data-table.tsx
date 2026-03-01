@@ -56,11 +56,11 @@ export function DataTable<T>({
   return (
     <div className="space-y-4">
       {/* Desktop table */}
-      <div className="hidden md:block rounded-xl border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="hidden md:block relative rounded-xl glass glass-noise overflow-hidden">
+        <div className="overflow-x-auto relative z-10">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-muted/8">
+              <tr className="border-b border-glass-border-subtle bg-white/10 dark:bg-white/5">
                 {columns.map((col) => (
                   <th
                     key={col.key}
@@ -95,8 +95,8 @@ export function DataTable<T>({
                   key={rowKey(row)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
-                    'border-b last:border-0 transition-colors',
-                    onRowClick && 'cursor-pointer hover:bg-muted/5',
+                    'border-b border-glass-border-subtle last:border-0 transition-colors',
+                    onRowClick && 'cursor-pointer hover:bg-white/10 dark:hover:bg-white/5',
                   )}
                 >
                   {columns.map((col) => (
@@ -118,8 +118,8 @@ export function DataTable<T>({
             key={rowKey(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
             className={cn(
-              'rounded-xl border bg-card p-4 space-y-2',
-              onRowClick && 'cursor-pointer active:bg-muted/5',
+              'rounded-xl glass-light p-4 space-y-2',
+              onRowClick && 'cursor-pointer active:bg-white/15 dark:active:bg-white/8',
             )}
           >
             {columns.map((col) => (
