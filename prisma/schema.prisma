@@ -237,6 +237,7 @@ model User {
   phoneNumber         String?   @map("phone_number") @db.VarChar(20)
   avatarUrl           String?   @map("avatar_url") @db.VarChar(500)
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  mustChangePassword  Boolean   @default(false) @map("must_change_password")
   lockedUntil         DateTime? @map("locked_until") @db.Timestamptz(6)
   lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz(6)
   lastLoginIp         String?   @map("last_login_ip") @db.VarChar(45)
@@ -267,8 +268,9 @@ model Session {
   tokenId   String   @unique @map("token_id") @db.VarChar(36)
   ipAddress String?  @map("ip_address") @db.VarChar(45)
   userAgent String?  @map("user_agent") @db.Text
-  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(6)
+  lastActivityAt DateTime @default(now()) @map("last_activity_at") @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

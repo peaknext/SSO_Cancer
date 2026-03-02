@@ -21,6 +21,7 @@ export class AuthService {
   private readonly refreshSecret: string;
   private readonly passwordHistoryCount: number;
   private readonly maxConcurrentSessions: number;
+  private readonly sessionInactivityTimeout: number;
 
   constructor(
     private readonly usersService: UsersService,
@@ -50,6 +51,9 @@ export class AuthService {
     );
     this.maxConcurrentSessions = Number(
       this.configService.get('MAX_CONCURRENT_SESSIONS', 5),
+    );
+    this.sessionInactivityTimeout = Number(
+      this.configService.get('SESSION_INACTIVITY_TIMEOUT', 1800),
     );
   }
 
@@ -118,6 +122,7 @@ export class AuthService {
         fullName: user.fullName,
         fullNameThai: user.fullNameThai,
       },
+      ...(user.mustChangePassword ? { mustChangePassword: true } : {}),
     };
   }
 
@@ -134,6 +139,15 @@ export class AuthService {
       throw new UnauthorizedException('SESSION_EXPIRED');
     }
 
+    // H-09: Check session inactivity
+    if (session.lastActivityAt) {
+      const inactiveMs = Date.now() - new Date(session.lastActivityAt).getTime();
+      if (inactiveMs > this.sessionInactivityTimeout * 1000) {
+        await this.prisma.session.delete({ where: { id: session.id } });
+        throw new UnauthorizedException('SESSION_INACTIVE');
+      }
+    }
+
     if (!session.user.isActive) {
       throw new UnauthorizedException('ACCOUNT_DEACTIVATED');
     }
@@ -148,6 +162,7 @@ export class AuthService {
         ipAddress: ip,
         userAgent: userAgent || null,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        lastActivityAt: new Date(),
       },
     });
 
@@ -201,6 +216,12 @@ export class AuthService {
     const newHash = await bcrypt.hash(dto.newPassword, 12);
     await this.usersService.addPasswordHistory(userId, user.passwordHash);
     await this.usersService.updatePassword(userId, newHash);
+
+    // H-06: Clear mustChangePassword flag after successful password change
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mustChangePassword: false },
+    });
 
     // Revoke all existing sessions to force re-login
     await this.prisma.session.deleteMany({ where: { userId } });

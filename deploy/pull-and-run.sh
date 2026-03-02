@@ -57,7 +57,7 @@ if [ ! -f deploy/nginx/ssl/cert.pem ] || [ ! -f deploy/nginx/ssl/key.pem ]; then
   echo
   if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     mkdir -p deploy/nginx/ssl
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    openssl req -x509 -nodes -days 90 -newkey rsa:4096 \
       -keyout deploy/nginx/ssl/key.pem \
       -out deploy/nginx/ssl/cert.pem \
       -subj '/CN=sso-cancer.hospital.local' 2>/dev/null

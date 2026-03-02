@@ -102,7 +102,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
         statusCode: status,
         timestamp: new Date().toISOString(),
         path: request.url,
-        ...(details ? { details } : {}),
+        // M-11 fix: Hide validation details in production to prevent schema leakage
+        ...(details && process.env.NODE_ENV !== 'production' ? { details } : {}),
       },
     });
   }

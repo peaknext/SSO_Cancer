@@ -4,6 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -89,6 +90,7 @@ export class UsersService {
         department: dto.department,
         position: dto.position,
         phoneNumber: dto.phoneNumber,
+        mustChangePassword: true,
       },
       select: {
         id: true, email: true, fullName: true, fullNameThai: true,
@@ -155,7 +157,7 @@ export class UsersService {
 
     await this.prisma.user.update({
       where: { id },
-      data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
+      data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null, mustChangePassword: true },
     });
 
     return { tempPassword };
@@ -231,11 +233,19 @@ export class UsersService {
   }
 
   private generateTempPassword(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghjkmnpqrstuvwxyz';
+    const digits = '23456789';
+    const special = '!@#$%';
+    const all = upper + lower + digits;
     let password = '';
     for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
+      password += all.charAt(randomInt(all.length));
     }
-    return password + 'A1!';
+    // Guarantee complexity: insert required character types at random positions
+    password += upper.charAt(randomInt(upper.length));
+    password += digits.charAt(randomInt(digits.length));
+    password += special.charAt(randomInt(special.length));
+    return password;
   }
 }

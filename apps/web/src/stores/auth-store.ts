@@ -7,9 +7,9 @@ function setAuthFlagCookie(value: '1' | '') {
   if (typeof document === 'undefined') return;
   const secure = window.location.protocol === 'https:' ? '; Secure' : '';
   if (value === '1') {
-    document.cookie = `sso-cancer-auth-flag=1; path=/; max-age=604800; SameSite=Lax${secure}`;
+    document.cookie = `sso-cancer-auth-flag=1; path=/; max-age=604800; SameSite=Strict${secure}`;
   } else {
-    document.cookie = `sso-cancer-auth-flag=; path=/; max-age=0; SameSite=Lax${secure}`;
+    document.cookie = `sso-cancer-auth-flag=; path=/; max-age=0; SameSite=Strict${secure}`;
   }
 }
 

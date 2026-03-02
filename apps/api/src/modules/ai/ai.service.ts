@@ -6,6 +6,7 @@ import { AiCompletionResponse } from './providers/ai-provider.interface';
 import { MatchingService } from '../protocol-analysis/services/matching.service';
 import { buildProtocolSuggestionPrompt, PromptContext } from './prompts/protocol-suggestion.prompt';
 import { AuditAction } from '../../common/enums/audit-action.enum';
+import { decryptValue } from '../../common/utils/crypto.util';
 
 interface AiSettings {
   [key: string]: string;
@@ -45,6 +46,10 @@ export class AiService {
     const map: AiSettings = {};
     for (const s of settings) {
       map[s.settingKey] = s.settingValue;
+    }
+    // H-03: Decrypt sensitive settings
+    for (const key of ['ai_gemini_api_key', 'ai_claude_api_key', 'ai_openai_api_key']) {
+      if (map[key]) map[key] = decryptValue(map[key]);
     }
     this.settingsCache = { data: map, expiresAt: Date.now() + this.SETTINGS_CACHE_TTL };
     return map;
@@ -236,8 +241,16 @@ export class AiService {
     return suggestions.map((s) => this.formatResponse(s));
   }
 
-  // ─── Validate provider API key ──────────────────────────────
-  async validateProviderKey(providerName: string, apiKey: string) {
+  // ─── Validate stored provider API key (C-03 fix: reads from DB) ─
+  async validateStoredProviderKey(providerName: string) {
+    // Read the key from app_settings (server-side only — never transmitted in request)
+    const settings = await this.getAiSettings();
+    const apiKey = settings[`ai_${providerName}_api_key`];
+
+    if (!apiKey) {
+      return { provider: providerName, valid: false, message: 'API key not configured' };
+    }
+
     const provider = this.providerFactory.getProvider(providerName);
     const valid = await provider.validateApiKey(apiKey);
     return { provider: providerName, valid };

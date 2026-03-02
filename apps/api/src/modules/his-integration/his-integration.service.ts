@@ -10,6 +10,23 @@ import {
 } from './types/his-api.types';
 import { AdvancedSearchDto } from './dto/advanced-search.dto';
 
+/** M-06 fix: Validate and sanitize ICD-10 code format */
+function sanitizeIcd10(code: string | null | undefined): string {
+  if (!code) return '';
+  const trimmed = String(code).trim().toUpperCase();
+  // Valid ICD-10: letter + 2 digits + optional (dot + 1-4 digits) OR letter + 2-5 digits (dot-less)
+  if (!/^[A-Z]\d{2}(\.\d{1,4})?$/.test(trimmed) && !/^[A-Z]\d{2,6}$/.test(trimmed)) {
+    return trimmed.replace(/[^A-Z0-9.]/g, '').slice(0, 10);
+  }
+  return trimmed;
+}
+
+/** M-06 fix: Sanitize patient name — trim and limit length */
+function sanitizePatientName(name: string | null | undefined): string {
+  if (!name) return '';
+  return String(name).trim().slice(0, 200);
+}
+
 type TxClient = Parameters<Parameters<PrismaService['$transaction']>[0]>[0];
 
 export interface PreviewResult {
@@ -45,18 +62,27 @@ export class HisIntegrationService {
   /** Search patients from HIS */
   async searchPatient(query: string, type?: string): Promise<HisPatientSearchResult[]> {
     // Auto-detect search type
+    const trimmed = query.trim();
     if (!type) {
-      const trimmed = query.trim();
       if (/^\d{13}$/.test(trimmed)) {
         type = 'citizen_id';
       } else if (/^\d+$/.test(trimmed)) {
         type = 'hn';
       } else {
-        type = 'name';
+        // HIS API does not support name search
+        throw new BadRequestException(
+          'HIS API รองรับค้นหาด้วย HN หรือเลขบัตรประชาชนเท่านั้น — ไม่รองรับค้นหาด้วยชื่อ',
+        );
       }
     }
 
-    return this.hisClient.searchPatient(query, type);
+    // HIS system uses 9-digit HN — pad with leading zeros
+    let searchQuery = trimmed;
+    if (type === 'hn') {
+      searchQuery = trimmed.padStart(9, '0');
+    }
+
+    return this.hisClient.searchPatient(searchQuery, type);
   }
 
   /** Preview import — fetch data from HIS and compute what will be imported */
@@ -205,14 +231,15 @@ export class HisIntegrationService {
       select: { id: true },
     });
 
+    // M-06 fix: Sanitize HIS patient data before saving
     const data = {
       hn: p.hn,
       citizenId: p.citizenId,
-      fullName: p.fullName,
-      titleName: p.titleName || null,
+      fullName: sanitizePatientName(p.fullName),
+      titleName: sanitizePatientName(p.titleName) || null,
       gender: p.gender || null,
       dateOfBirth: p.dateOfBirth ? new Date(p.dateOfBirth) : null,
-      address: p.address || null,
+      address: p.address ? String(p.address).trim().slice(0, 500) : null,
       phoneNumber: p.phoneNumber || null,
       mainHospitalCode: p.mainHospitalCode || null,
     };
@@ -237,13 +264,16 @@ export class HisIntegrationService {
     patientId: number,
     hn: string,
   ): Promise<void> {
+    // M-06 fix: Sanitize ICD-10 codes from HIS before processing
+    const sanitizedPrimaryDx = sanitizeIcd10(visit.primaryDiagnosis);
+
     // Resolve ICD-10 → CancerSite (read-only lookup, OK outside tx)
-    const resolvedSiteId = await this.importService.resolveIcd10(visit.primaryDiagnosis);
+    const resolvedSiteId = await this.importService.resolveIcd10(sanitizedPrimaryDx);
 
     // Normalize diagnosis codes
-    const primaryDx = visit.primaryDiagnosis.replace(/\./g, '').toUpperCase();
+    const primaryDx = sanitizedPrimaryDx.replace(/\./g, '').toUpperCase();
     const secondaryDx = visit.secondaryDiagnoses
-      ? visit.secondaryDiagnoses.replace(/\./g, '').toUpperCase()
+      ? sanitizeIcd10(visit.secondaryDiagnoses).replace(/\./g, '').toUpperCase()
       : null;
 
     // Build medicationsRaw from structured array (for protocol matching compatibility)
@@ -262,8 +292,8 @@ export class HisIntegrationService {
         visitDate: new Date(visit.visitDate),
         primaryDiagnosis: primaryDx,
         secondaryDiagnoses: secondaryDx,
-        hpi: visit.hpi || null,
-        doctorNotes: visit.doctorNotes || null,
+        hpi: visit.hpi ? String(visit.hpi).trim().slice(0, 2000) : null,
+        doctorNotes: visit.doctorNotes ? String(visit.doctorNotes).trim().slice(0, 2000) : null,
         medicationsRaw,
         serviceStartTime: visit.serviceStartTime ? new Date(visit.serviceStartTime) : null,
         serviceEndTime: visit.serviceEndTime ? new Date(visit.serviceEndTime) : null,

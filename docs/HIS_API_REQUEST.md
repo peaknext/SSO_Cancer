@@ -8,11 +8,11 @@
 
 ระบบ SSO Cancer Care ต้องเรียกใช้ API จากระบบ HIS ของโรงพยาบาล 3 endpoints:
 
-| #   | Endpoint                    | วัตถุประสงค์                                          | เรียกเมื่อ                         |
-| --- | --------------------------- | ----------------------------------------------------- | ---------------------------------- |
-| 1   | **Patient Search**          | ค้นหาผู้ป่วยจาก HN/Citizen ID/ชื่อ                    | ผู้ใช้กดปุ่ม "ค้นหาจาก HIS"        |
-| 2   | **Patient Visit Data**      | ดึงข้อมูล visits + ค่ารักษาพยาบาลทั้งหมดของผู้ป่วย    | ผู้ใช้กดปุ่ม "นำเข้าข้อมูล"        |
-| 3   | **Advanced Patient Search** | ค้นหาผู้ป่วยจากเงื่อนไขทางคลินิก (วันที่/วินิจฉัย/ยา) | ผู้ใช้กดปุ่ม "ค้นหาขั้นสูงจาก HIS" |
+| #   | Endpoint                    | วัตถุประสงค์                                          | เรียกเมื่อ                         | สถานะ             |
+| --- | --------------------------- | ----------------------------------------------------- | ---------------------------------- | ----------------- |
+| 1   | **Patient Search**          | ค้นหาผู้ป่วยจาก HN / Citizen ID                       | ผู้ใช้กดปุ่ม "ค้นหาจาก HIS"        | ✅ ส่งมอบแล้ว     |
+| 2   | **Patient Visit Data**      | ดึงข้อมูล visits + ค่ารักษาพยาบาลทั้งหมดของผู้ป่วย    | ผู้ใช้กดปุ่ม "นำเข้าข้อมูล"        | ⏳ รอทีม HIS      |
+| 3   | **Advanced Patient Search** | ค้นหาผู้ป่วยจากเงื่อนไขทางคลินิก (วันที่/วินิจฉัย/ยา) | ผู้ใช้กดปุ่ม "ค้นหาขั้นสูงจาก HIS" | ⏳ รอทีม HIS      |
 
 ### 1.2 Authentication
 
@@ -22,24 +22,31 @@
 | IP Whitelist | จำกัดเฉพาะ IP ของ server SSO Cancer Care                                           |
 | Rate Limit   | ≥ 10 requests/minute ต่อ IP                                                        |
 
-### 1.3 Endpoint 1: Patient Search
+### 1.3 Endpoint 1: Patient Search ✅
 
+> **หมายเหตุ**: ทีม HIS ส่งมอบ endpoint นี้แล้ว โดยรูปแบบแตกต่างจาก spec เดิมที่ร้องขอ — ฝั่ง SSO Cancer Care ได้ปรับ code รองรับแล้ว
+
+**เดิม (spec ที่ร้องขอ):**
 ```
 GET /api/patients/search?q={searchTerm}&type={searchType}
 ```
 
+**จริง (ที่ทีม HIS ส่งมอบ):**
+```
+GET /api/patient?hn={hn}
+GET /api/patient?cid={citizenId}
+```
+
 **Parameters:**
 
-| Parameter | Type   | Required | Description                                                       |
-| --------- | ------ | -------- | ----------------------------------------------------------------- |
-| `q`       | string | ✅       | คำค้นหา (HN, Citizen ID 13 หลัก, หรือ ชื่อ-สกุล)                  |
-| `type`    | string | ❌       | ประเภทการค้นหา: `hn`, `citizen_id`, `name` (default: auto-detect) |
+| Parameter | Type   | Required      | Description                       |
+| --------- | ------ | ------------- | --------------------------------- |
+| `hn`      | string | ✅ (เลือก 1) | HN ของผู้ป่วย (9 หลัก เติม 0 ข้างหน้า) |
+| `cid`     | string | ✅ (เลือก 1) | เลขบัตรประชาชน 13 หลัก             |
 
-**Auto-detect logic** (ฝั่งเราจะส่ง type ให้):
+> **หมายเหตุ**: ส่ง `hn` หรือ `cid` อย่างใดอย่างหนึ่ง ไม่รองรับค้นหาด้วยชื่อ-สกุล
 
-- ถ้า `q` เป็นตัวเลข 13 หลัก → `type=citizen_id`
-- ถ้า `q` เป็นตัวเลข (ไม่ใช่ 13 หลัก) → `type=hn`
-- อื่นๆ → `type=name`
+**HN Format**: ระบบ HIS ใช้ HN 9 หลัก — ถ้า HN น้อยกว่า 9 หลัก ให้เติม `0` ข้างหน้าจนครบ (เช่น `1002104` → `001002104`)
 
 **Response:**
 
@@ -48,17 +55,17 @@ GET /api/patients/search?q={searchTerm}&type={searchType}
   "success": true,
   "data": [
     {
-      "hn": "0012345",
-      "citizenId": "1234567890123",
-      "titleName": "นาย",
-      "fullName": "สมชาย ใจดี",
-      "gender": "M",
-      "dateOfBirth": "1980-05-15",
-      "address": "123/4 ม.5 ต.ในเมือง อ.เมือง จ.ขอนแก่น 40000",
-      "phoneNumber": "0891234567",
-      "insuranceType": "ประกันสังคม",
+      "hn": "001002104",
+      "citizenId": "3480100319816",
+      "titleName": "น.ส.",
+      "fullName": "พิศมัย หาญมูล",
+      "gender": "F",
+      "dateOfBirth": "1968-12-28",
+      "address": "3 หมู่ที่ 3   ต.ท่าค้อ อ.เมืองนครพนม จ.นครพนม 48000",
+      "phoneNumber": "0651192511",
+      "insuranceType": "ประกันสังคมนอกเครือข่าย OP,IP",
       "mainHospitalCode": "10711",
-      "totalVisitCount": 45
+      "totalVisitCount": 3
     }
   ]
 }
@@ -68,19 +75,33 @@ GET /api/patients/search?q={searchTerm}&type={searchType}
 
 | Field              | Type   | Required | คำอธิบาย                      | ใช้ใน                              |
 | ------------------ | ------ | -------- | ----------------------------- | ---------------------------------- |
-| `hn`               | string | ✅       | เลข HN ของ รพ.                | Patient.hn, OPServices.HN          |
+| `hn`               | string | ✅       | เลข HN ของ รพ. (9 หลัก)       | Patient.hn, OPServices.HN          |
 | `citizenId`        | string | ✅       | เลขบัตรประชาชน 13 หลัก        | Patient.citizenId, BILLTRAN.Pid    |
 | `titleName`        | string | ✅       | คำนำหน้า (นาย/นาง/น.ส.)       | Patient.titleName (แสดง UI)        |
 | `fullName`         | string | ✅       | คำนำหน้า+ชื่อ+สกุล            | Patient.fullName, BILLTRAN.Name    |
 | `gender`           | string | ✅       | เพศ: "M" / "F"                | Patient.gender (แสดง UI)           |
 | `dateOfBirth`      | string | ✅       | วันเกิด (YYYY-MM-DD)          | Patient.dateOfBirth (คำนวณอายุ UI) |
 | `address`          | string | ✅       | ที่อยู่                       | Patient.address (แสดง UI)          |
-| `phoneNumber`      | string | ❌       | เบอร์โทร                      | Patient.phoneNumber                |
-| `insuranceType`    | string | ❌       | สิทธิ์การรักษา                | แสดง UI เท่านั้น                   |
+| `phoneNumber`      | string | ✅       | เบอร์โทร                      | Patient.phoneNumber                |
+| `insuranceType`    | string | ✅       | สิทธิ์การรักษา                | แสดง UI เท่านั้น                   |
 | `mainHospitalCode` | string | ✅       | รหัส รพ.หลักตามสิทธิ (hcode5) | BILLTRAN.HMain (#15)               |
-| `totalVisitCount`  | number | ❌       | จำนวน visit ทั้งหมดใน HIS     | แสดง UI เท่านั้น                   |
+| `totalVisitCount`  | number | ✅       | จำนวน visit ทั้งหมดใน HIS     | แสดง UI เท่านั้น                   |
 
-### 1.4 Endpoint 2: Patient Visit Data (Full Import)
+**Error Response (ไม่พบผู้ป่วย):**
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PATIENT_NOT_FOUND",
+    "message": "ไม่พบข้อมูลผู้ป่วย HN 001002104"
+  }
+}
+```
+
+### 1.4 Endpoint 2: Patient Visit Data (Full Import) ⏳
+
+> **สถานะ**: รอทีม HIS พัฒนา
 
 ```
 GET /api/patients/{hn}/visits?from={startDate}&to={endDate}
@@ -90,7 +111,7 @@ GET /api/patients/{hn}/visits?from={startDate}&to={endDate}
 
 | Parameter | Type  | Required | Description                                  |
 | --------- | ----- | -------- | -------------------------------------------- |
-| `hn`      | path  | ✅       | HN ของผู้ป่วย                                |
+| `hn`      | path  | ✅       | HN ของผู้ป่วย (9 หลัก)                       |
 | `from`    | query | ❌       | วันเริ่มต้น (YYYY-MM-DD) — default: ไม่จำกัด |
 | `to`      | query | ❌       | วันสิ้นสุด (YYYY-MM-DD) — default: วันนี้    |
 
@@ -101,14 +122,14 @@ GET /api/patients/{hn}/visits?from={startDate}&to={endDate}
   "success": true,
   "data": {
     "patient": {
-      "hn": "0012345",
-      "citizenId": "1234567890123",
-      "titleName": "นาย",
-      "fullName": "สมชาย ใจดี",
-      "gender": "M",
-      "dateOfBirth": "1980-05-15",
-      "address": "123/4 ม.5 ต.ในเมือง อ.เมือง จ.ขอนแก่น 40000",
-      "phoneNumber": "0891234567",
+      "hn": "001002104",
+      "citizenId": "3480100319816",
+      "titleName": "น.ส.",
+      "fullName": "พิศมัย หาญมูล",
+      "gender": "F",
+      "dateOfBirth": "1968-12-28",
+      "address": "3 หมู่ที่ 3   ต.ท่าค้อ อ.เมืองนครพนม จ.นครพนม 48000",
+      "phoneNumber": "0651192511",
       "mainHospitalCode": "10711"
     },
     "visits": [
@@ -207,7 +228,9 @@ GET /api/patients/{hn}/visits?from={startDate}&to={endDate}
 
 > **สำคัญ**: `aipnCode` เป็น string (alphanumeric) และต้องส่งจาก HIS ทุกรายการ — ถ้าไม่มีค่า ระบบจะแสดง validation warning ตอน SSOP export preview
 
-### 1.5 Endpoint 3: Advanced Patient Search (Clinical Criteria)
+### 1.5 Endpoint 3: Advanced Patient Search (Clinical Criteria) ⏳
+
+> **สถานะ**: รอทีม HIS พัฒนา
 
 ```
 POST /api/patients/search/advanced
@@ -256,15 +279,15 @@ POST /api/patients/search/advanced
   "success": true,
   "data": [
     {
-      "hn": "0012345",
-      "citizenId": "1234567890123",
-      "titleName": "นาย",
-      "fullName": "สมชาย ใจดี",
-      "gender": "M",
-      "dateOfBirth": "1980-05-15",
-      "address": "123/4 ม.5 ต.ในเมือง อ.เมือง จ.ขอนแก่น 40000",
-      "phoneNumber": "0891234567",
-      "insuranceType": "ประกันสังคม",
+      "hn": "001002104",
+      "citizenId": "3480100319816",
+      "titleName": "น.ส.",
+      "fullName": "พิศมัย หาญมูล",
+      "gender": "F",
+      "dateOfBirth": "1968-12-28",
+      "address": "3 หมู่ที่ 3   ต.ท่าค้อ อ.เมืองนครพนม จ.นครพนม 48000",
+      "phoneNumber": "0651192511",
+      "insuranceType": "ประกันสังคมนอกเครือข่าย OP,IP",
       "mainHospitalCode": "10711",
       "matchingVisitCount": 3
     }
@@ -274,7 +297,7 @@ POST /api/patients/search/advanced
 
 **Response Fields:**
 
-เหมือน Endpoint 1 (§11.3) ยกเว้น:
+เหมือน Endpoint 1 (§1.3) ยกเว้น:
 
 | Field                | Type   | Required | คำอธิบาย                               |
 | -------------------- | ------ | -------- | -------------------------------------- |
@@ -298,7 +321,7 @@ POST /api/patients/search/advanced
   "success": false,
   "error": {
     "code": "PATIENT_NOT_FOUND",
-    "message": "ไม่พบข้อมูลผู้ป่วย HN 9999999"
+    "message": "ไม่พบข้อมูลผู้ป่วย HN 001002104"
   }
 }
 ```
@@ -314,3 +337,31 @@ Error codes ที่คาดหวัง:
 | `INTERNAL_ERROR`    | 500         | ข้อผิดพลาดภายใน HIS  |
 
 ---
+
+### 1.7 SSL/TLS Notes
+
+- HIS API ใช้ SSL certificate ที่ไม่ผ่าน standard CA verification (self-signed / intermediate CA ไม่ครบ)
+- ฝั่ง SSO Cancer Care ได้ปรับ code ให้ skip SSL verification สำหรับ HIS connections โดยเฉพาะ (ใช้ undici Agent กับ `rejectUnauthorized: false`)
+- ไม่กระทบ HTTPS connections อื่นของระบบ
+
+---
+
+### 1.8 Implementation Notes (สำหรับทีม SSO Cancer Care)
+
+**การปรับ code จาก spec เดิม:**
+
+| หัวข้อ | Spec เดิม | จริง (ที่ทีม HIS ส่งมอบ) | การปรับฝั่งเรา |
+| ------ | --------- | ----------------------- | ------------- |
+| Path | `GET /api/patients/search` | `GET /api/patient` (singular) | `his-api.client.ts` เปลี่ยน path |
+| Params | `?q={query}&type={type}` | `?hn={hn}` หรือ `?cid={cid}` | `his-api.client.ts` สร้าง params ตาม type |
+| HN format | ไม่จำกัดหลัก | 9 หลัก (เติม 0 ข้างหน้า) | `his-integration.service.ts` ใช้ `padStart(9, '0')` |
+| Name search | รองรับ | ไม่รองรับ | `his-integration.service.ts` throw BadRequestException |
+| SSL | Standard CA | Self-signed cert | `his-api.client.ts` ใช้ undici Agent skip verify |
+| 404 response | - | `{ success: false, error: { code: "PATIENT_NOT_FOUND" } }` | `his-api.client.ts` catch 404 → return `[]` |
+
+**Files ที่เกี่ยวข้อง:**
+
+- `apps/api/src/modules/his-integration/his-api.client.ts` — HTTP client เรียก HIS API
+- `apps/api/src/modules/his-integration/his-integration.service.ts` — business logic + auto-detect type
+- `apps/api/src/modules/his-integration/dto/search-patient.dto.ts` — DTO validation
+- `apps/web/src/app/(dashboard)/cancer-patients/new/page.tsx` — frontend search UI

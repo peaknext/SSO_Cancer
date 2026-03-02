@@ -20,6 +20,11 @@ async function bootstrap() {
 
   // CORS — require explicit origin in production
   const corsOrigin = process.env.CORS_ORIGIN;
+  // H-07 fix: Reject wildcard CORS in production
+  if (isProduction && corsOrigin === '*') {
+    logger.error('CORS_ORIGIN=* is not allowed in production. Set a specific origin.');
+    process.exit(1);
+  }
   if (isProduction && !corsOrigin) {
     logger.warn(
       'CORS_ORIGIN not set in production — defaulting to deny all cross-origin',

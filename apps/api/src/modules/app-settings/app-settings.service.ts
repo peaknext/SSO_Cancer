@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateAppSettingDto } from './dto/update-app-setting.dto';
+import { encryptValue } from '../../common/utils/crypto.util';
 
 // Keys whose values must be masked in GET responses
 const SENSITIVE_KEYS = new Set([
@@ -48,9 +49,15 @@ export class AppSettingsService {
     });
     if (!setting) throw new NotFoundException('SETTING_NOT_FOUND');
 
-    return this.prisma.appSetting.update({
+    const updated = await this.prisma.appSetting.update({
       where: { settingKey: key },
-      data: { settingValue: dto.settingValue },
+      data: { settingValue: SENSITIVE_KEYS.has(key) ? encryptValue(dto.settingValue) : dto.settingValue },
     });
+
+    // C-02 fix: Mask sensitive values in PATCH response
+    if (SENSITIVE_KEYS.has(key)) {
+      return { ...updated, settingValue: maskValue(updated.settingValue) };
+    }
+    return updated;
   }
 }

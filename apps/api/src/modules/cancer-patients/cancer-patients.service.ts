@@ -78,7 +78,9 @@ export class CancerPatientsService {
 
     // Filter by drug name: find HNs that have visits with matching resolved drug
     if (drugName) {
-      const pattern = `%${drugName}%`;
+      // M-07 fix: Escape ILIKE wildcard characters
+      const escaped = drugName.replace(/[%_\\]/g, '\\$&');
+      const pattern = `%${escaped}%`;
       const rows = await this.prisma.$queryRaw<{ hn: string }[]>`
         SELECT DISTINCT pv.hn
         FROM patient_visits pv

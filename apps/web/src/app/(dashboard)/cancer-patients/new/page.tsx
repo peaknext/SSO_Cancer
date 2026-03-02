@@ -289,7 +289,7 @@ export default function PatientCreatePage() {
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="กรอก HN, เลขบัตรประชาชน 13 หลัก, หรือ ชื่อ-สกุล"
+                  placeholder="กรอก HN หรือเลขบัตรประชาชน 13 หลัก"
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   className="flex-1"
                   autoFocus

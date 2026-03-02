@@ -47,6 +47,9 @@ const TABLE_ORDER = [
 
 const SKIP_TABLES = ['sessions', '_prisma_migrations'];
 
+// Allowlist of valid table names derived from TABLE_ORDER for SQL injection prevention
+const VALID_TABLE_NAMES = new Set(TABLE_ORDER);
+
 export interface BackupMetadata {
   version: string;
   createdAt: string;
@@ -63,6 +66,41 @@ export class BackupRestoreService {
   private readonly logger = new Logger(BackupRestoreService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Validates a dynamic SQL identifier to prevent SQL injection.
+   * - table: must be in the hardcoded VALID_TABLE_NAMES allowlist
+   * - sequence: must match strict PostgreSQL identifier pattern (allows dots and quotes for schema-qualified names)
+   * - column: must match strict identifier pattern (alphanumeric + underscore)
+   */
+  private validateIdentifier(
+    name: string,
+    type: 'table' | 'sequence' | 'column',
+  ): void {
+    switch (type) {
+      case 'table':
+        if (!VALID_TABLE_NAMES.has(name)) {
+          throw new BadRequestException(
+            `ชื่อตารางไม่ถูกต้อง: ${name} — Invalid table name: ${name}`,
+          );
+        }
+        break;
+      case 'sequence':
+        if (!/^[a-zA-Z_][a-zA-Z0-9_."]*$/.test(name)) {
+          throw new BadRequestException(
+            `ชื่อ sequence ไม่ถูกต้อง: ${name} — Invalid sequence name: ${name}`,
+          );
+        }
+        break;
+      case 'column':
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+          throw new BadRequestException(
+            `ชื่อคอลัมน์ไม่ถูกต้อง: ${name} — Invalid column name: ${name}`,
+          );
+        }
+        break;
+    }
+  }
 
   // ─── Backup ──────────────────────────────────────────────────────────────────
 
@@ -81,6 +119,7 @@ export class BackupRestoreService {
     let totalRows = 0;
 
     for (const table of tables) {
+      this.validateIdentifier(table, 'table');
       const rows: unknown[] = await this.prisma.$queryRawUnsafe(
         `SELECT * FROM "${table}" ORDER BY id`,
       );
@@ -107,8 +146,9 @@ export class BackupRestoreService {
     const backup = { metadata, data };
     const jsonBuffer = Buffer.from(JSON.stringify(backup));
     const gzipBuffer = zlib.gzipSync(jsonBuffer, { level: 6 });
+    const finalBuffer = this.encryptBuffer(gzipBuffer);
 
-    return { buffer: gzipBuffer, metadata };
+    return { buffer: finalBuffer, metadata };
   }
 
   // ─── Preview ─────────────────────────────────────────────────────────────────
@@ -164,6 +204,7 @@ export class BackupRestoreService {
       // Step 2: TRUNCATE in reverse dependency order
       const reversed = [...tablesToRestore].reverse();
       for (const table of reversed) {
+        this.validateIdentifier(table, 'table');
         await this.prisma.$executeRawUnsafe(
           `TRUNCATE TABLE "${table}" CASCADE`,
         );
@@ -262,7 +303,45 @@ export class BackupRestoreService {
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+  private encryptBuffer(buffer: Buffer): Buffer {
+    const key = process.env.BACKUP_ENCRYPTION_KEY || process.env.SETTINGS_ENCRYPTION_KEY;
+    if (!key || key.length < 64) return buffer; // No key = no encryption (graceful)
+
+    const keyBuf = Buffer.from(key.slice(0, 64), 'hex');
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-gcm', keyBuf, iv);
+
+    const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+    const tag = cipher.getAuthTag();
+
+    // Format: 'SSOENC' magic (6) + iv (16) + tag (16) + encrypted data
+    return Buffer.concat([Buffer.from('SSOENC'), iv, tag, encrypted]);
+  }
+
+  private decryptBuffer(buffer: Buffer): Buffer {
+    const magic = buffer.subarray(0, 6).toString();
+    if (magic !== 'SSOENC') return buffer; // Not encrypted
+
+    const key = process.env.BACKUP_ENCRYPTION_KEY || process.env.SETTINGS_ENCRYPTION_KEY;
+    if (!key || key.length < 64) {
+      throw new BadRequestException('Backup is encrypted but no decryption key configured');
+    }
+
+    const keyBuf = Buffer.from(key.slice(0, 64), 'hex');
+    const iv = buffer.subarray(6, 22);
+    const tag = buffer.subarray(22, 38);
+    const encrypted = buffer.subarray(38);
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', keyBuf, iv);
+    decipher.setAuthTag(tag);
+
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]);
+  }
+
   private decompress(buffer: Buffer, filename: string): { metadata: BackupMetadata; data: Record<string, unknown[]> } {
+    // H-05: Decrypt if encrypted
+    buffer = this.decryptBuffer(buffer);
+
     let jsonBuffer: Buffer;
 
     if (filename.endsWith('.gz') || filename.endsWith('.gzip')) {
@@ -324,6 +403,11 @@ export class BackupRestoreService {
     columns: string[],
     rows: Record<string, unknown>[],
   ): Promise<number> {
+    this.validateIdentifier(table, 'table');
+    for (const col of columns) {
+      this.validateIdentifier(col, 'column');
+    }
+
     const BATCH = 500;
     let total = 0;
 
@@ -354,11 +438,14 @@ export class BackupRestoreService {
   private async resetSequences(tables: string[]) {
     for (const table of tables) {
       try {
+        this.validateIdentifier(table, 'table');
         const seqResult = await this.prisma.$queryRawUnsafe<{ seq_name: string | null }[]>(
           `SELECT pg_get_serial_sequence('"${table}"', 'id') AS seq_name`,
         );
         const seqName = seqResult[0]?.seq_name;
         if (!seqName) continue;
+
+        this.validateIdentifier(seqName, 'sequence');
 
         const maxResult = await this.prisma.$queryRawUnsafe<{ max_id: number }[]>(
           `SELECT COALESCE(MAX(id), 0) AS max_id FROM "${table}"`,
@@ -384,6 +471,7 @@ export class BackupRestoreService {
     const verified: string[] = [];
 
     for (const table of tables) {
+      this.validateIdentifier(table, 'table');
       const expected = backupData[table]?.length ?? 0;
       const countResult = await this.prisma.$queryRawUnsafe<{ cnt: number }[]>(
         `SELECT COUNT(*)::int AS cnt FROM "${table}"`,
@@ -404,6 +492,7 @@ export class BackupRestoreService {
     const counts: Record<string, number> = {};
     for (const table of TABLE_ORDER) {
       try {
+        this.validateIdentifier(table, 'table');
         const result = await this.prisma.$queryRawUnsafe<{ cnt: number }[]>(
           `SELECT COUNT(*)::int AS cnt FROM "${table}"`,
         );

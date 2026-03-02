@@ -1,16 +1,18 @@
-import { IsString, IsNotEmpty, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, MaxLength, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
+/**
+ * C-03 fix: Removed apiKey field — validate-key now reads the key
+ * from app_settings (server-side only) instead of accepting it in
+ * the request body, preventing API key transmission over HTTP.
+ */
 export class ValidateKeyDto {
-  @ApiProperty({ description: 'AI provider name (gemini, claude, openai)' })
+  @ApiProperty({
+    description: 'AI provider name to validate (reads stored key from app_settings)',
+    enum: ['gemini', 'claude', 'openai'],
+  })
   @IsString()
   @IsNotEmpty()
-  @MaxLength(30)
+  @IsIn(['gemini', 'claude', 'openai'])
   provider: string;
-
-  @ApiProperty({ description: 'API key to validate' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(500)
-  apiKey: string;
 }

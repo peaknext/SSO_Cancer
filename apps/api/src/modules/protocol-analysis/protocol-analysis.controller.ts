@@ -59,6 +59,14 @@ export class ProtocolAnalysisController {
       throw new BadRequestException('กรุณาอัปโหลดไฟล์ — Please upload a file');
     }
 
+    // M-01 fix: Validate file magic bytes (ZIP signature for .xlsx)
+    const XLSX_MAGIC = Buffer.from([0x50, 0x4b, 0x03, 0x04]); // PK\x03\x04
+    if (!file.buffer.subarray(0, 4).equals(XLSX_MAGIC)) {
+      throw new BadRequestException(
+        'ไฟล์ไม่ใช่ Excel (.xlsx) ที่ถูกต้อง — Invalid file format (expected XLSX/ZIP signature)',
+      );
+    }
+
     const ext = file.originalname.split('.').pop()?.toLowerCase();
     if (ext !== 'xlsx' && ext !== 'xls') {
       throw new BadRequestException('รองรับเฉพาะไฟล์ .xlsx — Only .xlsx files are supported');
@@ -84,6 +92,14 @@ export class ProtocolAnalysisController {
   ) {
     if (!file) {
       throw new BadRequestException('กรุณาอัปโหลดไฟล์ — Please upload a file');
+    }
+
+    // M-01 fix: Validate file magic bytes (same check as preview)
+    const XLSX_MAGIC = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+    if (!file.buffer.subarray(0, 4).equals(XLSX_MAGIC)) {
+      throw new BadRequestException(
+        'ไฟล์ไม่ใช่ Excel (.xlsx) ที่ถูกต้อง — Invalid file format (expected XLSX/ZIP signature)',
+      );
     }
 
     const allRows = this.importService.parseAllRows(file.buffer);

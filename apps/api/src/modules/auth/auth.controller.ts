@@ -38,7 +38,7 @@ export class AuthController {
 
   @Public()
   @Post('login')
-  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   async login(
@@ -61,6 +61,7 @@ export class AuthController {
     return {
       accessToken: result.accessToken,
       user: result.user,
+      ...(result.mustChangePassword ? { mustChangePassword: true } : {}),
     };
   }
 

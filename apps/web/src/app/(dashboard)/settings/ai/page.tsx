@@ -109,15 +109,15 @@ export default function AiSettingsPage() {
     const apiKeyField = `ai_${providerName}_api_key`;
     const apiKey = values[apiKeyField];
     if (!apiKey) {
-      toast.error('กรุณาใส่ API Key ก่อน');
+      toast.error('กรุณาบันทึก API Key ก่อนตรวจสอบ');
       return;
     }
     setValidating(providerName);
     setKeyValid((prev) => ({ ...prev, [providerName]: null }));
     try {
+      // C-03 fix: API key is read server-side from app_settings — not sent in request body
       const result = await apiClient.post<{ valid: boolean }>('/ai/settings/validate-key', {
         provider: providerName,
-        apiKey,
       });
       setKeyValid((prev) => ({ ...prev, [providerName]: result.valid }));
       if (result.valid) {

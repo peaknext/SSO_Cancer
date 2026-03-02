@@ -5,6 +5,12 @@ import {
   HisPatientSearchResult,
   HisPatientData,
 } from './types/his-api.types';
+import { decryptValue } from '../../common/utils/crypto.util';
+
+// Hospital HIS APIs commonly use self-signed or incomplete-chain SSL certificates.
+// Use a custom undici Agent that skips SSL verification for HIS connections only.
+import { Agent as UndiciAgent } from 'undici';
+const hisHttpsAgent = new UndiciAgent({ connect: { rejectUnauthorized: false } });
 
 interface HisSettings {
   baseUrl: string;
@@ -36,9 +42,10 @@ export class HisApiClient {
 
     const map = new Map(rows.map((r) => [r.settingKey, r.settingValue]));
 
+    const rawApiKey = map.get('his_api_key') || '';
     this.settingsCache = {
       baseUrl: (map.get('his_api_base_url') || '').replace(/\/+$/, ''),
-      apiKey: map.get('his_api_key') || '',
+      apiKey: rawApiKey ? decryptValue(rawApiKey) : '',
       timeout: parseInt(map.get('his_api_timeout') || '30000', 10),
     };
     this.settingsCacheTime = now;
@@ -78,6 +85,8 @@ export class HisApiClient {
         const response = await fetch(url, {
           headers,
           signal: controller.signal,
+          // @ts-expect-error — undici dispatcher for self-signed HIS SSL certs
+          dispatcher: hisHttpsAgent,
         });
 
         clearTimeout(timer);
@@ -163,6 +172,8 @@ export class HisApiClient {
           headers,
           body: JSON.stringify(body),
           signal: controller.signal,
+          // @ts-expect-error — undici dispatcher for self-signed HIS SSL certs
+          dispatcher: hisHttpsAgent,
         });
 
         clearTimeout(timer);
@@ -233,9 +244,26 @@ export class HisApiClient {
 
   /** Search patients from HIS */
   async searchPatient(query: string, type?: string): Promise<HisPatientSearchResult[]> {
-    const params = new URLSearchParams({ q: query });
-    if (type) params.set('type', type);
-    return this.callApi<HisPatientSearchResult[]>(`/patients/search?${params}`);
+    // HIS team implemented: GET /api/patient?hn={hn} or GET /api/patient?cid={citizenId}
+    const params = new URLSearchParams();
+    if (type === 'citizen_id') {
+      params.set('cid', query);
+    } else {
+      params.set('hn', query);
+    }
+    try {
+      // HIS may return a single object or an array — normalize to array
+      const result = await this.callApi<HisPatientSearchResult | HisPatientSearchResult[]>(
+        `/patient?${params}`,
+      );
+      return Array.isArray(result) ? result : [result];
+    } catch (err: any) {
+      // HIS API returns 404 when patient not found — return empty array
+      if (err.message?.includes('404') || err.message?.includes('ไม่พบ') || err.message?.includes('NOT_FOUND')) {
+        return [];
+      }
+      throw err;
+    }
   }
 
   /** Fetch full visit data for a patient */
@@ -268,6 +296,8 @@ export class HisApiClient {
       const response = await fetch(`${settings.baseUrl}/health`, {
         headers,
         signal: controller.signal,
+        // @ts-expect-error — undici dispatcher for self-signed HIS SSL certs
+        dispatcher: hisHttpsAgent,
       });
 
       clearTimeout(timer);

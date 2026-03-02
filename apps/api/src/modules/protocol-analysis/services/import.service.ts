@@ -8,6 +8,20 @@ import {
   ImportResult,
 } from '../types/matching.types';
 
+/**
+ * M-02 fix: Sanitize cell value to prevent formula injection.
+ * Strips leading characters that Excel interprets as formula markers.
+ */
+function sanitizeCellValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value).trim();
+  // Strip leading formula markers: = + - @ | \t \r
+  if (/^[=+\-@|\t\r]/.test(str)) {
+    return str.replace(/^[=+\-@|\t\r]+/, '');
+  }
+  return str;
+}
+
 // Column header mappings (Thai → internal key)
 const COLUMN_MAP: Record<string, string> = {
   hn: 'hn',
@@ -103,8 +117,15 @@ export class ImportService {
       if (!mapped.visitDate) rowErrors.push('vsdate ว่างเปล่า');
       if (!mapped.primaryDiagnosis) rowErrors.push('วินิจฉัยหลักว่างเปล่า');
 
+      // M-02 fix: Sanitize text fields to prevent formula injection
+      const safePrimaryDiagnosis = sanitizeCellValue(mapped.primaryDiagnosis);
+      const safeSecondaryDiagnoses = sanitizeCellValue(mapped.secondaryDiagnoses);
+      const safeHpi = sanitizeCellValue(mapped.hpi);
+      const safeDoctorNotes = sanitizeCellValue(mapped.doctorNotes);
+      const safeMedicationsRaw = sanitizeCellValue(mapped.medicationsRaw);
+
       // Normalize ICD-10 code: remove dots
-      const primaryDx = (mapped.primaryDiagnosis || '').replace(/\./g, '').toUpperCase();
+      const primaryDx = (safePrimaryDiagnosis || '').replace(/\./g, '').toUpperCase();
 
       // Parse visit date — find the original raw value for date column
       let visitDateStr = mapped.visitDate || '';
@@ -138,13 +159,13 @@ export class ImportService {
         vn: mapped.vn || '',
         visitDate: visitDateStr,
         primaryDiagnosis: primaryDx,
-        secondaryDiagnoses: mapped.secondaryDiagnoses
-          ? mapped.secondaryDiagnoses.replace(/\./g, '').toUpperCase()
+        secondaryDiagnoses: safeSecondaryDiagnoses
+          ? safeSecondaryDiagnoses.replace(/\./g, '').toUpperCase()
           : null,
-        hpi: mapped.hpi || null,
-        doctorNotes: mapped.doctorNotes || null,
-        medicationsRaw: mapped.medicationsRaw && mapped.medicationsRaw.trim() !== 'ไม่มีรายการยา'
-          ? mapped.medicationsRaw
+        hpi: safeHpi || null,
+        doctorNotes: safeDoctorNotes || null,
+        medicationsRaw: safeMedicationsRaw && safeMedicationsRaw.trim() !== 'ไม่มีรายการยา'
+          ? safeMedicationsRaw
           : null,
         errors: rowErrors,
       });
@@ -203,7 +224,14 @@ export class ImportService {
       if (!mapped.visitDate) rowErrors.push('vsdate ว่างเปล่า');
       if (!mapped.primaryDiagnosis) rowErrors.push('วินิจฉัยหลักว่างเปล่า');
 
-      const primaryDx = (mapped.primaryDiagnosis || '').replace(/\./g, '').toUpperCase();
+      // M-02 fix: Sanitize text fields to prevent formula injection
+      const safePrimaryDiagnosis = sanitizeCellValue(mapped.primaryDiagnosis);
+      const safeSecondaryDiagnoses = sanitizeCellValue(mapped.secondaryDiagnoses);
+      const safeHpi = sanitizeCellValue(mapped.hpi);
+      const safeDoctorNotes = sanitizeCellValue(mapped.doctorNotes);
+      const safeMedicationsRaw = sanitizeCellValue(mapped.medicationsRaw);
+
+      const primaryDx = (safePrimaryDiagnosis || '').replace(/\./g, '').toUpperCase();
 
       let visitDateStr = mapped.visitDate || '';
       const vsKey = Object.keys(raw).find((k) => COLUMN_MAP[k.trim()] === 'visitDate') || '';
@@ -229,13 +257,13 @@ export class ImportService {
         vn: mapped.vn || '',
         visitDate: visitDateStr,
         primaryDiagnosis: primaryDx,
-        secondaryDiagnoses: mapped.secondaryDiagnoses
-          ? mapped.secondaryDiagnoses.replace(/\./g, '').toUpperCase()
+        secondaryDiagnoses: safeSecondaryDiagnoses
+          ? safeSecondaryDiagnoses.replace(/\./g, '').toUpperCase()
           : null,
-        hpi: mapped.hpi || null,
-        doctorNotes: mapped.doctorNotes || null,
-        medicationsRaw: mapped.medicationsRaw && mapped.medicationsRaw.trim() !== 'ไม่มีรายการยา'
-          ? mapped.medicationsRaw
+        hpi: safeHpi || null,
+        doctorNotes: safeDoctorNotes || null,
+        medicationsRaw: safeMedicationsRaw && safeMedicationsRaw.trim() !== 'ไม่มีรายการยา'
+          ? safeMedicationsRaw
           : null,
         errors: rowErrors,
       };

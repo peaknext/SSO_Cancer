@@ -19,7 +19,7 @@ fi
 if [ ! -f deploy/nginx/ssl/cert.pem ] || [ ! -f deploy/nginx/ssl/key.pem ]; then
   echo "WARNING: SSL certificates not found in deploy/nginx/ssl/"
   echo "Generate self-signed cert with:"
-  echo "  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\"
+  echo "  openssl req -x509 -nodes -days 90 -newkey rsa:4096 \\"
   echo "    -keyout deploy/nginx/ssl/key.pem \\"
   echo "    -out deploy/nginx/ssl/cert.pem \\"
   echo "    -subj '/CN=sso-cancer.hospital.local'"

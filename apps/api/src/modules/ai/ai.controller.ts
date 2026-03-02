@@ -43,8 +43,10 @@ export class AiController {
 
   @Post('settings/validate-key')
   @Roles(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Validate an AI provider API key' })
+  @ApiOperation({
+    summary: 'Validate stored AI provider API key (reads from app_settings)',
+  })
   async validateKey(@Body() dto: ValidateKeyDto) {
-    return this.aiService.validateProviderKey(dto.provider, dto.apiKey);
+    return this.aiService.validateStoredProviderKey(dto.provider);
   }
 }
