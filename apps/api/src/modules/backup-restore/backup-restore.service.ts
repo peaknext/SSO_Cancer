@@ -57,6 +57,7 @@ export interface BackupMetadata {
   tableCount: number;
   totalRows: number;
   includesAuditLogs: boolean;
+  encrypted: boolean;
   tables: Record<string, { count: number }>;
   checksum: string;
 }
@@ -102,6 +103,12 @@ export class BackupRestoreService {
     }
   }
 
+  /** Check if backup encryption key is configured */
+  private isEncryptionKeyConfigured(): boolean {
+    const key = process.env.BACKUP_ENCRYPTION_KEY || process.env.SETTINGS_ENCRYPTION_KEY;
+    return !!key && key.length >= 64;
+  }
+
   // ─── Backup ──────────────────────────────────────────────────────────────────
 
   async createBackup(userId: number, includeAuditLogs: boolean) {
@@ -139,6 +146,7 @@ export class BackupRestoreService {
       tableCount: tables.length,
       totalRows,
       includesAuditLogs: includeAuditLogs,
+      encrypted: this.isEncryptionKeyConfigured(),
       tables: tableMeta,
       checksum,
     };
@@ -298,7 +306,12 @@ export class BackupRestoreService {
   async getDatabaseStatus() {
     const counts = await this.getTableCounts();
     const totalRows = Object.values(counts).reduce((s, c) => s + c, 0);
-    return { tables: counts, totalRows, tableCount: Object.keys(counts).length };
+    return {
+      tables: counts,
+      totalRows,
+      tableCount: Object.keys(counts).length,
+      encryptionConfigured: this.isEncryptionKeyConfigured(),
+    };
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -426,11 +439,11 @@ export class BackupRestoreService {
         }
       }
 
-      await this.prisma.$executeRawUnsafe(
+      const affected = await this.prisma.$executeRawUnsafe(
         `INSERT INTO "${table}" (${colList}) VALUES ${valueSets.join(', ')} ON CONFLICT DO NOTHING`,
         ...params,
       );
-      total += batch.length;
+      total += affected;
     }
     return total;
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Database,
   Download,
@@ -9,11 +9,15 @@ import {
   CheckCircle2,
   Loader2,
   Shield,
+  Lock,
+  Unlock,
   FileArchive,
   ArrowUp,
   ArrowDown,
   Minus,
   RotateCcw,
+  Clock,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/use-api';
@@ -31,6 +35,7 @@ interface DbStatus {
   tables: Record<string, number>;
   totalRows: number;
   tableCount: number;
+  encryptionConfigured: boolean;
 }
 
 interface BackupMetadata {
@@ -40,6 +45,7 @@ interface BackupMetadata {
   tableCount: number;
   totalRows: number;
   includesAuditLogs: boolean;
+  encrypted?: boolean;
   tables: Record<string, { count: number }>;
   checksum: string;
 }
@@ -262,6 +268,28 @@ export default function BackupPage() {
             </div>
           ) : null}
 
+          {/* Encryption status (Issue #4) */}
+          {dbStatus && (
+            dbStatus.encryptionConfigured ? (
+              <div className="flex items-center gap-2 rounded-lg border border-emerald-300/40 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-500/30 px-3 py-2">
+                <Lock className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="text-xs text-emerald-800 dark:text-emerald-200">
+                  Backup จะเข้ารหัส AES-256-GCM
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-300/40 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-500/30 px-3 py-2">
+                <Unlock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <div className="text-xs text-amber-800 dark:text-amber-200">
+                  <p>Backup ไม่ได้เข้ารหัส</p>
+                  <p className="text-amber-700 dark:text-amber-300/80 mt-0.5">
+                    ตั้งค่า BACKUP_ENCRYPTION_KEY ใน environment variables เพื่อเข้ารหัสไฟล์
+                  </p>
+                </div>
+              </div>
+            )
+          )}
+
           {/* Audit logs checkbox */}
           <label className="flex items-center gap-2.5 cursor-pointer">
             <input
@@ -273,6 +301,18 @@ export default function BackupPage() {
             <span className="text-sm text-foreground">รวม Audit Logs</span>
             <span className="text-xs text-muted-foreground">(อาจทำให้ไฟล์ใหญ่ขึ้น)</span>
           </label>
+
+          {/* Audit log size warning (Issue #3) */}
+          {dbStatus && includeAuditBackup && (dbStatus.tables.audit_logs ?? 0) > 10000 && (
+            <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>
+                Audit logs มี {(dbStatus.tables.audit_logs ?? 0).toLocaleString()} แถว —
+                ไฟล์อาจใหญ่และดาวน์โหลดช้า (ประมาณ{' '}
+                {Math.ceil(dbStatus.totalRows * 0.5 / 1024)} MB)
+              </span>
+            </div>
+          )}
 
           {/* Download button */}
           <Button onClick={handleDownload} disabled={isDownloading} className="w-full">
@@ -384,6 +424,20 @@ export default function BackupPage() {
                     {preview.metadata.checksum?.slice(0, 20) || 'ไม่มี'}...
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">การเข้ารหัส</span>
+                  <span>
+                    {preview.metadata.encrypted ? (
+                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                        <Lock className="h-3 w-3" /> เข้ารหัสแล้ว
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                        <Unlock className="h-3 w-3" /> ไม่เข้ารหัส
+                      </span>
+                    )}
+                  </span>
+                </div>
               </div>
 
               {/* Warnings */}
@@ -433,17 +487,30 @@ export default function BackupPage() {
                 </div>
               </div>
 
-              {/* Audit logs checkbox */}
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={includeAuditRestore}
-                  onChange={(e) => setIncludeAuditRestore(e.target.checked)}
-                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary/30"
-                />
-                <span className="text-sm text-foreground">กู้คืน Audit Logs ด้วย</span>
-                <span className="text-xs text-muted-foreground">(ค่าเริ่มต้น: ไม่กู้คืน)</span>
-              </label>
+              {/* Audit logs checkbox (Issue #5 — clarify asymmetric defaults) */}
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeAuditRestore}
+                    onChange={(e) => setIncludeAuditRestore(e.target.checked)}
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary/30"
+                  />
+                  <span className="text-sm text-foreground">กู้คืน Audit Logs ด้วย</span>
+                </label>
+                <p className="text-xs text-muted-foreground ml-6.5 leading-relaxed">
+                  ค่าเริ่มต้น: ไม่กู้คืน — เพื่อรักษา audit trail ของ server ปัจจุบัน
+                </p>
+                {!includeAuditRestore && preview.metadata.includesAuditLogs && (
+                  <div className="flex items-center gap-1.5 ml-6.5 text-xs text-muted-foreground">
+                    <Info className="h-3 w-3 shrink-0" />
+                    <span>
+                      จะข้าม audit logs{' '}
+                      {(preview.metadata.tables.audit_logs?.count ?? 0).toLocaleString()} แถวจาก backup
+                    </span>
+                  </div>
+                )}
+              </div>
 
               {/* Confirm section */}
               <div className="space-y-2 border-t pt-3">
@@ -479,13 +546,9 @@ export default function BackupPage() {
             </div>
           )}
 
-          {/* ── State: Confirming / Restoring ─────────────────────────────── */}
+          {/* ── State: Confirming / Restoring — Multi-step Progress (Issue #2) */}
           {(restoreState === 'confirming' || restoreState === 'restoring') && (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm font-medium text-foreground">กำลังกู้คืนข้อมูล...</p>
-              <p className="text-xs text-muted-foreground">กรุณาอย่าปิดหน้านี้</p>
-            </div>
+            <RestoreProgress />
           )}
 
           {/* ── State: Success ────────────────────────────────────────────── */}
@@ -571,6 +634,96 @@ export default function BackupPage() {
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
+
+const RESTORE_STEPS = [
+  { label: 'ปิดข้อจำกัด FK', sublabel: 'Disabling FK constraints', delayMs: 1000 },
+  { label: 'ล้างข้อมูลเก่า', sublabel: 'Clearing existing data', delayMs: 1500 },
+  { label: 'นำเข้าข้อมูล', sublabel: 'Inserting data (main step)', delayMs: 0 }, // stays until done
+  { label: 'รีเซ็ต sequences', sublabel: 'Resetting sequences', delayMs: 0 },
+  { label: 'ตรวจสอบความถูกต้อง', sublabel: 'Verifying data integrity', delayMs: 0 },
+];
+
+function RestoreProgress() {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Auto-advance through early steps on a timer
+    if (currentStep === 0) {
+      const t = setTimeout(() => setCurrentStep(1), RESTORE_STEPS[0].delayMs);
+      return () => clearTimeout(t);
+    }
+    if (currentStep === 1) {
+      const t = setTimeout(() => setCurrentStep(2), RESTORE_STEPS[1].delayMs);
+      return () => clearTimeout(t);
+    }
+    // Step 2 (inserting data) stays until the HTTP response returns
+  }, [currentStep]);
+
+  const progress = Math.min(((currentStep + 1) / RESTORE_STEPS.length) * 100, 95);
+
+  return (
+    <div className="space-y-4 py-4">
+      {/* Progress bar */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>ขั้นตอน {currentStep + 1} / {RESTORE_STEPS.length}</span>
+          <span className="inline-flex items-center gap-1 font-mono tabular-nums">
+            <Clock className="h-3 w-3" />
+            {elapsed}s
+          </span>
+        </div>
+        <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Step list */}
+      <div className="space-y-1.5">
+        {RESTORE_STEPS.map((step, i) => {
+          const isActive = i === currentStep;
+          const isDone = i < currentStep;
+          return (
+            <div
+              key={i}
+              className={cn(
+                'flex items-center gap-2.5 rounded-md px-3 py-1.5 text-xs transition-all duration-300',
+                isActive && 'bg-primary/8 text-foreground',
+                isDone && 'text-muted-foreground',
+                !isActive && !isDone && 'text-muted-foreground/50',
+              )}
+            >
+              {isDone ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : isActive ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
+              ) : (
+                <div className="h-3.5 w-3.5 rounded-full border border-muted-foreground/30 shrink-0" />
+              )}
+              <span className={cn(isActive && 'font-medium')}>{step.label}</span>
+              <span className="text-muted-foreground/60 ml-auto">{step.sublabel}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-center text-muted-foreground">
+        กรุณาอย่าปิดหน้านี้
+      </p>
+    </div>
+  );
+}
 
 function DiffBadge({ diff }: { diff: number }) {
   if (diff === 0) {
