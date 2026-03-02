@@ -80,6 +80,10 @@
   --glass-bg-light: rgba(255, 255, 255, 0.35);
   --glass-border: rgba(255, 255, 255, 0.45);
   --glass-border-subtle: rgba(255, 255, 255, 0.25);
+  --glass-blur: blur(16px) saturate(180%);
+  --glass-blur-heavy: blur(24px) saturate(200%);
+  --glass-blur-light: blur(12px) saturate(150%);
+  --glass-blur-input: blur(8px) saturate(140%);
   --glass-shadow: 0 8px 32px rgba(15, 118, 110, 0.04), 0 2px 8px rgba(0, 0, 0, 0.03);
   --glass-shadow-lg: 0 20px 60px rgba(15, 118, 110, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
   --glass-shadow-xl: 0 32px 80px rgba(15, 118, 110, 0.08), 0 8px 24px rgba(0, 0, 0, 0.05);
@@ -133,6 +137,10 @@
   --glass-bg-light: rgba(255, 255, 255, 0.025);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-border-subtle: rgba(255, 255, 255, 0.05);
+  --glass-blur: blur(16px) saturate(180%);
+  --glass-blur-heavy: blur(24px) saturate(200%);
+  --glass-blur-light: blur(12px) saturate(150%);
+  --glass-blur-input: blur(8px) saturate(140%);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
   --glass-shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.20);
   --glass-shadow-xl: 0 32px 80px rgba(0, 0, 0, 0.40), 0 8px 24px rgba(0, 0, 0, 0.25);
@@ -174,24 +182,24 @@ html {
 
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow), var(--glass-inner-border);
 }
 
 .glass-heavy {
   background: var(--glass-bg-heavy);
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  backdrop-filter: var(--glass-blur-heavy);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow-lg), var(--glass-inner-border);
 }
 
 .glass-light {
   background: var(--glass-bg-light);
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  backdrop-filter: var(--glass-blur-light);
   border: 1px solid var(--glass-border-subtle);
   box-shadow: var(--glass-shadow);
 }
@@ -199,8 +207,8 @@ html {
 /* Glass for inputs — lighter blur to keep text sharp */
 .glass-input {
   background: var(--glass-bg-light);
-  backdrop-filter: blur(8px) saturate(140%);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: var(--glass-blur-input);
+  backdrop-filter: var(--glass-blur-input);
   border: 1px solid var(--glass-border-subtle);
 }
 
@@ -361,8 +369,10 @@ html {
   .glass-heavy,
   .glass-light,
   .glass-input {
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    --glass-blur: blur(4px);
+    --glass-blur-heavy: blur(4px);
+    --glass-blur-light: blur(4px);
+    --glass-blur-input: blur(4px);
   }
 
   [style*="orb-drift"],
