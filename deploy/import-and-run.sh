@@ -107,9 +107,11 @@ IMAGE_TAG="${TAG}" docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" 
 
 echo "Running database seed..."
 IMAGE_TAG="${TAG}" docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" \
-  run --rm api npx ts-node --transpile-only prisma/seed.ts || {
+  run --rm api node prisma/seed.js || {
     echo ""
-    echo "WARNING: Seed failed. Check logs above for details."
+    echo "ERROR: Seed failed! Check logs above."
+    echo "You can retry manually with:"
+    echo "  IMAGE_TAG=${TAG} docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} run --rm api node prisma/seed.js"
   }
 
 # ── Step 4: Start all services ──────────────────────────────────────────────

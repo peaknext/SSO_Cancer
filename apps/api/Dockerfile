@@ -73,6 +73,16 @@ RUN find prisma/generated/prisma/client -name "*.js" -exec \
 # Remove TypeScript files (keep only compiled JS) AFTER NestJS build
 RUN find prisma/generated/prisma/client -name "*.ts" -delete
 
+# Pre-compile seed.ts → seed.js so deploy scripts can use `node` instead of `ts-node`
+RUN npx tsc prisma/seed.ts \
+    --outDir prisma/ \
+    --target ES2020 \
+    --module commonjs \
+    --moduleResolution node \
+    --esModuleInterop \
+    --skipLibCheck \
+    --resolveJsonModule
+
 # ─── Stage 2: Runner ──────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 
@@ -88,13 +98,13 @@ COPY --from=builder /app/apps/api/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 # Prisma generated client must be at ./dist/prisma/ to match compiled import paths
 COPY --from=builder /app/prisma ./dist/prisma
-# Seed support: create paths matching seed.ts expectations
-# seed.ts uses path.join(__dirname, '..', 'database', 'seeds') → needs /app/database/seeds/
-# seed.ts imports from './generated/...' → needs /app/prisma/generated/ → symlink to dist
-COPY --from=builder /app/prisma/seed.ts ./prisma/seed.ts
+# Seed support: pre-compiled seed.js + SQL files
+# seed.js uses path.join(__dirname, '..', 'database', 'seeds') → needs /app/database/seeds/
+# seed.js imports from './generated/...' → needs /app/prisma/generated/ → symlink to dist
+COPY --from=builder /app/prisma/seed.js ./prisma/seed.js
 COPY --from=builder /app/database/seeds ./database/seeds
 
-# Symlink generated client so seed.ts imports resolve correctly
+# Symlink generated client so seed.js imports resolve correctly
 RUN ln -s /app/dist/prisma/generated ./prisma/generated
 
 # Set ownership

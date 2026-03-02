@@ -34,14 +34,21 @@ fi
 echo "1/4 — Building Docker images..."
 docker compose -f docker-compose.prod.yml build
 
-echo "2/4 — Running database migrations..."
+echo "2/5 — Running database migrations..."
 docker compose -f docker-compose.prod.yml run --rm api \
   npx prisma migrate deploy --config prisma/prisma.config.ts
 
-echo "3/4 — Starting services..."
+echo "3/5 — Running database seed..."
+docker compose -f docker-compose.prod.yml run --rm api \
+  node prisma/seed.js || {
+    echo ""
+    echo "ERROR: Seed failed! Check logs above."
+  }
+
+echo "4/5 — Starting services..."
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 
-echo "4/4 — Waiting for health checks..."
+echo "5/5 — Waiting for health checks..."
 sleep 15
 
 if curl -sf -k https://localhost/api/v1/health > /dev/null 2>&1; then
