@@ -26,6 +26,9 @@ Thumbs.db
 apps/*/dist/
 apps/web/.next/
 
+# Separate projects
+SSO_Mock_Project/
+
 # Source data (large files)
 cancer_full.txt
 cancerTreatments.pdf
