@@ -32,14 +32,14 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background relative">
-      {/* Gradient mesh background — colorful substrate visible through glass surfaces */}
+      {/* Gradient mesh background — colorful substrate visible through glass blur */}
       <div className="fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
         {/* Base gradient wash */}
         <div className="absolute inset-0 bg-gradient-to-br from-teal-50/80 via-background to-cyan-50/50 dark:from-teal-950/30 dark:via-background dark:to-cyan-950/20" />
 
-        {/* Floating gradient orbs */}
+        {/* Floating gradient orbs — subtle color accents in content area */}
         <div
-          className="absolute h-[600px] w-[600px] rounded-full opacity-[0.07] blur-[120px] dark:opacity-[0.10] will-change-transform"
+          className="absolute h-[600px] w-[600px] rounded-full opacity-[0.08] blur-[100px] dark:opacity-[0.06] will-change-transform"
           style={{
             top: '-8%',
             left: '-5%',
@@ -48,7 +48,7 @@ export default function DashboardLayout({
           }}
         />
         <div
-          className="absolute h-[500px] w-[500px] rounded-full opacity-[0.05] blur-[100px] dark:opacity-[0.08] will-change-transform"
+          className="absolute h-[500px] w-[500px] rounded-full opacity-[0.06] blur-[90px] dark:opacity-[0.05] will-change-transform"
           style={{
             top: '35%',
             right: '-8%',
@@ -57,7 +57,7 @@ export default function DashboardLayout({
           }}
         />
         <div
-          className="absolute h-[450px] w-[450px] rounded-full opacity-[0.06] blur-[90px] dark:opacity-[0.09] will-change-transform"
+          className="absolute h-[450px] w-[450px] rounded-full opacity-[0.07] blur-[95px] dark:opacity-[0.05] will-change-transform"
           style={{
             bottom: '-5%',
             left: '25%',
@@ -66,7 +66,7 @@ export default function DashboardLayout({
           }}
         />
         <div
-          className="absolute h-[350px] w-[350px] rounded-full opacity-[0.04] blur-[80px] dark:opacity-[0.06] will-change-transform"
+          className="absolute h-[350px] w-[350px] rounded-full opacity-[0.05] blur-[85px] dark:opacity-[0.04] will-change-transform"
           style={{
             top: '60%',
             left: '60%',

@@ -9,17 +9,15 @@ import type {
 /**
  * Generate BILLDISP XML content (drug dispensing + dispensed items)
  *
- * Structure:
+ * Structure (matches real SSOP sample files):
  * <Dispensing>
- *   <TOTAL>{N}</TOTAL>
- *   <DETAIL>record|record|...</DETAIL>
+ * record|record|...
  * </Dispensing>
  * <DispensedItems>
- *   <TOTAL>{N}</TOTAL>
- *   <DETAIL>record|record|...</DETAIL>
+ * record|record|...
  * </DispensedItems>
  *
- * Only visits with drug items (billingGroup === '3') generate records.
+ * Only visits with drug/supply items (billingGroup '3' or '5') generate records.
  *
  * @returns xml string + dispIdMap (VN → DispID) for BillItems.SvRefID routing
  */
@@ -35,8 +33,10 @@ export function generateBilldispXml(
   const dispIdMap = new Map<string, string>();
 
   for (const visit of visits) {
-    // Filter drug items only (BillMuad = 3 = ค่ายา/สารอาหาร)
-    const drugItems = visit.billingItems.filter((i) => i.billingGroup === '3');
+    // Filter drug + medical supply items (BillMuad 3=ค่ายา, 5=ค่าเวชภัณฑ์ที่มิใช่ยา)
+    const drugItems = visit.billingItems.filter(
+      (i) => i.billingGroup === '3' || i.billingGroup === '5',
+    );
     if (drugItems.length === 0) continue;
 
     const svid = svidMap.get(visit.vn) || '';
@@ -112,12 +112,10 @@ export function generateBilldispXml(
 
   const dataSections =
     `<Dispensing>\r\n` +
-    `  <TOTAL>${dispensingRecords.length}</TOTAL>\r\n` +
-    `  <DETAIL>${dispensingRecords.join('\r\n')}</DETAIL>\r\n` +
+    (dispensingRecords.length > 0 ? dispensingRecords.join('\r\n') + '\r\n' : '') +
     `</Dispensing>\r\n` +
     `<DispensedItems>\r\n` +
-    `  <TOTAL>${dispensedItemRecords.length}</TOTAL>\r\n` +
-    `  <DETAIL>${dispensedItemRecords.join('\r\n')}</DETAIL>\r\n` +
+    (dispensedItemRecords.length > 0 ? dispensedItemRecords.join('\r\n') + '\r\n' : '') +
     `</DispensedItems>\r\n`;
 
   const xml = wrapXml({

@@ -1,18 +1,16 @@
 import { wrapXml } from './xml-wrapper';
-import { formatDateTime, formatDate } from './encoding';
+import { formatDateTime, formatDate, formatAmount } from './encoding';
 import type { SsopVisitData, OpServiceRecord, OpDxRecord } from '../types/ssop.types';
 
 /**
  * Generate OPServices XML content (services + diagnoses)
  *
- * Structure:
+ * Structure (matches real SSOP sample files):
  * <OPServices>
- *   <TOTAL>{N}</TOTAL>
- *   <DETAIL>record|record|...</DETAIL>
+ * record|record|...
  * </OPServices>
  * <OPDx>
- *   <TOTAL>{N}</TOTAL>
- *   <DETAIL>record|record|...</DETAIL>
+ * record|record|...
  * </OPDx>
  */
 export function generateOpServicesXml(
@@ -41,6 +39,15 @@ export function generateOpServicesXml(
       ? formatDateTime(visit.serviceEndTime)
       : '';
 
+    // SvCharge = sum of hospital charges for non-dispensing items (BillMuad ≠ 3,5)
+    const nonDispItems = visit.billingItems.filter(
+      (i) => i.billingGroup !== '3' && i.billingGroup !== '5',
+    );
+    const svChargeTotal = nonDispItems.reduce(
+      (sum, i) => sum + i.quantity * i.unitPrice,
+      0,
+    );
+
     const service: OpServiceRecord = {
       invno: visit.vn,
       svId: svid,
@@ -60,7 +67,7 @@ export function generateOpServicesXml(
       lcCode: '',
       codeSet: '',
       stdCode: '',
-      svCharge: '0.00',
+      svCharge: formatAmount(svChargeTotal),
       completion: 'Y',
       svTxCode: '',
       claimCat,
@@ -86,13 +93,13 @@ export function generateOpServicesXml(
         .map((c) => c.trim())
         .filter(Boolean);
 
-      for (let i = 0; i < codes.length; i++) {
+      for (const code of codes) {
         const secDx: OpDxRecord = {
           class_: 'EC',
           svId: svid,
-          sl: String(i + 2),
+          sl: '4',
           codeSet: 'TT',
-          code: codes[i],
+          code,
           desc: '',
         };
         dxRecords.push(Object.values(secDx).join('|'));
@@ -102,12 +109,10 @@ export function generateOpServicesXml(
 
   const dataSections =
     `<OPServices>\r\n` +
-    `  <TOTAL>${serviceRecords.length}</TOTAL>\r\n` +
-    `  <DETAIL>${serviceRecords.join('\r\n')}</DETAIL>\r\n` +
+    (serviceRecords.length > 0 ? serviceRecords.join('\r\n') + '\r\n' : '') +
     `</OPServices>\r\n` +
     `<OPDx>\r\n` +
-    `  <TOTAL>${dxRecords.length}</TOTAL>\r\n` +
-    `  <DETAIL>${dxRecords.join('\r\n')}</DETAIL>\r\n` +
+    (dxRecords.length > 0 ? dxRecords.join('\r\n') + '\r\n' : '') +
     `</OPDx>\r\n`;
 
   return wrapXml({

@@ -415,7 +415,51 @@ export class DashboardService {
     });
   }
 
-  async getZ51ActionableVisits(offset = 0, limit = 20) {
+  async getZ51ActionableVisits(
+    offset = 0,
+    limit = 20,
+    diagnosisCode?: string,
+    dateFrom?: string,
+    dateTo?: string,
+    billingStatus?: string,
+  ) {
+    // Build dynamic WHERE conditions with parameterized values
+    const params: (string | number)[] = [];
+    const conditions: string[] = [];
+    let idx = 1;
+
+    // Z51 diagnosis filter (always present)
+    conditions.push(`pv.secondary_diagnoses ILIKE $${idx}`);
+    params.push(diagnosisCode ? `%${diagnosisCode}%` : '%Z51%');
+    idx++;
+
+    // Billing status filter (always present, optionally narrowed)
+    if (billingStatus === 'none') {
+      conditions.push(`lc.status IS NULL`);
+    } else if (billingStatus === 'rejected') {
+      conditions.push(`lc.status = 'REJECTED'`);
+    } else if (billingStatus === 'pending') {
+      conditions.push(`lc.status = 'PENDING'`);
+    } else {
+      conditions.push(`(lc.status IS NULL OR lc.status = 'REJECTED' OR lc.status = 'PENDING')`);
+    }
+
+    // Date range filters
+    if (dateFrom) {
+      conditions.push(`pv.visit_date >= $${idx}::date`);
+      params.push(dateFrom);
+      idx++;
+    }
+    if (dateTo) {
+      conditions.push(`pv.visit_date <= $${idx}::date`);
+      params.push(dateTo);
+      idx++;
+    }
+
+    const whereClause = conditions.join('\n        AND ');
+    const limitIdx = idx;
+    const offsetIdx = idx + 1;
+
     const dataQuery = `
       SELECT
         pv.vn, pv.hn, pv.visit_date AS "visitDate",
@@ -435,10 +479,9 @@ export class DashboardService {
         ORDER BY vbc.round_number DESC
         LIMIT 1
       ) lc ON true
-      WHERE pv.secondary_diagnoses ILIKE '%Z51%'
-        AND (lc.status IS NULL OR lc.status = 'REJECTED')
+      WHERE ${whereClause}
       ORDER BY pv.visit_date ASC
-      LIMIT $1 OFFSET $2
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `;
 
     const countQuery = `
@@ -451,8 +494,7 @@ export class DashboardService {
         ORDER BY vbc.round_number DESC
         LIMIT 1
       ) lc ON true
-      WHERE pv.secondary_diagnoses ILIKE '%Z51%'
-        AND (lc.status IS NULL OR lc.status = 'REJECTED')
+      WHERE ${whereClause}
     `;
 
     const [data, countRows] = await Promise.all([
@@ -468,8 +510,8 @@ export class DashboardService {
           protocolNameThai: string | null;
           billingStatus: string | null;
         }[]
-      >(dataQuery, limit, offset),
-      this.prisma.$queryRawUnsafe<[{ total: number }]>(countQuery),
+      >(dataQuery, ...params, limit, offset),
+      this.prisma.$queryRawUnsafe<[{ total: number }]>(countQuery, ...params),
     ]);
 
     return { data, total: countRows[0].total };

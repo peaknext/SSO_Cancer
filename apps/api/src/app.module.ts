@@ -38,7 +38,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 60,
+        limit: 120,
       },
     ]),
     ScheduleModule.forRoot(),

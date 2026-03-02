@@ -99,12 +99,17 @@ export class SsopExportService {
     // Get CareAccount setting for OPServices
     const careAccount = await this.getCareAccountSetting();
 
+    // Check which VNs were previously exported (for tflag: A=new, E=edit)
+    const previouslyExportedVns = await this.findPreviouslyExportedVns(
+      validVisits.map((v) => v.vn),
+    );
+
     // Generate XML content — billdisp first to get dispIdMap for billtran
     const { xml: billdispXml, dispIdMap } = generateBilldispXml(
       ssopVisits, hcode, hname, sessNoStr, svidMap,
     );
     const billtranXml = generateBilltranXml(
-      ssopVisits, hcode, hname, sessNoStr, svidMap, dispIdMap,
+      ssopVisits, hcode, hname, sessNoStr, svidMap, dispIdMap, previouslyExportedVns,
     );
     const opservicesXml = generateOpServicesXml(
       ssopVisits, hcode, hname, sessNoStr, svidMap, careAccount,
@@ -420,6 +425,40 @@ export class SsopExportService {
       where: { settingKey: 'ssop_care_account' },
     });
     return setting?.settingValue || '1';
+  }
+
+  /** Find VNs that were already exported in a previous batch (for tflag=E) */
+  private async findPreviouslyExportedVns(vns: string[]): Promise<Set<string>> {
+    if (vns.length === 0) return new Set();
+
+    // Get all batches that contain any of these VNs via visitIds → PatientVisit.vn
+    const batches = await this.prisma.billingExportBatch.findMany({
+      where: { isActive: true },
+      select: { visitIds: true },
+    });
+
+    // Collect all previously exported visit IDs
+    const allExportedIds = new Set<number>();
+    for (const batch of batches) {
+      if (Array.isArray(batch.visitIds)) {
+        for (const id of batch.visitIds) {
+          allExportedIds.add(id as number);
+        }
+      }
+    }
+
+    if (allExportedIds.size === 0) return new Set();
+
+    // Look up VNs for these visit IDs that match our target VN list
+    const visits = await this.prisma.patientVisit.findMany({
+      where: {
+        vn: { in: vns },
+        id: { in: Array.from(allExportedIds) },
+      },
+      select: { vn: true },
+    });
+
+    return new Set(visits.map((v) => v.vn));
   }
 
   /** Reserve next session number scoped by hcode (atomic via transaction) */

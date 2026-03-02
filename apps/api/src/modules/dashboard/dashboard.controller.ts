@@ -86,13 +86,42 @@ export class DashboardController {
   @ApiOperation({ summary: 'Z51x visits with no billing or rejected status' })
   @ApiQuery({ name: 'offset', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'diagnosisCode', required: false, enum: ['Z510', 'Z511'] })
+  @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'YYYY-MM-DD' })
+  @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'YYYY-MM-DD' })
+  @ApiQuery({
+    name: 'billingStatus',
+    required: false,
+    enum: ['none', 'rejected', 'pending'],
+    description: 'Filter: "none" = ยังไม่เรียกเก็บ, "rejected" = ถูกปฏิเสธ, "pending" = รอผล',
+  })
   async getZ51ActionableVisits(
     @Query('offset') offset?: string,
     @Query('limit') limit?: string,
+    @Query('diagnosisCode') diagnosisCode?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('billingStatus') billingStatus?: string,
   ) {
+    const VALID_CODES = ['Z510', 'Z511'];
+    const validatedCode =
+      diagnosisCode && VALID_CODES.includes(diagnosisCode) ? diagnosisCode : undefined;
+
+    const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    const validatedDateFrom = dateFrom && DATE_RE.test(dateFrom) ? dateFrom : undefined;
+    const validatedDateTo = dateTo && DATE_RE.test(dateTo) ? dateTo : undefined;
+
+    const VALID_BILLING = ['none', 'rejected', 'pending'];
+    const validatedBilling =
+      billingStatus && VALID_BILLING.includes(billingStatus) ? billingStatus : undefined;
+
     return this.dashboardService.getZ51ActionableVisits(
       offset ? parseInt(offset, 10) : 0,
       limit ? Math.min(parseInt(limit, 10), 100) : 20,
+      validatedCode,
+      validatedDateFrom,
+      validatedDateTo,
+      validatedBilling,
     );
   }
 

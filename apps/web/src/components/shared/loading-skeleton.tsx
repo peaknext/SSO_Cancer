@@ -44,21 +44,50 @@ export function CardSkeleton() {
   );
 }
 
-export function DashboardSkeleton() {
+function SectionSkeleton({ cards = 3 }: { cards?: number }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-1.5 w-1.5 rounded-full" />
+        <Skeleton className="h-3 w-24" />
+        <div className="h-px flex-1 bg-border/30" />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: cards }).map((_, i) => (
           <CardSkeleton key={i} />
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Skeleton className="h-[300px] rounded-xl" />
-        <Skeleton className="h-[300px] rounded-xl" />
-        <Skeleton className="h-[300px] rounded-xl" />
-        <Skeleton className="h-[300px] rounded-xl" />
+    </div>
+  );
+}
+
+export function DashboardSkeleton() {
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="space-y-2">
+        <Skeleton className="h-7 w-32" />
+        <Skeleton className="h-4 w-64" />
       </div>
-      <Skeleton className="h-[200px] rounded-xl" />
+
+      {/* 3 stat sections */}
+      <SectionSkeleton />
+      <SectionSkeleton />
+      <SectionSkeleton />
+
+      {/* Charts */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-1.5 w-1.5 rounded-full" />
+          <Skeleton className="h-3 w-16" />
+          <div className="h-px flex-1 bg-border/30" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[360px] rounded-xl" />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

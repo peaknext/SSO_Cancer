@@ -5,14 +5,12 @@ import type { SsopVisitData, BilltranRecord, BillItemRecord } from '../types/sso
 /**
  * Generate BILLTRAN XML content (transactions + bill items)
  *
- * Structure:
- * <BillTran>
- *   <TOTAL>{N}</TOTAL>
- *   <DETAIL>record|record|...</DETAIL>
- * </BillTran>
+ * Structure (matches real SSOP sample files):
+ * <BILLTRAN>
+ * record|record|...
+ * </BILLTRAN>
  * <BillItems>
- *   <TOTAL>{N}</TOTAL>
- *   <DETAIL>record|record|...</DETAIL>
+ * record|record|...
  * </BillItems>
  */
 export function generateBilltranXml(
@@ -22,12 +20,18 @@ export function generateBilltranXml(
   sessNo: string,
   svidMap: Map<string, string>,
   dispIdMap: Map<string, string> = new Map(),
+  previouslyExportedVns: Set<string> = new Set(),
 ): string {
   const tranRecords: string[] = [];
   const itemRecords: string[] = [];
 
   for (const visit of visits) {
-    // Calculate claim amount from billing items (Amount = ClaimAmt per CHI68-A02)
+    // Amount = sum(QTY × UP) = total hospital charge
+    const chargeAmount = visit.billingItems.reduce(
+      (sum, item) => sum + item.quantity * item.unitPrice,
+      0,
+    );
+    // ClaimAmt = sum(QTY × ClaimUP) = total SSO reimbursement
     const claimAmount = visit.billingItems.reduce(
       (sum, item) => sum + item.quantity * item.claimUnitPrice,
       0,
@@ -46,11 +50,11 @@ export function generateBilltranXml(
       invno: visit.vn,
       billno: '',
       hn: visit.patientHn,
-      memberNo: visit.caseNumber,
-      amount: formatAmount(claimAmount),
+      memberNo: visit.vcrCode || '',
+      amount: formatAmount(chargeAmount),
       paid: '0.00',
       verCode: visit.protocolCode,
-      tflag: 'A',
+      tflag: previouslyExportedVns.has(visit.vn) ? 'E' : 'A',
       pid: visit.patientCitizenId,
       name: visit.patientFullName,
       hMain: visit.mainHospitalCode,
@@ -70,10 +74,11 @@ export function generateBilltranXml(
       const chargeAmt = item.quantity * item.unitPrice;
       const claimAmt = item.quantity * item.claimUnitPrice;
 
-      // Drug items (BillMuad=3) reference Dispensing.DispID; others reference OPServices.SvID
-      const svRefId = item.billingGroup === '3'
-        ? (dispIdMap.get(visit.vn) || svid)
-        : svid;
+      // Drug/supply items (BillMuad=3,5) reference Dispensing.DispID; others reference OPServices.SvID
+      const svRefId =
+        item.billingGroup === '3' || item.billingGroup === '5'
+          ? (dispIdMap.get(visit.vn) || svid)
+          : svid;
 
       const billItem: BillItemRecord = {
         invno: visit.vn,
@@ -96,13 +101,11 @@ export function generateBilltranXml(
   }
 
   const dataSections =
-    `<BillTran>\r\n` +
-    `  <TOTAL>${tranRecords.length}</TOTAL>\r\n` +
-    `  <DETAIL>${tranRecords.join('\r\n')}</DETAIL>\r\n` +
-    `</BillTran>\r\n` +
+    `<BILLTRAN>\r\n` +
+    (tranRecords.length > 0 ? tranRecords.join('\r\n') + '\r\n' : '') +
+    `</BILLTRAN>\r\n` +
     `<BillItems>\r\n` +
-    `  <TOTAL>${itemRecords.length}</TOTAL>\r\n` +
-    `  <DETAIL>${itemRecords.join('\r\n')}</DETAIL>\r\n` +
+    (itemRecords.length > 0 ? itemRecords.join('\r\n') + '\r\n' : '') +
     `</BillItems>\r\n`;
 
   return wrapXml({
