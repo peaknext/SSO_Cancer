@@ -8,8 +8,10 @@ import {
 import { decryptValue } from '../../common/utils/crypto.util';
 
 // Hospital HIS APIs commonly use self-signed or incomplete-chain SSL certificates.
-// Use a custom undici Agent that skips SSL verification for HIS connections only.
-import { Agent as UndiciAgent } from 'undici';
+// Use undici's own fetch + Agent to bypass SSL verification for HIS connections only.
+// IMPORTANT: Must use fetch from the same undici package as Agent — Node.js 20 bundles
+// undici v5 internally, but we use undici v7 from npm. Mixing versions causes "fetch failed".
+import { fetch as undiciFetch, Agent as UndiciAgent } from 'undici';
 const hisHttpsAgent = new UndiciAgent({ connect: { rejectUnauthorized: false } });
 
 interface HisSettings {
@@ -82,10 +84,9 @@ export class HisApiClient {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), settings.timeout);
 
-        const response = await fetch(url, {
+        const response = await undiciFetch(url, {
           headers,
           signal: controller.signal,
-          // @ts-expect-error — undici dispatcher for self-signed HIS SSL certs
           dispatcher: hisHttpsAgent,
         });
 
@@ -111,7 +112,7 @@ export class HisApiClient {
           throw new Error(errorMsg);
         }
 
-        const json: HisApiResponse<T> = await response.json();
+        const json: HisApiResponse<T> = await response.json() as HisApiResponse<T>;
 
         if (!json.success) {
           throw new Error(json.error?.message || 'HIS API returned success=false');
@@ -127,14 +128,19 @@ export class HisApiClient {
           throw new Error(`HIS API timeout หลัง ${settings.timeout}ms — กรุณาลองใหม่อีกครั้ง`);
         }
 
-        // Network errors: retry
-        if (err.cause?.code === 'ECONNREFUSED' || err.cause?.code === 'ENOTFOUND') {
+        // Network errors: retry (check both err.cause and err.code)
+        const errCode = err.cause?.code || err.code;
+        if (errCode === 'ECONNREFUSED' || errCode === 'ENOTFOUND' || errCode === 'UND_ERR_CONNECT_TIMEOUT') {
           if (attempt < retries) {
             this.logger.warn(`HIS API network error (attempt ${attempt + 1}/${retries + 1}): ${err.message}`);
             continue;
           }
           throw new Error(`ไม่สามารถเชื่อมต่อ HIS API ได้ — ${err.message}`);
         }
+
+        // Log full error detail for debugging
+        this.logger.error(`HIS API call failed: ${url}`, err.message);
+        if (err.cause) this.logger.error(`  cause: ${err.cause?.message || err.cause?.code || JSON.stringify(err.cause)}`);
 
         throw err;
       }
@@ -167,12 +173,11 @@ export class HisApiClient {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), settings.timeout);
 
-        const response = await fetch(url, {
+        const response = await undiciFetch(url, {
           method: 'POST',
           headers,
           body: JSON.stringify(body),
           signal: controller.signal,
-          // @ts-expect-error — undici dispatcher for self-signed HIS SSL certs
           dispatcher: hisHttpsAgent,
         });
 
@@ -198,7 +203,7 @@ export class HisApiClient {
           throw new Error(errorMsg);
         }
 
-        const json: HisApiResponse<T> = await response.json();
+        const json: HisApiResponse<T> = await response.json() as HisApiResponse<T>;
 
         if (!json.success) {
           throw new Error(json.error?.message || 'HIS API returned success=false');
@@ -214,7 +219,8 @@ export class HisApiClient {
           throw new Error(`HIS API timeout หลัง ${settings.timeout}ms — กรุณาลองใหม่อีกครั้ง`);
         }
 
-        if (err.cause?.code === 'ECONNREFUSED' || err.cause?.code === 'ENOTFOUND') {
+        const errCode = err.cause?.code || err.code;
+        if (errCode === 'ECONNREFUSED' || errCode === 'ENOTFOUND' || errCode === 'UND_ERR_CONNECT_TIMEOUT') {
           if (attempt < retries) {
             this.logger.warn(
               `HIS API network error (attempt ${attempt + 1}/${retries + 1}): ${err.message}`,
@@ -223,6 +229,9 @@ export class HisApiClient {
           }
           throw new Error(`ไม่สามารถเชื่อมต่อ HIS API ได้ — ${err.message}`);
         }
+
+        this.logger.error(`HIS API POST failed: ${url}`, err.message);
+        if (err.cause) this.logger.error(`  cause: ${err.cause?.message || err.cause?.code || JSON.stringify(err.cause)}`);
 
         throw err;
       }
@@ -293,10 +302,9 @@ export class HisApiClient {
           : `Bearer ${settings.apiKey}`;
       }
 
-      const response = await fetch(`${settings.baseUrl}/health`, {
+      const response = await undiciFetch(`${settings.baseUrl}/health`, {
         headers,
         signal: controller.signal,
-        // @ts-expect-error — undici dispatcher for self-signed HIS SSL certs
         dispatcher: hisHttpsAgent,
       });
 
