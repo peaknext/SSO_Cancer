@@ -30,8 +30,15 @@ async function bootstrap() {
       'CORS_ORIGIN not set in production — defaulting to deny all cross-origin',
     );
   }
+  const parsedOrigin = corsOrigin
+    ? corsOrigin.includes(',')
+      ? corsOrigin.split(',').map((o) => o.trim())
+      : corsOrigin
+    : isProduction
+      ? false
+      : 'http://localhost:47001';
   app.enableCors({
-    origin: corsOrigin || (isProduction ? false : 'http://localhost:47001'),
+    origin: parsedOrigin,
     credentials: true,
   });
 
