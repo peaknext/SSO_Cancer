@@ -10,14 +10,15 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   async headers() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:48002';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const connectSrc = apiUrl ? `'self' ${apiUrl}` : `'self'`;
     return [
       {
         source: '/(.*)',
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ${apiUrl}; frame-ancestors 'none'`,
+            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src ${connectSrc}; frame-ancestors 'none'`,
           },
           {
             key: 'X-Frame-Options',

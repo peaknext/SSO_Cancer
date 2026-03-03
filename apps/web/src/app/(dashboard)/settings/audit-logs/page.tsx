@@ -103,7 +103,7 @@ export default function AuditLogsPage() {
 
   const handleExport = async () => {
     try {
-      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/v1/audit-logs/export`;
+      const url = `/api/v1/audit-logs/export`;
       const token = apiClient.getAccessToken();
       const resp = await fetch(url, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},

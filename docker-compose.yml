@@ -28,7 +28,7 @@ services:
     restart: unless-stopped
     env_file: .env.docker
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/sso_cancer?schema=public
       API_PORT: 4000
     ports:

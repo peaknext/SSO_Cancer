@@ -57,7 +57,7 @@ if [ ! -f deploy/nginx/ssl/cert.pem ] || [ ! -f deploy/nginx/ssl/key.pem ]; then
   echo
   if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     mkdir -p deploy/nginx/ssl
-    openssl req -x509 -nodes -days 90 -newkey rsa:4096 \
+    openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
       -keyout deploy/nginx/ssl/key.pem \
       -out deploy/nginx/ssl/cert.pem \
       -subj '/CN=sso-cancer.hospital.local' 2>/dev/null
@@ -80,7 +80,15 @@ echo ""
 echo "3/4 — Starting database and running migrations..."
 IMAGE_TAG="${TAG}" docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d db
 echo "Waiting for database to be ready..."
-sleep 10
+for i in $(seq 1 30); do
+  if IMAGE_TAG="${TAG}" docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" \
+    exec -T db pg_isready -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-sso_cancer}" > /dev/null 2>&1; then
+    echo "Database is ready."
+    break
+  fi
+  echo "  Waiting... ($i/30)"
+  sleep 2
+done
 
 IMAGE_TAG="${TAG}" docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" \
   run --rm api npx prisma migrate deploy --config dist/prisma/prisma.config.ts || {
