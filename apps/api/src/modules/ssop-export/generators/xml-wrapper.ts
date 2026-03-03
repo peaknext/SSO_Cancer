@@ -38,7 +38,7 @@ export function wrapXml(options: XmlWrapperOptions): string {
     `</ClaimRec>\r\n`;
 
   const checksum = calculateMd5(content);
-  return content + `<?EndNote Checksum="${checksum}"?>`;
+  return content + `<?EndNote Checksum="${checksum}"?>\r\n`;
 }
 
 /** Escape XML special characters */

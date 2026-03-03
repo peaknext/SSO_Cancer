@@ -9,6 +9,7 @@ import {
   formatDateCompact,
   formatDateTimeCompact,
   formatAmount,
+  getBangkokDateParts,
 } from './generators/encoding';
 import type { SsopVisitData } from './types/ssop.types';
 
@@ -380,6 +381,8 @@ export class SsopExportService {
    *
    * Uses serviceStartTime if available; falls back to visitDate with a
    * sequential seconds offset to guarantee uniqueness within a batch.
+   *
+   * NOTE: Uses Bangkok timezone (UTC+7) explicitly — safe in UTC Docker containers.
    */
   private generateSvidMap(
     visits: { vn: string; visitDate: Date; serviceStartTime: Date | null }[],
@@ -390,21 +393,23 @@ export class SsopExportService {
     for (let i = 0; i < visits.length; i++) {
       const v = visits[i];
       const d = v.serviceStartTime || v.visitDate;
+      // Use Bangkok timezone for consistent Thai local time
+      const p = getBangkokDateParts(d);
       // Buddhist Era = CE + 543
-      const beYear = d.getFullYear() + 543;
+      const beYear = p.year + 543;
       const yy = String(beYear).slice(-2);
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      const hh = String(d.getHours()).padStart(2, '0');
-      const min = String(d.getMinutes()).padStart(2, '0');
-      const ss = String(d.getSeconds()).padStart(2, '0');
+      const mm = String(p.month).padStart(2, '0');
+      const dd = String(p.day).padStart(2, '0');
+      const hh = String(p.hours).padStart(2, '0');
+      const min = String(p.minutes).padStart(2, '0');
+      const ss = String(p.seconds).padStart(2, '0');
 
       let svid = `${yy}${mm}${dd}${hh}${min}${ss}`;
 
       // Ensure uniqueness — if collision, increment seconds
       let offset = 1;
       while (usedSvids.has(svid)) {
-        const adjSec = String((d.getSeconds() + offset) % 100).padStart(2, '0');
+        const adjSec = String((p.seconds + offset) % 100).padStart(2, '0');
         svid = `${yy}${mm}${dd}${hh}${min}${adjSec}`;
         offset++;
       }

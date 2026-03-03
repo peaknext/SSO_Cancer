@@ -140,6 +140,8 @@ export interface SsopVisitData {
   vcrCode: string;
   protocolCode: string;
   mainHospitalCode: string;
+  /** OPServices TypeServ: 01=ER, 03=scheduled OP, 04=refer-out (default: 03) */
+  typeServ?: string;
   billingItems: {
     hospitalCode: string;
     aipnCode: string | null;

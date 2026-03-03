@@ -37,6 +37,7 @@ export function generateOpServicesXml(
 
     // SvCharge = professional service fee only (NOT total charges — those are in BillItems)
     // Per reference file and spec, this is 0.00 for SSO cancer billing
+    // TypeServ: 01=ER, 03=scheduled OP, 04=refer-out — defaults to 03 for cancer visits
     const service: OpServiceRecord = {
       invno: visit.vn,
       svId: svid,
@@ -45,7 +46,7 @@ export function generateOpServicesXml(
       hn: visit.patientHn,
       pid: visit.patientCitizenId,
       careAccount,
-      typeServ: '03',
+      typeServ: visit.typeServ || '03',
       typeIn: '9',
       typeOut: '9',
       dtAppoint: '',
