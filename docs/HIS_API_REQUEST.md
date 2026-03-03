@@ -365,3 +365,117 @@ Error codes ที่คาดหวัง:
 - `apps/api/src/modules/his-integration/his-integration.service.ts` — business logic + auto-detect type
 - `apps/api/src/modules/his-integration/dto/search-patient.dto.ts` — DTO validation
 - `apps/web/src/app/(dashboard)/cancer-patients/new/page.tsx` — frontend search UI
+
+---
+
+### 1.9 Additional Data Requirements for SSOP 0.93 Export ⏳
+
+> **สถานะ**: ต้องแจ้งทีม HIS เพิ่มเติม — ข้อมูลเหล่านี้จำเป็นสำหรับ SSOP 0.93 electronic billing file ที่ถูกต้องสมบูรณ์ตาม guideline สปส.
+
+จากการตรวจสอบ SSOP 0.93 specification (SSOP063.txt, SSOP093Manual.pdf) พบว่าข้อมูลจาก HIS ที่ส่งมาปัจจุบันยังไม่ครบสำหรับ SSOP export — ต้องเพิ่มข้อมูลดังต่อไปนี้
+
+#### 1.9.1 Visit-Level Fields (เพิ่มใน Endpoint 2 response `visits[]`)
+
+| Field                 | Type   | Required | คำอธิบาย                                        | ใช้ใน SSOP                      | ค่าที่รับ                                                                     |
+| --------------------- | ------ | -------- | ----------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------- |
+| `billNo`              | string | ❌       | เลขที่ใบเสร็จ (ถ้ามี)                           | BILLTRAN.Billno (#6)            | เลขที่ใบเสร็จของ รพ.                                                          |
+| `visitType`           | string | ✅       | ประเภทการมา visit                               | OPServices.TypeIn (#9)          | `1`=walk-in, `2`=นัด, `3`=ส่งต่อ, `4`=ฉุกเฉิน, `9`=อื่นๆ                    |
+| `dischargeType`       | string | ✅       | ประเภทการจำหน่าย                                | OPServices.TypeOut (#10)        | `1`=กลับบ้าน, `2`=admit, `3`=ส่งต่อ, `4`=เสียชีวิต, `5`=หนี, `9`=อื่นๆ      |
+| `nextAppointmentDate` | string | ❌       | วันนัดครั้งถัดไป (YYYY-MM-DD)                   | OPServices.DTAppoint (#11)      | ISO 8601 date, null ถ้าไม่มีนัด                                               |
+| `serviceClass`        | string | ✅       | ประเภทบริการ                                    | OPServices.Class (#3)           | `EC`=ตรวจรักษา, `OP`=หัตถการ, `LB`=Lab, `XR`=รังสี, `IV`=ตรวจพิเศษ, `ZZ`=อื่น |
+| `serviceType`         | string | ❌       | ลักษณะบริการ                                    | OPServices.TypeServ (#8)        | `01`=ใหม่, `02`=F/U, `03`=เรื้อรัง, `04`=ปรึกษา, `05`=ฉุกเฉิน               |
+| `prescriptionTime`    | string | ❌       | เวลาสั่งยา (ISO 8601) ถ้าต่างจาก serviceStartTime | Dispensing.Prescdt (#6)         | ใช้แยกเวลาสั่งยาออกจากเวลาเริ่มบริการ                                         |
+
+> **หมายเหตุ**: ปัจจุบันระบบใช้ค่า default (`visitType="9"`, `dischargeType="9"`, `serviceClass="EC"`, `serviceType="03"`) — หากทีม HIS ส่งค่าจริงมา จะช่วยให้ SSOP export ถูกต้องมากขึ้น
+
+#### 1.9.2 Billing Item Fields (เพิ่มใน `billingItems[]`)
+
+| Field     | Type   | Required | คำอธิบาย                                          | ใช้ใน SSOP                | ค่าที่รับ                                                    |
+| --------- | ------ | -------- | ------------------------------------------------- | ------------------------- | ------------------------------------------------------------ |
+| `stdCode` | string | ✅       | รหัสมาตรฐานแห่งชาติ (TMT สำหรับยา, MoF สำหรับอื่น) | BillItems.STDCode (#5)    | รหัส TMT (ยา), รหัสมาตรฐานราคากลาง (บริการ/เวชภัณฑ์)         |
+
+> **สำคัญ — แก้ไขจาก spec เดิม**: ใน spec ก่อนหน้า `aipnCode` ถูกระบุว่าใช้สำหรับ `BillItems.STDCode (#5)` ซึ่ง**ไม่ถูกต้อง** ตาม SSOP 0.93 guideline:
+> - **`hospitalCode`** → `BillItems.LCCode` (#4) — รหัสภายในของ รพ.
+> - **`aipnCode`** → สำรองใช้ mapping กับฐานข้อมูล AIPN ภายในระบบ
+> - **`stdCode`** (ใหม่) → `BillItems.STDCode` (#5) — รหัสมาตรฐานแห่งชาติ
+> - **`tmtCode`** → `DispensedItems.DrgID` (#4) — รหัสยา TMT (เฉพาะรายการยา)
+>
+> ในกรณีที่ทีม HIS ยังไม่สามารถส่ง `stdCode` แยกได้ — ระบบจะใช้ `tmtCode` (สำหรับยา) หรือ `aipnCode` (สำหรับบริการ) เป็นค่า fallback
+
+#### 1.9.3 Drug/Dispensing Fields (เพิ่มใน `billingItems[]` สำหรับรายการยา billingGroup="3")
+
+| Field            | Type   | Required | คำอธิบาย                                | ใช้ใน SSOP                          | ค่าที่รับ                        |
+| ---------------- | ------ | -------- | --------------------------------------- | ----------------------------------- | -------------------------------- |
+| `dfsText`        | string | ✅       | ชื่อยา / dose / form / strength         | DispensedItems.dfsText (#6)         | เช่น "Paclitaxel 300mg/50ml inj" |
+| `packsize`       | string | ❌       | ขนาดบรรจุ                               | DispensedItems.Packsize (#7)        | เช่น "50 ml", "10 tab"          |
+| `sigCode`        | string | ❌       | รหัสวิธีใช้ยา                           | DispensedItems.sigCode (#8)         | รหัสมาตรฐาน sig code (ถ้ามี)     |
+| `sigText`        | string | ❌       | ข้อความวิธีใช้ยา                        | DispensedItems.sigText (#9)         | เช่น "IV drip in D5W 500ml"     |
+| `supplyDuration` | string | ❌       | ระยะเวลาจ่ายยา (format: nnnA)          | DispensedItems.SupplyFor (#19)      | เช่น "1D", "7D", "30D"          |
+| `dayCover`       | string | ❌       | ระยะเวลาครอบคลุมรวมทั้งใบสั่งยา         | Dispensing.DayCover (#18)           | เช่น "30D"                       |
+
+> **หมายเหตุ**: ข้อมูลยาเหล่านี้มีประโยชน์สำหรับ BILLDISP file — ปัจจุบันระบบใช้ `description` จาก billing item เป็นค่า fallback สำหรับ `dfsText` และเว้นว่างสำหรับฟิลด์อื่น
+
+#### 1.9.4 Updated Billing Item Response Schema (Revised)
+
+```json
+{
+  "billingItems": [
+    {
+      "hospitalCode": "1502262",
+      "aipnCode": "3119967",
+      "tmtCode": "1052756000040901",
+      "stdCode": "49304",
+      "billingGroup": "3",
+      "description": "PACLITAXEL 300MG/50ML INJ",
+      "dfsText": "Paclitaxel 300mg/50ml injection",
+      "packsize": "50 ml",
+      "sigCode": "",
+      "sigText": "IV drip in D5W 500ml over 3hr",
+      "supplyDuration": "1D",
+      "quantity": 1,
+      "unitPrice": 2500.00,
+      "claimUnitPrice": 2500.00,
+      "claimCategory": "OPR"
+    },
+    {
+      "hospitalCode": "3100453",
+      "aipnCode": "3100453",
+      "tmtCode": null,
+      "stdCode": "55021",
+      "billingGroup": "C",
+      "description": "ค่าบริการผู้ป่วยนอก นอกเวลาราชการ",
+      "dfsText": null,
+      "packsize": null,
+      "sigCode": null,
+      "sigText": null,
+      "supplyDuration": null,
+      "quantity": 1,
+      "unitPrice": 50.00,
+      "claimUnitPrice": 50.00,
+      "claimCategory": "OP1"
+    }
+  ]
+}
+```
+
+> **Code mappings** ที่ถูกต้องตาม SSOP 0.93:
+> | HIS Field      | SSOP File    | SSOP Field           | Description                        |
+> | -------------- | ------------ | -------------------- | ---------------------------------- |
+> | `hospitalCode` | BILLTRAN     | BillItems.LCCode #4  | Local code ของ รพ.                 |
+> | `stdCode`      | BILLTRAN     | BillItems.STDCode #5 | รหัสมาตรฐานแห่งชาติ                |
+> | `aipnCode`     | (internal)   | — mapping only —     | รหัส AIPN สำหรับ lookup ภายในระบบ   |
+> | `tmtCode`      | BILLDISP     | DispensedItems.DrgID #4 | รหัสยา TMT (เฉพาะยา)            |
+> | `description`  | BILLTRAN     | BillItems.Desc #6    | คำอธิบายรายการ                     |
+> | `dfsText`      | BILLDISP     | DispensedItems.dfsText #6 | ชื่อยา/dose/form/strength     |
+
+#### 1.9.5 Priority Matrix
+
+| Priority | ข้อมูล | เหตุผล | Fallback ปัจจุบัน |
+| -------- | ------ | ------ | ----------------- |
+| 🔴 สูง   | `stdCode` | STDCode เป็น required field ใน SSOP | ใช้ `tmtCode` (ยา) หรือ `aipnCode` (บริการ) |
+| 🔴 สูง   | `visitType` | TypeIn เป็น required field ใน SSOP | ใช้ `"9"` (อื่นๆ) |
+| 🔴 สูง   | `dischargeType` | TypeOut เป็น required field ใน SSOP | ใช้ `"9"` (อื่นๆ) |
+| 🟡 กลาง  | `dfsText`, `sigText` | required ใน SSOP phase 1 | ใช้ `description` จาก billing item |
+| 🟡 กลาง  | `serviceClass` | Class field ใน OPServices | ใช้ `"EC"` (ตรวจรักษา) |
+| 🟢 ต่ำ   | `billNo`, `packsize`, `sigCode` | optional ใน SSOP phase 1 | เว้นว่าง |
+| 🟢 ต่ำ   | `nextAppointmentDate`, `supplyDuration`, `dayCover` | optional | เว้นว่าง |

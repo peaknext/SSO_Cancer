@@ -50,10 +50,10 @@ export function generateBilltranXml(
       invno: visit.vn,
       billno: '',
       hn: visit.patientHn,
-      memberNo: visit.vcrCode || '',
+      memberNo: visit.caseNumber || '',
       amount: formatAmount(chargeAmount),
       paid: '0.00',
-      verCode: visit.protocolCode,
+      verCode: visit.vcrCode || '',
       tflag: previouslyExportedVns.has(visit.vn) ? 'E' : 'A',
       pid: visit.patientCitizenId,
       name: visit.patientFullName,
@@ -80,12 +80,18 @@ export function generateBilltranXml(
           ? (dispIdMap.get(visit.vn) || svid)
           : svid;
 
+      // STDCode: TMT code for drugs (BillMuad=3), AIPN code for others
+      const stdCode =
+        item.billingGroup === '3'
+          ? (item.tmtCode || item.aipnCode || '')
+          : (item.aipnCode || '');
+
       const billItem: BillItemRecord = {
         invno: visit.vn,
         svDate,
         billMuad: item.billingGroup,
         lcCode: item.hospitalCode,
-        stdCode: item.aipnCode || '',
+        stdCode,
         desc: item.description,
         qty: String(item.quantity),
         up: formatAmount(item.unitPrice),

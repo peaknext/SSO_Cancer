@@ -372,19 +372,44 @@ export class SsopExportService {
     return issues;
   }
 
-  /** Generate unique SVID for each visit (format: YYMMDDHHMM + seq) */
-  private generateSvidMap(visits: { vn: string; visitDate: Date }[]): Map<string, string> {
+  /**
+   * Generate unique SVID for each visit.
+   *
+   * Format: Buddhist Era YYMMDDHHMMSS (matches Thai hospital convention).
+   * Example: 681112191059 = BE 2568/11/12 19:10:59 = CE 2025-11-12 19:10:59
+   *
+   * Uses serviceStartTime if available; falls back to visitDate with a
+   * sequential seconds offset to guarantee uniqueness within a batch.
+   */
+  private generateSvidMap(
+    visits: { vn: string; visitDate: Date; serviceStartTime: Date | null }[],
+  ): Map<string, string> {
     const map = new Map<string, string>();
-    const seqDigits = visits.length > 99 ? 3 : 2;
+    const usedSvids = new Set<string>();
 
     for (let i = 0; i < visits.length; i++) {
       const v = visits[i];
-      const d = v.visitDate;
-      const yy = String(d.getFullYear()).slice(-2);
+      const d = v.serviceStartTime || v.visitDate;
+      // Buddhist Era = CE + 543
+      const beYear = d.getFullYear() + 543;
+      const yy = String(beYear).slice(-2);
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
-      const seq = String(i + 1).padStart(seqDigits, '0');
-      const svid = `${yy}${mm}${dd}0000${seq}`;
+      const hh = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      const ss = String(d.getSeconds()).padStart(2, '0');
+
+      let svid = `${yy}${mm}${dd}${hh}${min}${ss}`;
+
+      // Ensure uniqueness — if collision, increment seconds
+      let offset = 1;
+      while (usedSvids.has(svid)) {
+        const adjSec = String((d.getSeconds() + offset) % 100).padStart(2, '0');
+        svid = `${yy}${mm}${dd}${hh}${min}${adjSec}`;
+        offset++;
+      }
+
+      usedSvids.add(svid);
       map.set(v.vn, svid);
     }
 

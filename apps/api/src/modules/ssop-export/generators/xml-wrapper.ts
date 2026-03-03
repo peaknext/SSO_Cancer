@@ -28,11 +28,11 @@ export function wrapXml(options: XmlWrapperOptions): string {
     `<?xml version="1.0" encoding="windows-874"?>\r\n` +
     `<ClaimRec System="OP" PayPlan="SS" Version="0.93" Prgs="HX">\r\n` +
     `<Header>\r\n` +
-    `  <HCODE>${options.hcode}</HCODE>\r\n` +
-    `  <HNAME>${escapeXml(options.hname)}</HNAME>\r\n` +
-    `  <DATETIME>${formatDateTime(now)}</DATETIME>\r\n` +
-    `  <SESSNO>${options.sessNo}</SESSNO>\r\n` +
-    `  <RECCOUNT>${options.recCount}</RECCOUNT>\r\n` +
+    `<HCODE>${options.hcode}</HCODE>\r\n` +
+    `<HNAME>${escapeXml(options.hname)}</HNAME>\r\n` +
+    `<DATETIME>${formatDateTime(now)}</DATETIME>\r\n` +
+    `<SESSNO>${options.sessNo}</SESSNO>\r\n` +
+    `<RECCOUNT>${options.recCount}</RECCOUNT>\r\n` +
     `</Header>\r\n` +
     options.dataSections +
     `</ClaimRec>\r\n`;

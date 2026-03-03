@@ -11,10 +11,10 @@ export interface BilltranRecord {
   invno: string;         // #5: VN (PK)
   billno: string;        // #6: empty
   hn: string;            // #7: Patient.hn (เลขประจำตัวผู้ป่วย)
-  memberNo: string;      // #8: PatientCase.caseNumber (CHI68-A02: Case No.)
+  memberNo: string;      // #8: Case Number (เลขที่เคส from SSO registration)
   amount: string;        // #9: total billing amount
   paid: string;          // #10: "0.00"
-  verCode: string;       // #11: Protocol code (CHI68-A02 override)
+  verCode: string;       // #11: Protocol code from QR Code (รหัส Protocol จาก QR Code)
   tflag: string;         // #12: "A" (ขอเบิก)
   pid: string;           // #13: Citizen ID 13 digits
   name: string;          // #14: fullName
@@ -30,8 +30,8 @@ export interface BillItemRecord {
   invno: string;       // #1: FK → BILLTRAN.Invno
   svDate: string;      // #2: YYYY-MM-DD
   billMuad: string;    // #3: billing group (3/8/B/C/G)
-  lcCode: string;      // #4: hospital code
-  stdCode: string;     // #5: AIPN code
+  lcCode: string;      // #4: local hospital code
+  stdCode: string;     // #5: TMT code (drugs) / AIPN standard code (non-drugs)
   desc: string;        // #6: description
   qty: string;         // #7: quantity
   up: string;          // #8: unit price
@@ -62,10 +62,10 @@ export interface OpServiceRecord {
   lcCode: string;      // #16: empty
   codeSet: string;     // #17: empty
   stdCode: string;     // #18: empty
-  svCharge: string;    // #19: "0.00"
+  svCharge: string;    // #19: "0.00" (professional fee only; charges in BillItems)
   completion: string;  // #20: "Y"
   svTxCode: string;    // #21: empty
-  claimCat: string;    // #22: "OP1" or "OPR"
+  claimCat: string;    // #22: "OP1" (always at service level; item-level handles OPR)
 }
 
 /** OPDx record (6 pipe-delimited fields) */

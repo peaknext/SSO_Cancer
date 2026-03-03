@@ -1,5 +1,5 @@
 import { wrapXml } from './xml-wrapper';
-import { formatDateTime, formatDate, formatAmount } from './encoding';
+import { formatDateTime } from './encoding';
 import type { SsopVisitData, OpServiceRecord, OpDxRecord } from '../types/ssop.types';
 
 /**
@@ -27,10 +27,6 @@ export function generateOpServicesXml(
   for (const visit of visits) {
     const svid = svidMap.get(visit.vn) || '';
 
-    // Determine ClaimCat: use "OPR" if any billing item is OPR, otherwise "OP1"
-    const hasRadiation = visit.billingItems.some((i) => i.claimCategory === 'OPR');
-    const claimCat = hasRadiation ? 'OPR' : 'OP1';
-
     const begDt = visit.serviceStartTime
       ? formatDateTime(visit.serviceStartTime)
       : formatDateTime(visit.visitDate);
@@ -39,15 +35,8 @@ export function generateOpServicesXml(
       ? formatDateTime(visit.serviceEndTime)
       : '';
 
-    // SvCharge = sum of hospital charges for non-dispensing items (BillMuad ≠ 3,5)
-    const nonDispItems = visit.billingItems.filter(
-      (i) => i.billingGroup !== '3' && i.billingGroup !== '5',
-    );
-    const svChargeTotal = nonDispItems.reduce(
-      (sum, i) => sum + i.quantity * i.unitPrice,
-      0,
-    );
-
+    // SvCharge = professional service fee only (NOT total charges — those are in BillItems)
+    // Per reference file and spec, this is 0.00 for SSO cancer billing
     const service: OpServiceRecord = {
       invno: visit.vn,
       svId: svid,
@@ -67,30 +56,30 @@ export function generateOpServicesXml(
       lcCode: '',
       codeSet: '',
       stdCode: '',
-      svCharge: formatAmount(svChargeTotal),
+      svCharge: '0.00',
       completion: 'Y',
       svTxCode: '',
-      claimCat,
+      claimCat: 'OP1',
     };
 
     serviceRecords.push(Object.values(service).join('|'));
 
-    // Primary diagnosis
+    // Primary diagnosis — strip dots from ICD-10 codes (C11.9 → C119)
     const primaryDx: OpDxRecord = {
       class_: 'EC',
       svId: svid,
       sl: '1',
       codeSet: 'TT',
-      code: visit.primaryDiagnosis,
+      code: visit.primaryDiagnosis.replace(/\./g, ''),
       desc: '',
     };
     dxRecords.push(Object.values(primaryDx).join('|'));
 
-    // Secondary diagnoses
+    // Secondary diagnoses — strip dots from ICD-10 codes
     if (visit.secondaryDiagnoses) {
       const codes = visit.secondaryDiagnoses
         .split(',')
-        .map((c) => c.trim())
+        .map((c) => c.trim().replace(/\./g, ''))
         .filter(Boolean);
 
       for (const code of codes) {
