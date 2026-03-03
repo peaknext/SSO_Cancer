@@ -108,6 +108,11 @@ export class AiService {
       stageInference: matchResult.stageInference,
       algorithmicResults: matchResult.results.slice(0, 5),
       protocolContext,
+      // Clinical context from HIS (no PII)
+      clinicCode: visit.clinicCode,
+      serviceClass: visit.serviceClass,
+      visitType: visit.visitType,
+      dischargeType: visit.dischargeType,
     };
 
     const { systemPrompt, userPrompt } = buildProtocolSuggestionPrompt(promptCtx);

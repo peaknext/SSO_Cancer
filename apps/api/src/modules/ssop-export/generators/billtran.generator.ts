@@ -48,7 +48,7 @@ export function generateBilltranXml(
       dtTran,
       hcode,
       invno: visit.vn,
-      billno: '',
+      billno: visit.billNo || '',
       hn: visit.patientHn,
       memberNo: visit.caseNumber || '',
       amount: formatAmount(chargeAmount),
@@ -80,11 +80,9 @@ export function generateBilltranXml(
           ? (dispIdMap.get(visit.vn) || svid)
           : svid;
 
-      // STDCode: TMT code for drugs (BillMuad=3), AIPN code for others
-      const stdCode =
-        item.billingGroup === '3'
-          ? (item.tmtCode || item.aipnCode || '')
-          : (item.aipnCode || '');
+      // STDCode: use stdCode from HIS if available, fallback to TMT (drugs) or AIPN (services)
+      const stdCode = item.stdCode
+        || (item.billingGroup === '3' ? (item.tmtCode || item.aipnCode || '') : (item.aipnCode || ''));
 
       const billItem: BillItemRecord = {
         invno: visit.vn,

@@ -140,17 +140,31 @@ export interface SsopVisitData {
   vcrCode: string;
   protocolCode: string;
   mainHospitalCode: string;
-  /** OPServices TypeServ: 01=ER, 03=scheduled OP, 04=refer-out (default: 03) */
+  // SSOP 0.93 visit-level fields (from HIS Endpoint 2)
+  billNo?: string;
+  visitType?: string;
+  dischargeType?: string;
+  nextAppointmentDate?: Date | null;
+  serviceClass?: string;
   typeServ?: string;
+  prescriptionTime?: Date | null;
+  dayCover?: string;
   billingItems: {
     hospitalCode: string;
     aipnCode: string | null;
     tmtCode: string | null;
+    stdCode: string | null;
     billingGroup: string;
     description: string;
     quantity: number;
     unitPrice: number;
     claimUnitPrice: number;
     claimCategory: string;
+    // Drug/dispensing fields
+    dfsText: string | null;
+    packsize: string | null;
+    sigCode: string | null;
+    sigText: string | null;
+    supplyDuration: string | null;
   }[];
 }

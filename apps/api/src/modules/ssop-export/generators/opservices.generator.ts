@@ -1,5 +1,5 @@
 import { wrapXml } from './xml-wrapper';
-import { formatDateTime } from './encoding';
+import { formatDateTime, formatDate } from './encoding';
 import type { SsopVisitData, OpServiceRecord, OpDxRecord } from '../types/ssop.types';
 
 /**
@@ -41,15 +41,15 @@ export function generateOpServicesXml(
     const service: OpServiceRecord = {
       invno: visit.vn,
       svId: svid,
-      class_: 'EC',
+      class_: visit.serviceClass || 'EC',
       hcode,
       hn: visit.patientHn,
       pid: visit.patientCitizenId,
       careAccount,
       typeServ: visit.typeServ || '03',
-      typeIn: '9',
-      typeOut: '9',
-      dtAppoint: '',
+      typeIn: visit.visitType || '9',
+      typeOut: visit.dischargeType || '9',
+      dtAppoint: visit.nextAppointmentDate ? formatDate(visit.nextAppointmentDate) : '',
       svPid: visit.physicianLicenseNo || '',
       clinic: visit.clinicCode || '99',
       begDt,
@@ -66,8 +66,9 @@ export function generateOpServicesXml(
     serviceRecords.push(Object.values(service).join('|'));
 
     // Primary diagnosis — strip dots from ICD-10 codes (C11.9 → C119)
+    const svcClass = visit.serviceClass || 'EC';
     const primaryDx: OpDxRecord = {
-      class_: 'EC',
+      class_: svcClass,
       svId: svid,
       sl: '1',
       codeSet: 'TT',
@@ -85,7 +86,7 @@ export function generateOpServicesXml(
 
       for (const code of codes) {
         const secDx: OpDxRecord = {
-          class_: 'EC',
+          class_: svcClass,
           svId: svid,
           sl: '4',
           codeSet: 'TT',

@@ -15,6 +15,11 @@ export interface PromptContext {
   stageInference: StageInference;
   algorithmicResults: MatchResult[];
   protocolContext: string;
+  // Clinical context from HIS (no PII)
+  clinicCode?: string | null;
+  serviceClass?: string | null;
+  visitType?: string | null;
+  dischargeType?: string | null;
 }
 
 const SYSTEM_PROMPT = `You are an expert oncology clinical decision support system for the Thai Social Security Office (SSO) cancer treatment protocols. Your role is to analyze clinical visit data and recommend the most appropriate SSO treatment protocol.
@@ -73,6 +78,10 @@ export function buildProtocolSuggestionPrompt(ctx: PromptContext): {
 **Inferred Stage:** ${ctx.stageInference.inferredStage || 'Unknown'}
 **Stage Reasoning:** ${ctx.stageInference.reasons.join('; ') || 'N/A'}
 **Treatment Modality:** Chemo=${ctx.stageInference.treatmentModality.isChemotherapy}, Radiation=${ctx.stageInference.treatmentModality.isRadiation}, Immunotherapy=${ctx.stageInference.treatmentModality.isImmunotherapy}
+**Clinic Department:** ${ctx.clinicCode || 'N/A'} (01=Internal Medicine, 10=Radiation Oncology, 99=Other)
+**Service Class:** ${ctx.serviceClass || 'N/A'} (EC=Examination, XR=Radiology, OP=Procedure, LB=Lab)
+**Visit Type:** ${ctx.visitType || 'N/A'} (1=walk-in, 2=scheduled, 3=referred, 4=emergency)
+**Discharge Type:** ${ctx.dischargeType || 'N/A'} (1=home, 2=admitted, 3=transferred, 4=deceased)
 
 **HPI:** ${ctx.hpi || 'N/A'}
 **Doctor Notes:** ${ctx.doctorNotes || 'N/A'}

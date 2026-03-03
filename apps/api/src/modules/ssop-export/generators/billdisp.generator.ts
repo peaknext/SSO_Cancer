@@ -43,9 +43,11 @@ export function generateBilldispXml(
     const dispId = `${visit.vn}D01`;
     dispIdMap.set(visit.vn, dispId);
 
-    const prescDt = visit.serviceStartTime
-      ? formatDateTime(visit.serviceStartTime)
-      : formatDateTime(visit.visitDate);
+    const prescDt = visit.prescriptionTime
+      ? formatDateTime(visit.prescriptionTime)
+      : visit.serviceStartTime
+        ? formatDateTime(visit.serviceStartTime)
+        : formatDateTime(visit.visitDate);
 
     const totalCharge = drugItems.reduce(
       (sum, i) => sum + i.quantity * i.unitPrice,
@@ -74,7 +76,7 @@ export function generateBilldispXml(
       benefitPlan: 'SS',
       dispeStat: '1',
       svId: svid,
-      dayCover: '',
+      dayCover: visit.dayCover || '',
     };
 
     dispensingRecords.push(Object.values(dispensing).join('|'));
@@ -90,10 +92,10 @@ export function generateBilldispXml(
         hospdrgid: item.hospitalCode,
         drgId: item.tmtCode || item.aipnCode || '',
         dfsCode: '',
-        dfsText: item.description,
-        packsize: '',
-        sigCode: '',
-        sigText: '',
+        dfsText: item.dfsText || item.description,
+        packsize: item.packsize || '',
+        sigCode: item.sigCode || '',
+        sigText: item.sigText || '',
         quantity: String(item.quantity),
         unitPrice: formatAmount(item.unitPrice),
         chargeAmt: formatAmount(chargeAmt),
@@ -103,7 +105,7 @@ export function generateBilldispXml(
         claimcont: 'OD',
         claimCat: item.claimCategory,
         multiDisp: '',
-        supplyFor: '',
+        supplyFor: item.supplyDuration || '',
       };
 
       dispensedItemRecords.push(Object.values(dispensedItem).join('|'));

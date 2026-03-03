@@ -319,16 +319,32 @@ export class SsopExportService {
       vcrCode: v.case?.vcrCode || '',
       protocolCode: v.case?.protocol?.protocolCode || '',
       mainHospitalCode: v.case?.sourceHospital?.hcode5 || v.patient?.mainHospitalCode || '',
+      // SSOP 0.93 visit-level fields
+      billNo: v.billNo ?? undefined,
+      visitType: v.visitType ?? undefined,
+      dischargeType: v.dischargeType ?? undefined,
+      nextAppointmentDate: v.nextAppointmentDate,
+      serviceClass: v.serviceClass ?? undefined,
+      typeServ: v.serviceType ?? undefined,
+      prescriptionTime: v.prescriptionTime,
+      dayCover: v.dayCover ?? undefined,
       billingItems: v.visitBillingItems.map((item) => ({
         hospitalCode: item.hospitalCode,
         aipnCode: item.aipnCode,
         tmtCode: item.tmtCode ?? null,
+        stdCode: item.stdCode ?? null,
         billingGroup: item.billingGroup,
         description: item.description,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
         claimUnitPrice: Number(item.claimUnitPrice ?? item.unitPrice),
         claimCategory: item.claimCategory,
+        // Drug/dispensing fields
+        dfsText: item.dfsText ?? null,
+        packsize: item.packsize ?? null,
+        sigCode: item.sigCode ?? null,
+        sigText: item.sigText ?? null,
+        supplyDuration: item.supplyDuration ?? null,
       })),
     }));
   }

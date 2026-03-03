@@ -28,12 +28,19 @@ export interface HisBillingItem {
   hospitalCode: string;
   aipnCode?: string;
   tmtCode?: string;
+  stdCode?: string;
   billingGroup: string;
   description: string;
   quantity: number;
   unitPrice: number;
   claimUnitPrice?: number;
   claimCategory?: string;
+  // Drug/dispensing fields (billingGroup "3" only)
+  dfsText?: string;
+  packsize?: string;
+  sigCode?: string;
+  sigText?: string;
+  supplyDuration?: string;
 }
 
 export interface HisVisit {
@@ -47,6 +54,15 @@ export interface HisVisit {
   secondaryDiagnoses?: string;
   hpi?: string;
   doctorNotes?: string;
+  // SSOP 0.93 fields
+  billNo?: string;
+  visitType?: string;
+  dischargeType?: string;
+  nextAppointmentDate?: string;
+  serviceClass?: string;
+  serviceType?: string;
+  prescriptionTime?: string;
+  dayCover?: string;
   medications: HisMedication[];
   billingItems: HisBillingItem[];
 }

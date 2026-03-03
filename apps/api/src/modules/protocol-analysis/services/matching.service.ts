@@ -63,7 +63,11 @@ export class MatchingService {
   /**
    * Infer disease stage and treatment modality from secondary diagnoses
    */
-  inferStage(secondaryDiagnoses: string | null): StageInference {
+  inferStage(
+    secondaryDiagnoses: string | null,
+    clinicCode?: string | null,
+    serviceClass?: string | null,
+  ): StageInference {
     const result: StageInference = {
       inferredStage: null,
       hasDistantMets: false,
@@ -125,6 +129,16 @@ export class MatchingService {
         result.treatmentModality.isRadiation = true;
         result.reasons.push('9224 → หัตถการฉายรังสี (teleradiotherapy)');
       }
+    }
+
+    // Clinic/service-based radiation detection (from HIS Endpoint 2)
+    if (clinicCode === '10' && !result.treatmentModality.isRadiation) {
+      result.treatmentModality.isRadiation = true;
+      result.reasons.push('clinicCode=10 → แผนกรังสีรักษา');
+    }
+    if (serviceClass === 'XR' && !result.treatmentModality.isRadiation) {
+      result.treatmentModality.isRadiation = true;
+      result.reasons.push('serviceClass=XR → บริการรังสีวินิจฉัย/รังสีรักษา');
     }
 
     // Determine inferred stage
@@ -230,8 +244,12 @@ export class MatchingService {
 
     if (!visit) return { results: [], stageInference: emptyInference, nonProtocolChemoDrugs: [] };
 
-    // Step 1: Infer stage from secondary diagnoses
-    const stageInference = this.inferStage(visit.secondaryDiagnoses);
+    // Step 1: Infer stage from secondary diagnoses + clinic/service signals
+    const stageInference = this.inferStage(
+      visit.secondaryDiagnoses,
+      visit.clinicCode,
+      visit.serviceClass,
+    );
 
     // Step 2: Resolve cancer site from ICD-10
     let siteId = visit.resolvedSiteId;
