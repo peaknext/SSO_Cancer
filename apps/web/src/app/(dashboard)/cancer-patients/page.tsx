@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Plus, Download, Pill, X, FileArchive } from 'lucide-react';
+import { Users, Plus, Download, Pill, X, FileArchive, Search } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
@@ -250,8 +250,8 @@ export default function CancerPatientsPage() {
           </Button>
           <Button asChild>
             <Link href="/cancer-patients/new">
-              <Plus className="h-4 w-4 mr-1" />
-              ลงทะเบียนผู้ป่วย
+              <Search className="h-4 w-4 mr-1" />
+              ค้นหา/นำเข้า HIS
             </Link>
           </Button>
         </div>

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
@@ -7,6 +7,8 @@ import { HisIntegrationService } from './his-integration.service';
 import { SearchPatientDto } from './dto/search-patient.dto';
 import { ImportPatientDto } from './dto/import-patient.dto';
 import { AdvancedSearchDto } from './dto/advanced-search.dto';
+import { ImportSingleVisitDto } from './dto/import-single-visit.dto';
+import { SyncVisitDto } from './dto/sync-visit.dto';
 
 @ApiTags('HIS Integration')
 @ApiBearerAuth()
@@ -40,6 +42,48 @@ export class HisIntegrationController {
     @CurrentUser('id') userId: number,
   ) {
     return this.hisService.importPatient(hn, userId, dto.from, dto.to);
+  }
+
+  @Get('search-preview')
+  @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'ค้นหาผู้ป่วย + preview visits พร้อมตรวจสอบความสมบูรณ์' })
+  searchAndPreview(@Query() dto: SearchPatientDto) {
+    return this.hisService.searchAndPreview(dto.q, dto.type);
+  }
+
+  @Post('import-visit')
+  @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'นำเข้า visit เดียวจาก HIS' })
+  importSingleVisit(
+    @Body() dto: ImportSingleVisitDto,
+    @Query() searchDto: SearchPatientDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    const type = searchDto.type || (/^\d{13}$/.test(searchDto.q?.trim()) ? 'citizen_id' : 'hn');
+    return this.hisService.importSingleVisit(
+      dto.vn,
+      searchDto.q,
+      type as 'hn' | 'citizen_id',
+      userId,
+      dto.forceIncomplete,
+    );
+  }
+
+  @Patch('sync-visit')
+  @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'ซิงค์ข้อมูล visit ที่นำเข้าแล้วกับข้อมูลล่าสุดจาก HIS' })
+  syncVisit(
+    @Body() dto: SyncVisitDto,
+    @Query() searchDto: SearchPatientDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    const type = searchDto.type || (/^\d{13}$/.test(searchDto.q?.trim()) ? 'citizen_id' : 'hn');
+    return this.hisService.syncVisit(
+      dto.vn,
+      searchDto.q,
+      type as 'hn' | 'citizen_id',
+      userId,
+    );
   }
 
   @Post('search/advanced')

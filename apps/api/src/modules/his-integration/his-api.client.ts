@@ -4,6 +4,7 @@ import {
   HisApiResponse,
   HisPatientSearchResult,
   HisPatientData,
+  HisVisit,
 } from './types/his-api.types';
 import { decryptValue } from '../../common/utils/crypto.util';
 
@@ -275,7 +276,59 @@ export class HisApiClient {
     }
   }
 
-  /** Fetch full visit data for a patient */
+  /**
+   * Fetch patient + all visits from HIS (single endpoint).
+   * HIS returns { patient, visits[] } from GET /api/patient?hn= or ?cid=
+   */
+  async fetchPatientWithVisits(
+    query: string,
+    type: 'hn' | 'citizen_id',
+  ): Promise<HisPatientData> {
+    const params = new URLSearchParams();
+    if (type === 'citizen_id') {
+      params.set('cid', query);
+    } else {
+      params.set('hn', query.padStart(9, '0'));
+    }
+    try {
+      const data = await this.callApi<HisPatientData>(`/patient?${params}`);
+      // Normalize visits: HIS may omit medications/billingItems and send "" for dates
+      if (data?.visits) {
+        data.visits = data.visits.map((v) => this.normalizeHisVisit(v));
+      } else {
+        data.visits = [];
+      }
+      return data;
+    } catch (err: any) {
+      if (
+        err.message?.includes('404') ||
+        err.message?.includes('ไม่พบ') ||
+        err.message?.includes('NOT_FOUND')
+      ) {
+        throw new Error('ไม่พบข้อมูลผู้ป่วยใน HIS');
+      }
+      throw err;
+    }
+  }
+
+  /** Normalize HIS visit data — handle missing arrays and empty string dates */
+  private normalizeHisVisit(visit: Record<string, any>): HisVisit {
+    return {
+      ...visit,
+      medications: Array.isArray(visit.medications) ? visit.medications : [],
+      billingItems: Array.isArray(visit.billingItems) ? visit.billingItems : [],
+      primaryDiagnosis: visit.primaryDiagnosis || null,
+      nextAppointmentDate: visit.nextAppointmentDate?.trim() || null,
+      prescriptionTime: visit.prescriptionTime?.trim() || null,
+      serviceClass: visit.serviceClass?.trim() || null,
+      serviceType: visit.serviceType?.trim() || null,
+      visitType: visit.visitType || null,
+      dischargeType: visit.dischargeType || null,
+      dayCover: visit.dayCover || null,
+    } as HisVisit;
+  }
+
+  /** @deprecated Use fetchPatientWithVisits() instead */
   async fetchVisitData(hn: string, from?: string, to?: string): Promise<HisPatientData> {
     const params = new URLSearchParams();
     if (from) params.set('from', from);

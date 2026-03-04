@@ -7,6 +7,8 @@ import {
   HisPatientData,
   HisVisit,
   isCancerRelatedIcd10,
+  analyzeVisitCompleteness,
+  HisSearchPreviewResult,
 } from './types/his-api.types';
 import { AdvancedSearchDto } from './dto/advanced-search.dto';
 
@@ -277,8 +279,9 @@ export class HisIntegrationService {
       : null;
 
     // Build medicationsRaw from structured array (for protocol matching compatibility)
-    const medicationsRaw = visit.medications.length > 0
-      ? visit.medications
+    const meds = visit.medications ?? [];
+    const medicationsRaw = meds.length > 0
+      ? meds
           .map((m) => `${m.hospitalCode || ''} - ${m.medicationName} ${m.quantity || ''} ${m.unit || ''}`.trim())
           .join('\n')
       : null;
@@ -313,16 +316,181 @@ export class HisIntegrationService {
       },
     });
 
-    // Create VisitMedication records (for protocol analysis)
-    for (const med of visit.medications) {
-      // resolveDrug is a read-only lookup, OK outside tx
+    // Create VisitMedication + VisitBillingItem records
+    await this.createVisitMedications(tx, createdVisit.id, meds);
+    await this.createVisitBillingItems(tx, createdVisit.id, visit.billingItems ?? []);
+  }
+
+  /** Search + preview: single call returns patient + enriched visits with completeness */
+  async searchAndPreview(query: string, type?: string): Promise<HisSearchPreviewResult> {
+    // Auto-detect search type
+    const trimmed = query.trim();
+    if (!type) {
+      if (/^\d{13}$/.test(trimmed)) {
+        type = 'citizen_id';
+      } else if (/^\d+$/.test(trimmed)) {
+        type = 'hn';
+      } else {
+        throw new BadRequestException(
+          'HIS API รองรับค้นหาด้วย HN หรือเลขบัตรประชาชนเท่านั้น — ไม่รองรับค้นหาด้วยชื่อ',
+        );
+      }
+    }
+
+    const hisData = await this.hisClient.fetchPatientWithVisits(
+      trimmed,
+      type as 'hn' | 'citizen_id',
+    );
+
+    // Check if patient already exists in our DB
+    const existingPatient = await this.prisma.patient.findFirst({
+      where: {
+        OR: [
+          { hn: hisData.patient.hn },
+          ...(hisData.patient.citizenId ? [{ citizenId: hisData.patient.citizenId }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+
+    // Find already-imported VNs
+    const allVns = hisData.visits.map((v) => v.vn);
+    const existingVisits =
+      allVns.length > 0
+        ? await this.prisma.patientVisit.findMany({
+            where: { vn: { in: allVns } },
+            select: { vn: true },
+          })
+        : [];
+    const existingVnSet = new Set(existingVisits.map((v) => v.vn));
+
+    // Fetch non-supportive drug names for protocol drug detection (one query)
+    const protocolDrugs = await this.prisma.drug.findMany({
+      where: { isActive: true, drugCategory: { not: 'supportive' } },
+      select: { genericName: true },
+    });
+    const protocolDrugNames = protocolDrugs.map((d) => d.genericName.toLowerCase());
+
+    // Enrich each visit
+    const enrichedVisits = hisData.visits.map((visit) => {
+      const meds = visit.medications ?? [];
+      const hasProtocolDrugs = meds.some((med) => {
+        const medName = (med.medicationName || '').toLowerCase();
+        return protocolDrugNames.some(
+          (drugName) => medName.includes(drugName) || drugName.includes(medName),
+        );
+      });
+      return {
+        visit,
+        isCancerRelated: isCancerRelatedIcd10(visit.primaryDiagnosis),
+        isAlreadyImported: existingVnSet.has(visit.vn),
+        completeness: analyzeVisitCompleteness(visit),
+        hasProtocolDrugs,
+      };
+    });
+
+    // Compute summary
+    const cancerVisits = enrichedVisits.filter((v) => v.isCancerRelated);
+    const alreadyImported = enrichedVisits.filter((v) => v.isAlreadyImported);
+    const newImportable = cancerVisits.filter((v) => !v.isAlreadyImported);
+    const completeVisits = newImportable.filter((v) => v.completeness.level === 'complete');
+    const incompleteVisits = newImportable.filter((v) => v.completeness.level !== 'complete');
+
+    return {
+      patient: hisData.patient,
+      existingPatientId: existingPatient?.id ?? null,
+      visits: enrichedVisits,
+      summary: {
+        totalVisits: hisData.visits.length,
+        cancerRelatedVisits: cancerVisits.length,
+        alreadyImported: alreadyImported.length,
+        newImportable: newImportable.length,
+        completeVisits: completeVisits.length,
+        incompleteVisits: incompleteVisits.length,
+      },
+    };
+  }
+
+  /** Import a single visit by VN — fetches from HIS, validates, and writes to DB */
+  async importSingleVisit(
+    vn: string,
+    query: string,
+    queryType: 'hn' | 'citizen_id',
+    userId: number | null,
+    forceIncomplete = false,
+  ): Promise<{ patientId: number; importId: number }> {
+    // 1. Check if VN already imported
+    const existingVisit = await this.prisma.patientVisit.findFirst({
+      where: { vn },
+      select: { id: true },
+    });
+    if (existingVisit) {
+      throw new BadRequestException(`VN ${vn} ถูกนำเข้าแล้ว`);
+    }
+
+    // 2. Fetch patient + visits from HIS
+    const hisData = await this.hisClient.fetchPatientWithVisits(query, queryType);
+
+    // 3. Find the target visit
+    const targetVisit = hisData.visits.find((v) => v.vn === vn);
+    if (!targetVisit) {
+      throw new BadRequestException(`ไม่พบ VN ${vn} ในข้อมูลจาก HIS`);
+    }
+
+    // 4. Check completeness
+    const completeness = analyzeVisitCompleteness(targetVisit);
+    if (completeness.level === 'minimal' && !forceIncomplete) {
+      const missingLabels = completeness.missingFields
+        .filter((f) => f.priority === 'critical')
+        .map((f) => f.label)
+        .join(', ');
+      throw new BadRequestException(
+        `ข้อมูล visit ไม่สมบูรณ์ — ขาดข้อมูลสำคัญ: ${missingLabels} ` +
+          `(ส่ง forceIncomplete=true เพื่อบังคับนำเข้า)`,
+      );
+    }
+
+    // 5. Transaction: upsert patient + import single visit
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const patientId = await this.upsertPatient(tx, hisData.patient);
+
+        const importRecord = await tx.patientImport.create({
+          data: {
+            filename: `HIS_SINGLE_${vn}_${new Date().toISOString().slice(0, 10)}`,
+            source: 'HIS_API',
+            totalRows: 1,
+            importedRows: 1,
+            skippedRows: 0,
+            importedById: userId,
+            status: 'COMPLETED',
+          },
+        });
+
+        await this.importVisit(tx, targetVisit, importRecord.id, patientId, hisData.patient.hn);
+
+        return { patientId, importId: importRecord.id };
+      },
+      { timeout: 30000 },
+    );
+
+    return result;
+  }
+
+  /** Create VisitMedication records (extracted helper for reuse) */
+  private async createVisitMedications(
+    tx: TxClient,
+    visitId: number,
+    medications: HisVisit['medications'] extends (infer T)[] | undefined ? NonNullable<HisVisit['medications']>[number][] : never[],
+  ): Promise<number> {
+    let count = 0;
+    for (const med of medications) {
       const resolvedDrugId = med.medicationName
         ? await this.importService.resolveDrug(med.medicationName)
         : null;
-
       await tx.visitMedication.create({
         data: {
-          visitId: createdVisit.id,
+          visitId,
           rawLine: `${med.hospitalCode || ''} - ${med.medicationName}`.trim(),
           hospitalCode: med.hospitalCode || null,
           medicationName: med.medicationName || null,
@@ -331,13 +499,22 @@ export class HisIntegrationService {
           resolvedDrugId,
         },
       });
+      count++;
     }
+    return count;
+  }
 
-    // Create VisitBillingItem records (for SSOP export)
-    for (const item of visit.billingItems) {
+  /** Create VisitBillingItem records (extracted helper for reuse) */
+  private async createVisitBillingItems(
+    tx: TxClient,
+    visitId: number,
+    billingItems: NonNullable<HisVisit['billingItems']>,
+  ): Promise<number> {
+    let count = 0;
+    for (const item of billingItems) {
       await tx.visitBillingItem.create({
         data: {
-          visitId: createdVisit.id,
+          visitId,
           hospitalCode: item.hospitalCode,
           aipnCode: item.aipnCode ? String(item.aipnCode) : null,
           tmtCode: item.tmtCode ? String(item.tmtCode) : null,
@@ -348,7 +525,6 @@ export class HisIntegrationService {
           unitPrice: item.unitPrice,
           claimUnitPrice: item.claimUnitPrice ?? item.unitPrice,
           claimCategory: item.claimCategory || 'OP1',
-          // Drug/dispensing fields
           dfsText: item.dfsText || null,
           packsize: item.packsize || null,
           sigCode: item.sigCode || null,
@@ -356,7 +532,119 @@ export class HisIntegrationService {
           supplyDuration: item.supplyDuration || null,
         },
       });
+      count++;
     }
+    return count;
+  }
+
+  /** Sync an already-imported visit with latest data from HIS */
+  async syncVisit(
+    vn: string,
+    query: string,
+    queryType: 'hn' | 'citizen_id',
+    userId: number,
+  ): Promise<{
+    patientId: number;
+    visitId: number;
+    updatedFields: string[];
+    medicationsCount: number;
+    billingItemsCount: number;
+  }> {
+    // 1. Find existing visit
+    const existing = await this.prisma.patientVisit.findFirst({
+      where: { vn },
+      select: { id: true, patientId: true, hn: true },
+    });
+    if (!existing) {
+      throw new BadRequestException(`ไม่พบ VN ${vn} ในระบบ — ต้อง import ก่อนจึงจะซิงค์ได้`);
+    }
+
+    // 2. Fetch fresh data from HIS
+    const hisData = await this.hisClient.fetchPatientWithVisits(query, queryType);
+    const freshVisit = hisData.visits.find((v) => v.vn === vn);
+    if (!freshVisit) {
+      throw new BadRequestException(`ไม่พบ VN ${vn} ในข้อมูลจาก HIS แล้ว`);
+    }
+
+    // 3. Prepare updated fields
+    const sanitizedPrimaryDx = sanitizeIcd10(freshVisit.primaryDiagnosis);
+    const resolvedSiteId = await this.importService.resolveIcd10(sanitizedPrimaryDx);
+    const primaryDx = sanitizedPrimaryDx.replace(/\./g, '').toUpperCase();
+    const secondaryDx = freshVisit.secondaryDiagnoses
+      ? sanitizeIcd10(freshVisit.secondaryDiagnoses).replace(/\./g, '').toUpperCase()
+      : null;
+    const meds = freshVisit.medications ?? [];
+    const medicationsRaw = meds.length > 0
+      ? meds
+          .map((m) => `${m.hospitalCode || ''} - ${m.medicationName} ${m.quantity || ''} ${m.unit || ''}`.trim())
+          .join('\n')
+      : null;
+
+    // Track which fields changed
+    const updatedFields: string[] = [];
+
+    // 4. Transaction: delete children → update visit → re-create children
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        // Delete old medications and billing items
+        const deletedMeds = await tx.visitMedication.deleteMany({ where: { visitId: existing.id } });
+        const deletedItems = await tx.visitBillingItem.deleteMany({ where: { visitId: existing.id } });
+        if (deletedMeds.count > 0) updatedFields.push('medications');
+        if (deletedItems.count > 0) updatedFields.push('billingItems');
+
+        // Update visit fields (preserve: confirmedProtocolId, confirmedRegimenId, confirmedAt,
+        // confirmedByUserId, caseId, patientId, importId)
+        const updateData = {
+          visitDate: new Date(freshVisit.visitDate),
+          primaryDiagnosis: primaryDx,
+          secondaryDiagnoses: secondaryDx,
+          hpi: freshVisit.hpi ? String(freshVisit.hpi).trim().slice(0, 2000) : null,
+          doctorNotes: freshVisit.doctorNotes ? String(freshVisit.doctorNotes).trim().slice(0, 2000) : null,
+          medicationsRaw,
+          serviceStartTime: freshVisit.serviceStartTime ? new Date(freshVisit.serviceStartTime) : null,
+          serviceEndTime: freshVisit.serviceEndTime ? new Date(freshVisit.serviceEndTime) : null,
+          physicianLicenseNo: freshVisit.physicianLicenseNo || null,
+          clinicCode: freshVisit.clinicCode || null,
+          billNo: freshVisit.billNo || null,
+          visitType: freshVisit.visitType || null,
+          dischargeType: freshVisit.dischargeType || null,
+          nextAppointmentDate: freshVisit.nextAppointmentDate ? new Date(freshVisit.nextAppointmentDate) : null,
+          serviceClass: freshVisit.serviceClass || null,
+          serviceType: freshVisit.serviceType || null,
+          prescriptionTime: freshVisit.prescriptionTime ? new Date(freshVisit.prescriptionTime) : null,
+          dayCover: freshVisit.dayCover || null,
+          resolvedSiteId,
+        };
+
+        await tx.patientVisit.update({
+          where: { id: existing.id },
+          data: updateData,
+        });
+        updatedFields.push('visitFields');
+
+        // Also update patient info
+        await this.upsertPatient(tx, hisData.patient);
+
+        // Re-create medications and billing items
+        const medsCount = await this.createVisitMedications(tx, existing.id, meds);
+        const itemsCount = await this.createVisitBillingItems(tx, existing.id, freshVisit.billingItems ?? []);
+
+        return { medsCount, itemsCount };
+      },
+      { timeout: 30000 },
+    );
+
+    this.logger.log(
+      `Synced VN ${vn}: ${result.medsCount} meds, ${result.itemsCount} billing items`,
+    );
+
+    return {
+      patientId: existing.patientId!,
+      visitId: existing.id,
+      updatedFields,
+      medicationsCount: result.medsCount,
+      billingItemsCount: result.itemsCount,
+    };
   }
 
   /** Advanced search — search patients from HIS by clinical criteria */
