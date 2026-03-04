@@ -83,7 +83,21 @@ RUN npx tsc prisma/seed.ts \
     --skipLibCheck \
     --resolveJsonModule
 
-# ─── Stage 2: Runner ──────────────────────────────────────────────────────
+# ─── Stage 2: Prune devDependencies ───────────────────────────────────────
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+# Copy workspace package files + lockfile
+COPY --from=builder /app/package.json /app/package-lock.json* ./
+COPY --from=builder /app/apps/api/package.json apps/api/
+COPY --from=builder /app/apps/web/package.json apps/web/
+
+# Install production dependencies only
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --omit=dev --cache /root/.npm
+
+# ─── Stage 3: Runner ──────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 
 WORKDIR /app
@@ -95,7 +109,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Copy built artifacts
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
 # Prisma generated client must be at ./dist/prisma/ to match compiled import paths
 COPY --from=builder /app/prisma ./dist/prisma
 # Seed support: pre-compiled seed.js + SQL files

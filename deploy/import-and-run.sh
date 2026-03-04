@@ -143,9 +143,8 @@ if curl -sf -k https://localhost/api/v1/health > /dev/null 2>&1; then
   echo "Access the application:"
   echo "  https://$(hostname -f 2>/dev/null || echo 'your-server-ip')"
   echo ""
-  echo "Default admin login:"
-  echo "  Email:    admin@sso-cancer.local"
-  echo "  Password: Admin@1234"
+  echo "Login with the admin credentials configured during setup."
+  echo "  (Change the default password immediately if this is a fresh install.)"
 elif curl -sf http://localhost/api/v1/health > /dev/null 2>&1; then
   echo "=== Deployment successful (HTTP only) ==="
 else
