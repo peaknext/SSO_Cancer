@@ -112,9 +112,12 @@ COPY --from=builder /app/apps/api/package.json ./
 COPY --from=deps /app/node_modules ./node_modules
 # Prisma generated client must be at ./dist/prisma/ to match compiled import paths
 COPY --from=builder /app/prisma ./dist/prisma
-# Seed support: pre-compiled seed.js + SQL files
-# seed.js uses path.join(__dirname, '..', 'database', 'seeds') → needs /app/database/seeds/
-# seed.js imports from './generated/...' → needs /app/prisma/generated/ → symlink to dist
+# Prisma config + schema + migrations at /app/prisma/ for deploy-time commands:
+#   npx prisma migrate deploy --config prisma/prisma.config.ts
+#   node prisma/seed.js
+COPY --from=builder /app/prisma/prisma.config.ts ./prisma/prisma.config.ts
+COPY --from=builder /app/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=builder /app/prisma/migrations ./prisma/migrations
 COPY --from=builder /app/prisma/seed.js ./prisma/seed.js
 COPY --from=builder /app/database/seeds ./database/seeds
 
