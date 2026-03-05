@@ -600,8 +600,10 @@ module.exports = {
   apps: [
     {
       name: 'sso-cancer-api',
-      script: 'apps/api/dist/apps/api/src/main.js',
-      cwd: 'C:\\SSO_Cancer',
+      script: 'dist/apps/api/src/main.js',
+      cwd: 'C:\\SSO_Cancer\\apps\\api',
+      // cwd ต้องเป็น apps/api เพราะ NestJS ConfigModule ใช้ envFilePath: '../../.env'
+      // ซึ่ง resolve สัมพัทธ์กับ cwd → ../../ จาก apps/api/ = C:\SSO_Cancer\.env ✓
       env: {
         NODE_ENV: 'production',
         PORT: '4000',
@@ -872,6 +874,8 @@ pm2 logs sso-cancer-api --lines 50
 ```
 
 > **สาเหตุ #1 ที่พบบ่อยที่สุด**: ลืมสร้างไฟล์ `.env` — API อ่าน `.env` จาก root ของ repo (`C:\SSO_Cancer\.env`) ทุกครั้งที่ start
+>
+> **สาเหตุ #2**: PM2 cwd ผิด — API ใช้ `envFilePath: '../../.env'` ซึ่ง resolve สัมพัทธ์กับ cwd ดังนั้น cwd ต้องเป็น `C:\SSO_Cancer\apps\api` (ไม่ใช่ `C:\SSO_Cancer`) เพื่อให้ `../../.env` ชี้ถูกที่
 
 ### เข้าเว็บไม่ได้ (Connection refused)
 
