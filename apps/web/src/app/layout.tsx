@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { dmSans, baiJamjuree, jetbrainsMono } from '@/lib/fonts';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -14,11 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="th"
-      suppressHydrationWarning
-      className={`${dmSans.variable} ${baiJamjuree.variable} ${jetbrainsMono.variable}`}
-    >
+    <html lang="th" suppressHydrationWarning>
       <body className="antialiased">{children}</body>
     </html>
   );

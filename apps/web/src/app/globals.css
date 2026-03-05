@@ -49,6 +49,11 @@
    LIGHT MODE TOKENS
    ═══════════════════════════════════════════ */
 :root {
+  /* Font fallbacks — overridden by next/font .variable classes when Providers mounts */
+  --font-dm-sans: system-ui, -apple-system, sans-serif;
+  --font-bai-jamjuree: system-ui, -apple-system, sans-serif;
+  --font-jetbrains-mono: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+
   --primary: #0f766e;
   --primary-hover: #0d9488;
   --primary-subtle: #ccfbf1;
