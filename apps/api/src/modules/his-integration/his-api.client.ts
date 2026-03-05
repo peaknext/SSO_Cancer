@@ -291,13 +291,14 @@ export class HisApiClient {
       params.set('hn', query.padStart(9, '0'));
     }
     try {
-      const data = await this.callApi<HisPatientData>(`/patient?${params}`);
+      const raw = await this.callApi<any>(`/patient?${params}`);
+      // HIS API may return { patient, visits } or flat { hn, visits, ... }
+      // Normalize to HisPatientData format
+      const data: HisPatientData = raw.patient
+        ? { patient: raw.patient, visits: raw.visits ?? [] }
+        : { patient: { hn: raw.hn, citizenId: raw.citizenId, fullName: raw.fullName ?? raw.name ?? '', titleName: raw.titleName, gender: raw.gender, dateOfBirth: raw.dateOfBirth, address: raw.address, phoneNumber: raw.phoneNumber, insuranceType: raw.insuranceType, mainHospitalCode: raw.mainHospitalCode }, visits: raw.visits ?? [] };
       // Normalize visits: HIS may omit medications/billingItems and send "" for dates
-      if (data?.visits) {
-        data.visits = data.visits.map((v) => this.normalizeHisVisit(v));
-      } else {
-        data.visits = [];
-      }
+      data.visits = data.visits.map((v) => this.normalizeHisVisit(v));
       return data;
     } catch (err: any) {
       if (
