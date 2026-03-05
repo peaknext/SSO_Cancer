@@ -89,7 +89,7 @@ export class HisIntegrationService {
 
   /** Preview import — fetch data from HIS and compute what will be imported */
   async preview(hn: string, from?: string, to?: string): Promise<PreviewResult> {
-    const hisData = await this.hisClient.fetchVisitData(hn, from, to);
+    const hisData = await this.hisClient.fetchPatientWithVisits(hn, 'hn', from, to);
 
     // Check if patient already exists
     const existingPatient = await this.prisma.patient.findFirst({
@@ -135,7 +135,7 @@ export class HisIntegrationService {
     from?: string,
     to?: string,
   ): Promise<ImportResult> {
-    const hisData = await this.hisClient.fetchVisitData(hn, from, to);
+    const hisData = await this.hisClient.fetchPatientWithVisits(hn, 'hn', from, to);
 
     // 1. Filter cancer-related visits
     const cancerVisits = hisData.visits.filter((v) =>

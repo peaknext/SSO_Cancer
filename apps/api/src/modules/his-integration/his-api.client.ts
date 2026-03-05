@@ -277,28 +277,40 @@ export class HisApiClient {
   }
 
   /**
-   * Fetch patient + all visits from HIS (single endpoint).
-   * HIS returns { patient, visits[] } from GET /api/patient?hn= or ?cid=
+   * Fetch patient + visits from HIS (two-step: resolve HN then fetch visits).
+   * 1. If CID → search patient first to get HN
+   * 2. Call GET /patients/{hn}/visits?from=&to= for visit data
    */
   async fetchPatientWithVisits(
     query: string,
     type: 'hn' | 'citizen_id',
+    from?: string,
+    to?: string,
   ): Promise<HisPatientData> {
-    const params = new URLSearchParams();
+    let hn: string;
+
     if (type === 'citizen_id') {
-      params.set('cid', query);
+      // Step 1: resolve CID → HN via patient search
+      const patients = await this.searchPatient(query, 'citizen_id');
+      if (!patients.length) {
+        throw new Error('ไม่พบข้อมูลผู้ป่วยใน HIS');
+      }
+      hn = patients[0].hn;
     } else {
-      params.set('hn', query.padStart(9, '0'));
+      hn = query.padStart(9, '0');
     }
+
+    // Step 2: fetch visits from dedicated endpoint
     try {
-      const raw = await this.callApi<any>(`/patient?${params}`);
-      // HIS API may return { patient, visits } or flat { hn, visits, ... }
-      // Normalize to HisPatientData format
-      const data: HisPatientData = raw.patient
-        ? { patient: raw.patient, visits: raw.visits ?? [] }
-        : { patient: { hn: raw.hn, citizenId: raw.citizenId, fullName: raw.fullName ?? raw.name ?? '', titleName: raw.titleName, gender: raw.gender, dateOfBirth: raw.dateOfBirth, address: raw.address, phoneNumber: raw.phoneNumber, insuranceType: raw.insuranceType, mainHospitalCode: raw.mainHospitalCode }, visits: raw.visits ?? [] };
+      const params = new URLSearchParams();
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      const qs = params.toString();
+      const data = await this.callApi<HisPatientData>(
+        `/patients/${encodeURIComponent(hn)}/visits${qs ? '?' + qs : ''}`,
+      );
       // Normalize visits: HIS may omit medications/billingItems and send "" for dates
-      data.visits = data.visits.map((v) => this.normalizeHisVisit(v));
+      data.visits = (data.visits ?? []).map((v) => this.normalizeHisVisit(v));
       return data;
     } catch (err: any) {
       if (
@@ -327,15 +339,6 @@ export class HisApiClient {
       dischargeType: visit.dischargeType || null,
       dayCover: visit.dayCover || null,
     } as HisVisit;
-  }
-
-  /** @deprecated Use fetchPatientWithVisits() instead */
-  async fetchVisitData(hn: string, from?: string, to?: string): Promise<HisPatientData> {
-    const params = new URLSearchParams();
-    if (from) params.set('from', from);
-    if (to) params.set('to', to);
-    const qs = params.toString();
-    return this.callApi<HisPatientData>(`/patients/${encodeURIComponent(hn)}/visits${qs ? '?' + qs : ''}`);
   }
 
   /** Health check — test connectivity */
