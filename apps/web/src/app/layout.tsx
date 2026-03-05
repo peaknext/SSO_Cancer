@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import { ThemeProvider } from 'next-themes';
-import { Toaster } from 'sonner';
 import { dmSans, baiJamjuree, jetbrainsMono } from '@/lib/fonts';
+import { Providers } from '@/components/providers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -22,16 +21,7 @@ export default function RootLayout({
       className={`${dmSans.variable} ${baiJamjuree.variable} ${jetbrainsMono.variable}`}
     >
       <body className="antialiased">
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {children}
-          <Toaster
-            position="top-right"
-            richColors
-            toastOptions={{
-              className: 'font-body',
-            }}
-          />
-        </ThemeProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
