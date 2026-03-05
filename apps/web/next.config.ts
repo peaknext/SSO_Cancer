@@ -3,6 +3,12 @@ import path from 'path';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Fix: /_not-found prerender fails with workUnitAsyncStorage error on Windows Server.
+  // Worker threads don't inherit AsyncLocalStorage context properly.
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+  },
   // Point to monorepo root for proper dependency tracing
   outputFileTracingRoot: path.join(__dirname, '../../'),
   eslint: {
