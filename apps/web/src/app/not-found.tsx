@@ -1,26 +1,36 @@
-'use client';
-
-import Link from 'next/link';
-import { FileQuestion } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="max-w-md w-full text-center">
-        <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-warning-subtle mb-6">
-          <FileQuestion className="h-7 w-7 text-warning" />
-        </div>
-        <h1 className="font-heading text-6xl font-bold text-primary mb-2">404</h1>
-        <h2 className="font-heading text-xl font-semibold text-foreground mb-2">
-          ไม่พบหน้าที่ต้องการ
-        </h2>
-        <p className="text-sm text-muted-foreground mb-8">
-          The page you are looking for does not exist.
+    <div
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'system-ui, sans-serif',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <h1 style={{ fontSize: '3rem', fontWeight: 700, color: '#0F766E', margin: 0 }}>
+          404
+        </h1>
+        <p style={{ fontSize: '1rem', color: '#71717a', marginTop: '0.5rem' }}>
+          ไม่พบหน้าที่ต้องการ — Page not found
         </p>
-        <Button asChild>
-          <Link href="/">กลับหน้าหลัก</Link>
-        </Button>
+        <a
+          href="/"
+          style={{
+            display: 'inline-block',
+            marginTop: '1.5rem',
+            padding: '0.5rem 1.5rem',
+            backgroundColor: '#0F766E',
+            color: '#fff',
+            borderRadius: '0.5rem',
+            textDecoration: 'none',
+            fontSize: '0.875rem',
+          }}
+        >
+          กลับหน้าหลัก
+        </a>
       </div>
     </div>
   );

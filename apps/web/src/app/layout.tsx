@@ -3,6 +3,8 @@ import { dmSans, baiJamjuree, jetbrainsMono } from '@/lib/fonts';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'SSO Cancer Care — ระบบจัดการโปรโตคอลรักษามะเร็ง',
   description:
