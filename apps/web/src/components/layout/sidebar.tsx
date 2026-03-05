@@ -115,12 +115,12 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(
-    pathname.startsWith('/settings') ? '/settings' : null,
+    pathname?.startsWith('/settings') ? '/settings' : null,
   );
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
-    return pathname === href || pathname.startsWith(href + '/');
+    return pathname === href || pathname?.startsWith(href + '/') || false;
   };
 
   const visibleItems = navItems.filter(

@@ -51,7 +51,7 @@ export function LoginForm() {
         description: 'Welcome back!',
       });
       // Validate redirect param — only allow relative paths (prevent open redirect)
-      const raw = searchParams.get('redirect') || '/';
+      const raw = searchParams?.get('redirect') || '/';
       const redirect = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
       router.push(redirect);
     } catch (error: unknown) {

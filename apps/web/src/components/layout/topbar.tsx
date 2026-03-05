@@ -58,7 +58,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   }, []);
 
   const breadcrumbs = () => {
-    if (pathname === '/') return [{ label: 'แดชบอร์ด', href: '/' }];
+    if (!pathname || pathname === '/') return [{ label: 'แดชบอร์ด', href: '/' }];
     const segments = pathname.split('/').filter(Boolean);
     const crumbs: { label: string; href: string }[] = [];
     let path = '';
