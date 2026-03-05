@@ -45,7 +45,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             .filter((tab) => !('superAdminOnly' in tab && tab.superAdminOnly) || user.role === 'SUPER_ADMIN')
             .map((tab) => {
             const Icon = tab.icon;
-            const active = pathname === tab.href || pathname.startsWith(tab.href + '/');
+            const active = pathname === tab.href || pathname?.startsWith(tab.href + '/');
             return (
               <Link
                 key={tab.href}
