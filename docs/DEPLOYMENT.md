@@ -457,6 +457,62 @@ openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
 
 > **Windows Server**: รันคำสั่งนี้ใน WSL terminal (OpenSSL มีอยู่แล้วใน Ubuntu) ไม่ใช่ PowerShell
 
+### 4.4 เปลี่ยน SSL Certificate (Renewal)
+
+เมื่อได้ SSL certificate ใหม่ (เช่น cert หมดอายุ หรือได้ cert จริงจาก CA มาแทน self-signed):
+
+#### ขั้นตอนที่ 1: วางไฟล์ certificate ใหม่
+
+```bash
+# วางทับไฟล์เดิม (ชื่อต้องเป็น cert.pem และ key.pem)
+cp /path/to/new-certificate.pem deploy/nginx/ssl/cert.pem
+cp /path/to/new-private-key.pem deploy/nginx/ssl/key.pem
+```
+
+**กรณีได้ cert มาหลายไฟล์** (cert + intermediate CA / chain):
+
+```bash
+# รวม cert + chain เป็นไฟล์เดียว (cert ของเราต้องอยู่บนสุด)
+cat your-cert.pem intermediate-ca.pem > deploy/nginx/ssl/cert.pem
+cp your-private-key.pem deploy/nginx/ssl/key.pem
+```
+
+> **สำคัญ**: ลำดับในไฟล์ cert.pem ต้องเป็น: (1) Server certificate → (2) Intermediate CA → (3) Root CA (ถ้ามี)
+
+#### ขั้นตอนที่ 2: ตรวจสอบ certificate
+
+```bash
+# ดูข้อมูล cert (ชื่อ, ผู้ออก, วันหมดอายุ)
+openssl x509 -in deploy/nginx/ssl/cert.pem -noout -subject -issuer -dates
+
+# ตรวจว่า key กับ cert ตรงกัน (ค่า modulus ต้องเหมือนกัน)
+openssl x509 -in deploy/nginx/ssl/cert.pem -noout -modulus | md5sum
+openssl rsa  -in deploy/nginx/ssl/key.pem  -noout -modulus | md5sum
+```
+
+> ถ้า md5sum ของทั้งสองไม่ตรงกัน แสดงว่า key ไม่ใช่คู่กับ cert นี้ — ต้องขอ key ที่ถูกต้อง
+
+#### ขั้นตอนที่ 3: Restart nginx
+
+```bash
+export TAG=v2.0.0e    # ปรับตามเวอร์ชันที่ใช้
+
+# Docker deploy (docker-compose.deploy.yml)
+IMAGE_TAG=$TAG docker compose -f docker-compose.deploy.yml --env-file .env.production restart nginx
+
+# หรือ Docker prod (docker-compose.prod.yml)
+docker compose -f docker-compose.prod.yml --env-file .env.production restart nginx
+```
+
+ตรวจสอบ cert ใหม่ทำงาน:
+
+```bash
+# ดู cert ที่ server ใช้จริง
+echo | openssl s_client -connect localhost:443 -servername localhost 2>/dev/null | openssl x509 -noout -dates
+```
+
+> **ไม่ต้องแก้ nginx.conf** — ชื่อไฟล์เดิม (`cert.pem` / `key.pem`) แค่ restart nginx ก็เพียงพอ
+
 ---
 
 ## 5. วิธี A: Deploy ด้วยไฟล์ tar (Offline)

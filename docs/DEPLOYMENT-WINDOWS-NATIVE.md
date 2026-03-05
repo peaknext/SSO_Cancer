@@ -476,7 +476,77 @@ openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
   -subj '//CN=sso-cancer.hospital.local'
 ```
 
-### 7.2 ตั้งค่า nginx.conf
+### 7.2 เปลี่ยน SSL Certificate (Renewal)
+
+เมื่อได้ SSL certificate ใหม่ (เช่น cert หมดอายุ หรือได้ cert จริงจาก CA มาแทน self-signed):
+
+#### ขั้นตอนที่ 1: วางไฟล์ certificate ใหม่
+
+```powershell
+# วางทับไฟล์เดิม (ชื่อต้องเป็น cert.pem และ key.pem)
+Copy-Item C:\path\to\new-certificate.pem C:\nginx\ssl\cert.pem -Force
+Copy-Item C:\path\to\new-private-key.pem C:\nginx\ssl\key.pem -Force
+```
+
+**กรณีได้ cert มาหลายไฟล์** (cert + intermediate CA / chain):
+
+เปิด **Git Bash**:
+
+```bash
+# รวม cert + chain เป็นไฟล์เดียว (cert ของเราต้องอยู่บนสุด)
+cat your-cert.pem intermediate-ca.pem > /c/nginx/ssl/cert.pem
+cp your-private-key.pem /c/nginx/ssl/key.pem
+```
+
+> **สำคัญ**: ลำดับในไฟล์ cert.pem ต้องเป็น: (1) Server certificate → (2) Intermediate CA → (3) Root CA (ถ้ามี)
+
+#### ขั้นตอนที่ 2: ตรวจสอบ certificate
+
+เปิด **Git Bash**:
+
+```bash
+# ดูข้อมูล cert (ชื่อ, ผู้ออก, วันหมดอายุ)
+openssl x509 -in /c/nginx/ssl/cert.pem -noout -subject -issuer -dates
+
+# ตรวจว่า key กับ cert ตรงกัน (ค่า modulus ต้องเหมือนกัน)
+openssl x509 -in /c/nginx/ssl/cert.pem -noout -modulus | md5sum
+openssl rsa  -in /c/nginx/ssl/key.pem  -noout -modulus | md5sum
+```
+
+> ถ้า md5sum ของทั้งสองไม่ตรงกัน แสดงว่า key ไม่ใช่คู่กับ cert นี้ — ต้องขอ key ที่ถูกต้อง
+
+หรือใช้ **PowerShell** (ถ้า OpenSSL อยู่ใน PATH):
+
+```powershell
+& "C:\Program Files\Git\usr\bin\openssl.exe" x509 -in C:\nginx\ssl\cert.pem -noout -subject -issuer -dates
+```
+
+#### ขั้นตอนที่ 3: Reload nginx
+
+```powershell
+# Reload config (ไม่ต้อง restart — ไม่มี downtime)
+C:\nginx\nginx.exe -s reload
+
+# หรือถ้าใช้ NSSM:
+C:\nginx\nssm.exe restart nginx
+```
+
+ตรวจสอบ cert ใหม่ทำงาน:
+
+```powershell
+# ดู cert ที่ server ใช้จริง (SkipCertificateCheck สำหรับ self-signed)
+Invoke-WebRequest -Uri https://localhost/api/v1/health -SkipCertificateCheck -UseBasicParsing | Select-Object StatusCode
+```
+
+หรือใน **Git Bash**:
+
+```bash
+echo | openssl s_client -connect localhost:443 -servername localhost 2>/dev/null | openssl x509 -noout -dates
+```
+
+> **ไม่ต้องแก้ nginx.conf** — ชื่อไฟล์เดิม (`cert.pem` / `key.pem`) แค่ reload nginx ก็เพียงพอ
+
+### 7.3 ตั้งค่า nginx.conf
 
 แก้ไขไฟล์ `C:\nginx\conf\nginx.conf` ให้มีเนื้อหาดังนี้:
 
@@ -556,21 +626,21 @@ http {
 }
 ```
 
-### 7.3 ทดสอบ config
+### 7.4 ทดสอบ config
 
 ```powershell
 C:\nginx\nginx.exe -t
 # nginx: configuration file C:\nginx\conf\nginx.conf test is successful
 ```
 
-### 7.4 เริ่ม nginx
+### 7.5 เริ่ม nginx
 
 ```powershell
 cd C:\nginx
 Start-Process nginx.exe
 ```
 
-### 7.5 ตั้ง nginx เป็น Windows Service (แนะนำ)
+### 7.6 ตั้ง nginx เป็น Windows Service (แนะนำ)
 
 ใช้ **NSSM** (Non-Sucking Service Manager) เพื่อให้ nginx auto-start:
 
@@ -586,7 +656,7 @@ C:\nginx\nssm.exe set nginx AppDirectory "C:\nginx"
 C:\nginx\nssm.exe start nginx
 ```
 
-### 7.6 คำสั่งจัดการ nginx
+### 7.7 คำสั่งจัดการ nginx
 
 ```powershell
 # Reload config (ไม่ต้อง restart)
@@ -877,6 +947,32 @@ WHERE email = 'admin@sso-cancer.local';
 ---
 
 ## 13. Troubleshooting
+
+### Next.js build ล้มเหลว: `workUnitAsyncStorage` error
+
+```
+Error occurred prerendering page "/_not-found"
+Error [InvariantError]: Invariant: Expected workUnitAsyncStorage to have a store.
+```
+
+**สาเหตุ**: Windows path casing ไม่ตรงกับชื่อโฟลเดอร์จริงบน disk
+
+Windows เป็น case-insensitive สำหรับ file access แต่ **Webpack ถือว่า path ที่ casing ต่างกันเป็นคนละ module** เช่น ถ้าโฟลเดอร์จริงชื่อ `C:\SSO_Cancer` แต่ shell resolve เป็น `C:\sso_cancer` (ตัวเล็ก) Webpack จะ load React 2 ครั้งผ่าน 2 paths ทำให้ `AsyncLocalStorage` ของ Next.js พัง
+
+**วิธีแก้**:
+
+```powershell
+# ตรวจ casing จริงของโฟลเดอร์
+Get-Item C:\sso_cancer | Select-Object FullName
+
+# ใช้ casing ที่ตรงกับผลลัพธ์ด้านบน เช่น:
+cd C:\SSO_Cancer    # ← ตรงกับชื่อจริง ไม่ใช่ C:\sso_cancer
+
+# แล้ว build ใหม่
+npm run build --workspace=apps/web
+```
+
+> **สำคัญ**: ตรวจสอบให้ cwd ตรงกับ disk casing ทุกครั้งก่อน build — เปิด PowerShell ใหม่แล้ว cd ด้วย path ที่ถูกต้อง
 
 ### PM2 process ไม่ online
 
