@@ -1,3 +1,5 @@
+import { Providers } from '@/components/providers';
+
 export const dynamic = 'force-dynamic';
 
 export default function AuthLayout({
@@ -5,5 +7,5 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <Providers>{children}</Providers>;
 }

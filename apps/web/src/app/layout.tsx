@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { dmSans, baiJamjuree, jetbrainsMono } from '@/lib/fonts';
-import { Providers } from '@/components/providers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -20,9 +19,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${dmSans.variable} ${baiJamjuree.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="antialiased">
-        <Providers>{children}</Providers>
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
