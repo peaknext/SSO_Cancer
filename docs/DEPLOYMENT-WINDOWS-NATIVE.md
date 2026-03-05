@@ -289,6 +289,20 @@ cd ..\..
 
 ผลลัพธ์: standalone output ใน `apps/web/.next/standalone/`
 
+#### คัดลอก static files เข้า standalone (สำคัญ)
+
+Next.js standalone output **ไม่รวม** static files และ public folder — ต้อง copy เข้าไปเอง:
+
+```powershell
+# Static files (CSS, JS chunks)
+Copy-Item -Path "apps\web\.next\static" -Destination "apps\web\.next\standalone\apps\web\.next\static" -Recurse -Force
+
+# Public folder (favicon, locales, images)
+Copy-Item -Path "apps\web\public" -Destination "apps\web\.next\standalone\apps\web\public" -Recurse -Force
+```
+
+> **ถ้าไม่ทำขั้นตอนนี้**: หน้าเว็บจะโหลดเป็นหน้าขาว — CSS/JS ทั้งหมดจะ 404
+
 ### 5.3 Compile Prisma Client เป็น CommonJS (สำคัญมาก)
 
 > **ทำไมต้องทำ**: Prisma 7 generate เป็น TypeScript files ที่ **runtime (Node.js)** อ่านไม่ได้ — ต้อง compile เป็น CommonJS ก่อนรัน production
@@ -766,6 +780,10 @@ cd apps\api && npm run build && cd ..\..
 $env:NEXT_PUBLIC_API_URL = ""
 $env:API_INTERNAL_URL = "http://localhost:4000"
 cd apps\web && npm run build && cd ..\..
+
+# 5.5 คัดลอก static files เข้า standalone
+Copy-Item -Path "apps\web\.next\static" -Destination "apps\web\.next\standalone\apps\web\.next\static" -Recurse -Force
+Copy-Item -Path "apps\web\public" -Destination "apps\web\.next\standalone\apps\web\public" -Recurse -Force
 
 # 6. คัดลอก Prisma generated ไป dist (ทำซ้ำขั้นตอน 5.5)
 Copy-Item -Path "prisma\generated" -Destination "apps\api\dist\prisma\generated" -Recurse -Force
