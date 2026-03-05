@@ -6,6 +6,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AiService } from './ai.service';
 import { ValidateKeyDto } from './dto/ai-suggestion.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -19,6 +20,7 @@ export class AiController {
   constructor(private readonly aiService: AiService) {}
 
   @Post('suggest/:vn')
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EDITOR)
   @ApiOperation({ summary: 'Get AI protocol suggestion for a visit (calls AI provider)' })
   async suggest(
