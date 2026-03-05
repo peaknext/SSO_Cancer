@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../prisma';
+import { SsoAipnCatalogService } from '../sso-aipn-catalog/sso-aipn-catalog.service';
 import { QuerySsoProtocolDrugsDto } from './dto/query-sso-protocol-drugs.dto';
 
 @Injectable()
 export class SsoProtocolDrugsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aipnCatalogService: SsoAipnCatalogService,
+  ) {}
 
   async findAll(query: QuerySsoProtocolDrugsDto) {
     const {
@@ -202,19 +206,29 @@ export class SsoProtocolDrugsService {
    */
   async getFormularyDrugNames(
     protocolCodes: string[],
+    visitDate?: Date,
   ): Promise<Map<string, Set<string>>> {
     if (protocolCodes.length === 0) return new Map();
+
+    // Load valid AIPN codes for date filtering (if visit date provided)
+    let validCodes: Set<number> | null = null;
+    if (visitDate) {
+      validCodes = await this.aipnCatalogService.getValidAipnCodes(visitDate);
+    }
 
     const items = await this.prisma.ssoProtocolDrug.findMany({
       where: {
         protocolCode: { in: protocolCodes },
         isActive: true,
       },
-      select: { protocolCode: true, description: true },
+      select: { protocolCode: true, description: true, aipnCode: true },
     });
 
     const result = new Map<string, Set<string>>();
     for (const item of items) {
+      // Skip if AIPN code is not effective on visit date
+      if (validCodes && !validCodes.has(item.aipnCode)) continue;
+
       const genericName = this.extractGenericName(item.description);
       if (!genericName) continue;
       if (!result.has(item.protocolCode)) {

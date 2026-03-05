@@ -27,4 +27,12 @@ export class QuerySsoAipnDto extends PaginationQueryDto {
   @Type(() => Number)
   @IsNumber()
   maxPrice?: number;
+
+  @ApiPropertyOptional({
+    description: 'Show only versions effective on this date (YYYY-MM-DD)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  asOfDate?: string;
 }

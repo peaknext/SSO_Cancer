@@ -97,7 +97,9 @@ const navItems: NavItem[] = [
       { label: 'Users', labelThai: 'ผู้ใช้งาน', href: '/settings/users' },
       { label: 'App Settings', labelThai: 'ตั้งค่าระบบ', href: '/settings/app' },
       { label: 'AI Settings', labelThai: 'ตั้งค่า AI', href: '/settings/ai' },
+      { label: 'AIPN Catalog', labelThai: 'บัญชียา AIPN', href: '/settings/aipn-catalog' },
       { label: 'Audit Logs', labelThai: 'บันทึกกิจกรรม', href: '/settings/audit-logs' },
+      { label: 'Backup & Restore', labelThai: 'สำรอง/กู้คืน', href: '/settings/backup' },
     ],
   },
 ];
@@ -118,7 +120,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
-    return pathname.startsWith(href);
+    return pathname === href || pathname.startsWith(href + '/');
   };
 
   const visibleItems = navItems.filter(

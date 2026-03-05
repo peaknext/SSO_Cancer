@@ -15,9 +15,14 @@ import { Prisma } from '../../prisma';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: QueryUsersDto) {
+  async findAll(query: QueryUsersDto, currentUserRole?: string) {
     const { page = 1, limit = 25, sortBy = 'id', sortOrder = 'asc', search, role, isActive } = query;
     const where: Prisma.UserWhereInput = {};
+
+    // ADMIN cannot see SUPER_ADMIN users
+    if (currentUserRole && currentUserRole !== 'SUPER_ADMIN') {
+      where.role = { not: 'SUPER_ADMIN' };
+    }
 
     if (search) {
       where.OR = [

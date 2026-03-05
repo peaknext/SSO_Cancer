@@ -606,7 +606,7 @@ model Hospital {
 model SsoAipnItem {
   id            Int      @id @default(autoincrement())
   billingGroup  String   @map("billing_group") @db.VarChar(5)
-  code          Int      @unique
+  code          Int
   unit          String   @db.VarChar(100)
   rate          Decimal  @db.Decimal(12, 2)
   rate2         Decimal  @default(0) @db.Decimal(12, 2)
@@ -621,8 +621,11 @@ model SsoAipnItem {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  @@unique([code, dateEffective], map: "uq_sso_aipn_code_date_effective")
+  @@index([code], map: "idx_sso_aipn_items_code")
   @@index([billingGroup], map: "idx_sso_aipn_items_billing_group")
   @@index([rate], map: "idx_sso_aipn_items_rate")
+  @@index([dateEffective, dateExpiry], map: "idx_sso_aipn_items_date_range")
   @@map("sso_aipn_items")
 }
 

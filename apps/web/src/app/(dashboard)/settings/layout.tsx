@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Users, Settings, ScrollText, Brain, Database } from 'lucide-react';
+import { Users, Settings, ScrollText, Brain, Database, Pill } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -11,6 +11,7 @@ const settingsTabs = [
   { label: 'ผู้ใช้งาน', labelEn: 'Users', href: '/settings/users', icon: Users },
   { label: 'ตั้งค่าระบบ', labelEn: 'App Settings', href: '/settings/app', icon: Settings },
   { label: 'AI', labelEn: 'AI Settings', href: '/settings/ai', icon: Brain },
+  { label: 'บัญชียา AIPN', labelEn: 'AIPN Catalog', href: '/settings/aipn-catalog', icon: Pill },
   { label: 'บันทึกกิจกรรม', labelEn: 'Audit Logs', href: '/settings/audit-logs', icon: ScrollText },
   { label: 'สำรอง/กู้คืน', labelEn: 'Backup', href: '/settings/backup', icon: Database, superAdminOnly: true },
 ] as const;
@@ -44,7 +45,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             .filter((tab) => !('superAdminOnly' in tab && tab.superAdminOnly) || user.role === 'SUPER_ADMIN')
             .map((tab) => {
             const Icon = tab.icon;
-            const active = pathname.startsWith(tab.href);
+            const active = pathname === tab.href || pathname.startsWith(tab.href + '/');
             return (
               <Link
                 key={tab.href}

@@ -373,7 +373,10 @@ export class ProtocolAnalysisController {
       const nameToAipn = new Map<string, number>();
       for (const name of uniqueNames) {
         const match = await this.prisma.ssoAipnItem.findFirst({
-          where: { description: { contains: name, mode: 'insensitive' } },
+          where: {
+            description: { contains: name, mode: 'insensitive' },
+            isActive: true,
+          },
           select: { code: true },
         });
         if (match) nameToAipn.set(name, match.code);
@@ -393,15 +396,24 @@ export class ProtocolAnalysisController {
     >();
     if (aipnCodes.length > 0) {
       const aipnItems = await this.prisma.ssoAipnItem.findMany({
-        where: { code: { in: aipnCodes } },
+        where: {
+          code: { in: aipnCodes },
+          isActive: true,
+          dateEffective: { lte: visit.visitDate },
+          dateExpiry: { gte: visit.visitDate },
+        },
         select: { code: true, rate: true, unit: true, description: true },
+        orderBy: { dateEffective: 'desc' },
       });
       for (const item of aipnItems) {
-        aipnPriceMap.set(item.code, {
-          rate: Number(item.rate),
-          unit: item.unit,
-          description: item.description,
-        });
+        // Use most recent effective version (first match due to desc order)
+        if (!aipnPriceMap.has(item.code)) {
+          aipnPriceMap.set(item.code, {
+            rate: Number(item.rate),
+            unit: item.unit,
+            description: item.description,
+          });
+        }
       }
     }
 
@@ -684,7 +696,10 @@ export class ProtocolAnalysisController {
       const uniqueNames = [...new Set(needsNameLookup)];
       for (const name of uniqueNames) {
         const match = await this.prisma.ssoAipnItem.findFirst({
-          where: { description: { contains: name, mode: 'insensitive' } },
+          where: {
+            description: { contains: name, mode: 'insensitive' },
+            isActive: true,
+          },
           select: { code: true },
         });
         if (match && !seen.has(match.code)) {

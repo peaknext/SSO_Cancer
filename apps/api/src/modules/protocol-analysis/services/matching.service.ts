@@ -384,10 +384,12 @@ export class MatchingService {
     });
 
     // Step 5.5: Load formulary drug names for all candidate protocols
+    // Pass visit date to filter by AIPN dateEffective
     const formularyNameMap =
       visitResolvedDrugNames.size > 0
         ? await this.formularyService.getFormularyDrugNames(
             protocols.map((p) => p.protocolCode),
+            visit.visitDate,
           )
         : new Map<string, Set<string>>();
 

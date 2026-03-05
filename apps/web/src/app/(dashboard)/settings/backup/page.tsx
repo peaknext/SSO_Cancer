@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Database,
   Download,
@@ -20,6 +21,7 @@ import {
   Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth-store';
 import { useApi } from '@/hooks/use-api';
 import { apiClient } from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,6 +82,16 @@ interface RestoreResult {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function BackupPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
+
+  // SUPER_ADMIN only — redirect if accessed directly via URL
+  useEffect(() => {
+    if (user && user.role !== 'SUPER_ADMIN') {
+      router.replace('/');
+    }
+  }, [user, router]);
+
   // Backup state
   const [includeAuditBackup, setIncludeAuditBackup] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);

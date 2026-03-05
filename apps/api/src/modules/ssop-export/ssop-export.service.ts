@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import * as archiver from 'archiver';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SsoAipnCatalogService } from '../sso-aipn-catalog/sso-aipn-catalog.service';
 import { generateBilltranXml } from './generators/billtran.generator';
 import { generateBilldispXml } from './generators/billdisp.generator';
 import { generateOpServicesXml } from './generators/opservices.generator';
@@ -23,7 +24,10 @@ export interface ValidationIssue {
 export class SsopExportService {
   private readonly logger = new Logger(SsopExportService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aipnCatalogService: SsoAipnCatalogService,
+  ) {}
 
   /** Preview/validate visits before export */
   async preview(visitIds: number[]): Promise<{
@@ -32,11 +36,12 @@ export class SsopExportService {
     totalAmount: number;
   }> {
     const visits = await this.loadVisitData(visitIds);
+    const aipnDateMap = await this.aipnCatalogService.getAipnDateMap();
     const valid: { visitId: number; vn: string; amount: number }[] = [];
     const invalid: ValidationIssue[] = [];
 
     for (const visit of visits) {
-      const issues = this.validateVisit(visit);
+      const issues = this.validateVisit(visit, aipnDateMap);
       if (issues.length === 0) {
         const amount = visit.billingItems.reduce(
           (sum, item) => sum + item.quantity * item.claimUnitPrice,
@@ -59,7 +64,8 @@ export class SsopExportService {
   ): Promise<{ buffer: Buffer; fileName: string; batchId: number }> {
     // Load and validate
     const visits = await this.loadVisitData(visitIds);
-    const validVisits = visits.filter((v) => this.validateVisit(v).length === 0);
+    const aipnDateMap = await this.aipnCatalogService.getAipnDateMap();
+    const validVisits = visits.filter((v) => this.validateVisit(v, aipnDateMap).length === 0);
 
     if (validVisits.length === 0) {
       throw new BadRequestException('ไม่มี visit ที่ผ่านการตรวจสอบ — กรุณาตรวจสอบข้อมูลให้ครบ');
@@ -350,21 +356,25 @@ export class SsopExportService {
   }
 
   /** Validate a single visit has all required data for SSOP */
-  private validateVisit(visit: {
-    patientCitizenId: string;
-    patientFullName: string;
-    vn: string;
-    primaryDiagnosis: string;
-    billingItems: { quantity: number; claimUnitPrice: number }[];
-    physicianLicenseNo: string | null;
-    clinicCode: string | null;
-    serviceStartTime: Date | null;
-    serviceEndTime: Date | null;
-    caseNumber: string;
-    vcrCode: string;
-    protocolCode: string;
-    mainHospitalCode: string;
-  }): string[] {
+  private validateVisit(
+    visit: {
+      patientCitizenId: string;
+      patientFullName: string;
+      vn: string;
+      visitDate: Date;
+      primaryDiagnosis: string;
+      billingItems: { quantity: number; claimUnitPrice: number; aipnCode: string | null }[];
+      physicianLicenseNo: string | null;
+      clinicCode: string | null;
+      serviceStartTime: Date | null;
+      serviceEndTime: Date | null;
+      caseNumber: string;
+      vcrCode: string;
+      protocolCode: string;
+      mainHospitalCode: string;
+    },
+    aipnDateMap?: Map<number, Array<{ dateEffective: Date; dateExpiry: Date }>>,
+  ): string[] {
     const issues: string[] = [];
 
     // HIS data checks
@@ -385,6 +395,42 @@ export class SsopExportService {
     if (!visit.vcrCode) issues.push('ไม่มีรหัส Protocol QR Code (VCR Code)');
     if (!visit.protocolCode) issues.push('ไม่มีรหัส Protocol (ต้อง confirm protocol ก่อน)');
     if (!visit.mainHospitalCode) issues.push('ไม่มีรหัส รพ.ตามสิทธิ');
+
+    // AIPN dateEffective validation (multi-version aware)
+    if (aipnDateMap) {
+      const visitDate = visit.visitDate;
+      for (const item of visit.billingItems) {
+        if (!item.aipnCode) continue;
+        const code = parseInt(item.aipnCode, 10);
+        if (isNaN(code)) continue;
+        const versions = aipnDateMap.get(code);
+        if (!versions) continue; // not in catalog — no date to validate
+        const validVersion = versions.find(
+          (v) => v.dateEffective <= visitDate && v.dateExpiry >= visitDate,
+        );
+        if (!validVersion) {
+          const allFuture = versions.every((v) => v.dateEffective > visitDate);
+          const allExpired = versions.every((v) => v.dateExpiry < visitDate);
+          if (allFuture) {
+            const earliest = versions[0].dateEffective;
+            issues.push(
+              `รหัส AIPN ${code} ยังไม่มีผลบังคับใช้ ณ วันที่เข้ารับบริการ` +
+              ` (มีผล ${earliest.toISOString().split('T')[0]})`,
+            );
+          } else if (allExpired) {
+            const latest = versions[versions.length - 1].dateExpiry;
+            issues.push(
+              `รหัส AIPN ${code} หมดอายุแล้ว ณ วันที่เข้ารับบริการ` +
+              ` (หมดอายุ ${latest.toISOString().split('T')[0]})`,
+            );
+          } else {
+            issues.push(
+              `รหัส AIPN ${code} ไม่มี version ที่ครอบคลุมวันที่เข้ารับบริการ`,
+            );
+          }
+        }
+      }
+    }
 
     return issues;
   }

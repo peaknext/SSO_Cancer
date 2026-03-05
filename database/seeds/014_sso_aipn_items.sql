@@ -1205,4 +1205,4 @@ VALUES
   ('03', 997116, 'vial', 606, 0, 'TAXOTERE (SANOFI-AVENTIS DEUTSCHLAND, GERMANY) (docetaxel 20 mg/0.5 mL) concentrate and solvent for solution for infusion, 0.5 mL vial (TPU)', '2025-02-18', '2025-02-18', '2099-12-30', '2026-02-19', 'SSOCAC', 'โครงการ SSO Cancer Care', true, NOW(), NOW()),
   ('03', 997137, 'vial', 2320, 0, 'TAXOTERE (SANOFI-AVENTIS DEUTSCHLAND, GERMANY) (docetaxel 80 mg/2 mL) concentrate and solvent for solution for infusion, 2 mL vial (TPU)', '2025-02-18', '2025-02-18', '2099-12-30', '2026-02-19', 'SSOCAC', 'โครงการ SSO Cancer Care', true, NOW(), NOW()),
   ('03', 1017546, 'vial', 606, 0, 'DOCEGRIX (SANOFI-AVENTIS DEUTSCHLAND, GERMANY) (docetaxel 20 mg/1 mL) concentrate for solution for infusion, 1 mL vial (TPU)', '2025-02-18', '2025-02-18', '2099-12-30', '2026-02-19', 'SSOCAC', 'โครงการ SSO Cancer Care', true, NOW(), NOW())
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT (code, date_effective) DO NOTHING;

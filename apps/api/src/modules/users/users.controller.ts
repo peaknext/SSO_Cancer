@@ -9,6 +9,7 @@ import {
   Body,
   ParseIntPipe,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -29,17 +30,26 @@ export class UsersController {
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'List users with pagination and filters' })
-  async findAll(@Query() query: QueryUsersDto) {
-    const result = await this.usersService.findAll(query);
+  async findAll(
+    @Query() query: QueryUsersDto,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    const result = await this.usersService.findAll(query, currentUserRole);
     return createPaginatedResponse(result.data, result.total, result.page, result.limit);
   }
 
   @Get(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get user detail' })
-  async findOne(@Param('id', ParseIntPipe) id: number) {
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
     const user = await this.usersService.findByIdDetail(id);
     if (!user) throw new NotFoundException('USER_NOT_FOUND');
+    if (user.role === 'SUPER_ADMIN' && currentUserRole !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Cannot view SUPER_ADMIN details');
+    }
     return user;
   }
 
@@ -105,7 +115,11 @@ export class UsersController {
   @Get(':id/sessions')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get user active sessions' })
-  async getSessions(@Param('id', ParseIntPipe) id: number) {
+  async getSessions(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    await this.guardSuperAdminAccess(id, currentUserRole);
     return this.usersService.getSessions(id);
   }
 
@@ -115,8 +129,19 @@ export class UsersController {
   async revokeSession(
     @Param('id', ParseIntPipe) id: number,
     @Param('sessionId', ParseIntPipe) sessionId: number,
+    @CurrentUser('role') currentUserRole: string,
   ) {
+    await this.guardSuperAdminAccess(id, currentUserRole);
     await this.usersService.revokeSession(id, sessionId);
     return { message: 'Session revoked' };
+  }
+
+  /** Reject ADMIN from accessing SUPER_ADMIN user resources */
+  private async guardSuperAdminAccess(targetId: number, currentUserRole: string) {
+    if (currentUserRole === 'SUPER_ADMIN') return;
+    const target = await this.usersService.findById(targetId);
+    if (target?.role === 'SUPER_ADMIN') {
+      throw new ForbiddenException('Cannot access SUPER_ADMIN resources');
+    }
   }
 }

@@ -1,7 +1,8 @@
 'use client';
 
-import { use, useState, useCallback } from 'react';
+import { use, useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Shield, Monitor, Trash2, RotateCcw, UserX, UserCheck, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/use-api';
@@ -55,12 +56,20 @@ const roleLabels: Record<string, string> = {
 
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const currentUser = useAuthStore((s) => s.user);
   const { data: user, isLoading, refetch } = useApi<UserDetail>(`/users/${id}`);
   const { data: sessions, refetch: refetchSessions } = useApi<Session[]>(`/users/${id}/sessions`);
   const [acting, setActing] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // ADMIN cannot view SUPER_ADMIN user details
+  useEffect(() => {
+    if (user && currentUser && user.role === 'SUPER_ADMIN' && currentUser.role !== 'SUPER_ADMIN') {
+      router.replace('/settings/users');
+    }
+  }, [user, currentUser, router]);
 
   const copyTempPassword = useCallback(async () => {
     if (!tempPassword) return;
