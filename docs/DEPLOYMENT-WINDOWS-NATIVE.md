@@ -11,8 +11,8 @@
 1. [สถาปัตยกรรมระบบ](#1-สถาปัตยกรรมระบบ)
 2. [ข้อกำหนดเบื้องต้น](#2-ข้อกำหนดเบื้องต้น)
 3. [ติดตั้ง Prerequisites](#3-ติดตั้ง-prerequisites)
-4. [เตรียม Source Code & Build](#4-เตรียม-source-code--build)
-5. [ตั้งค่า Environment Variables](#5-ตั้งค่า-environment-variables)
+4. [เตรียม Source Code & Environment](#4-เตรียม-source-code--environment)
+5. [Build](#5-build)
 6. [Database Migration & Seed](#6-database-migration--seed)
 7. [ตั้งค่า nginx for Windows](#7-ตั้งค่า-nginx-for-windows)
 8. [ตั้งค่า PM2 (Process Manager)](#8-ตั้งค่า-pm2-process-manager)
@@ -173,7 +173,7 @@ Git for Windows มี OpenSSL มาด้วยแล้ว ตรวจสอ
 
 ---
 
-## 4. เตรียม Source Code & Build
+## 4. เตรียม Source Code & Environment
 
 ### 4.1 Clone Repository
 
@@ -189,15 +189,111 @@ cd SSO_Cancer
 npm install
 ```
 
-### 4.3 Generate Prisma Client
+### 4.3 ตั้งค่า Environment Variables
+
+> **สำคัญมาก**: ต้องสร้างไฟล์ `.env` **ก่อน build และก่อนรัน** — API ต้องการ `.env` ตั้งแต่ตอน startup (JWT_SECRET, DATABASE_URL ฯลฯ)
+
+#### สร้างไฟล์ `.env`
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+#### ค่าที่ต้องตั้ง
+
+```ini
+# ─── Database ──────────────────────────────────────────────────
+DATABASE_URL=postgresql://postgres:YOUR_DB_PASSWORD@localhost:5432/sso_cancer?schema=public
+
+# ─── JWT Secrets (สร้างด้วย: openssl rand -hex 32) ─────────────
+JWT_SECRET=<64-char-hex>
+JWT_REFRESH_SECRET=<64-char-hex>
+
+# ─── Application ───────────────────────────────────────────────
+NODE_ENV=production
+PORT=4000
+CORS_ORIGIN=https://192.168.1.100
+
+# ─── Security ──────────────────────────────────────────────────
+MAX_FAILED_LOGIN_ATTEMPTS=5
+LOCKOUT_DURATION_SECONDS=900
+MAX_CONCURRENT_SESSIONS=5
+JWT_ACCESS_TTL=15m
+JWT_REFRESH_TTL=7d
+PASSWORD_HISTORY_COUNT=5
+SESSION_INACTIVITY_TIMEOUT=1800
+
+# ─── Encryption (สร้างด้วย: openssl rand -hex 32) ──────────────
+SETTINGS_ENCRYPTION_KEY=<64-char-hex>
+BACKUP_ENCRYPTION_KEY=<64-char-hex>
+```
+
+> **`PORT`**: ใช้ `PORT=4000` (ไม่ใช่ `API_PORT`) — production API อ่านจาก `PORT` ก่อน, `API_PORT` เป็น fallback สำหรับ dev เท่านั้น
+>
+> **`CORS_ORIGIN`**: เปลี่ยนเป็น URL ของ server (เช่น `https://192.168.1.100` หรือ `https://sso-cancer.hospital.local`) — ห้ามใช้ `*` (wildcard)
+
+#### สร้าง Secrets
+
+เปิด **Git Bash** แล้วรัน:
+
+```bash
+openssl rand -hex 32    # → JWT_SECRET
+openssl rand -hex 32    # → JWT_REFRESH_SECRET
+openssl rand -hex 32    # → SETTINGS_ENCRYPTION_KEY
+openssl rand -hex 32    # → BACKUP_ENCRYPTION_KEY
+```
+
+> **สำคัญ**: ค่าทุกตัวต้องเป็น hex string 64 ตัวอักษร (256 bits)
+
+หรือรัน PowerShell ได้โดยตรง:
+
+```powershell
+-join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
+```
+
+### 4.4 Generate Prisma Client
 
 ```powershell
 npx prisma generate --config prisma/prisma.config.ts
 ```
 
-### 4.4 Compile Prisma Client เป็น CommonJS (สำคัญมาก)
+---
 
-> **ทำไมต้องทำ**: Prisma 7 generate เป็น TypeScript files ที่ต้อง compile เป็น CommonJS ก่อนรัน production ได้
+## 5. Build
+
+### 5.1 Build API (NestJS)
+
+> **สำคัญ**: ต้อง build API **ก่อน** compile Prisma เป็น CJS เพราะ NestJS build ต้องการไฟล์ `.ts` ของ Prisma client สำหรับ type checking
+
+```powershell
+cd apps\api
+npm run build
+cd ..\..
+```
+
+ผลลัพธ์: compiled output ใน `apps/api/dist/`
+
+### 5.2 Build Web (Next.js)
+
+```powershell
+# ตั้ง environment variables สำหรับ build
+$env:NEXT_PUBLIC_API_URL = ""
+$env:API_INTERNAL_URL = "http://localhost:4000"
+$env:NEXT_TELEMETRY_DISABLED = "1"
+
+cd apps\web
+npm run build
+cd ..\..
+```
+
+ผลลัพธ์: standalone output ใน `apps/web/.next/standalone/`
+
+### 5.3 Compile Prisma Client เป็น CommonJS (สำคัญมาก)
+
+> **ทำไมต้องทำ**: Prisma 7 generate เป็น TypeScript files ที่ **runtime (Node.js)** อ่านไม่ได้ — ต้อง compile เป็น CommonJS ก่อนรัน production
+>
+> **ทำไมต้องทำหลัง build**: ขั้นตอนนี้จะลบไฟล์ `.ts` ทิ้ง ถ้าทำก่อน build จะทำให้ NestJS build ไม่มี types ใช้
 
 #### ขั้นตอนที่ 1: สร้าง tsconfig ชั่วคราว
 
@@ -272,7 +368,7 @@ Get-ChildItem -Path "prisma\generated\prisma\client" -Filter "*.js" -Recurse | F
 Get-ChildItem -Path "prisma\generated\prisma\client" -Filter "*.ts" -Recurse | Remove-Item -Force
 ```
 
-### 4.5 Pre-compile Seed
+### 5.4 Pre-compile Seed
 
 ```powershell
 npx tsc prisma/seed.ts `
@@ -287,37 +383,12 @@ npx tsc prisma/seed.ts `
 
 ผลลัพธ์: ได้ไฟล์ `prisma/seed.js`
 
-### 4.6 Build API (NestJS)
+### 5.5 คัดลอก Prisma artifacts ไป dist
+
+NestJS runtime ต้องการ Prisma client compiled (CJS) อยู่ใน `dist/prisma/generated/`:
 
 ```powershell
-cd apps\api
-npm run build
-cd ..\..
-```
-
-ผลลัพธ์: compiled output ใน `apps/api/dist/`
-
-### 4.7 Build Web (Next.js)
-
-```powershell
-# ตั้ง environment variables สำหรับ build
-$env:NEXT_PUBLIC_API_URL = ""
-$env:API_INTERNAL_URL = "http://localhost:4000"
-$env:NEXT_TELEMETRY_DISABLED = "1"
-
-cd apps\web
-npm run build
-cd ..\..
-```
-
-ผลลัพธ์: standalone output ใน `apps/web/.next/standalone/`
-
-### 4.8 สร้าง Symlink สำหรับ Prisma (สำหรับ seed.js)
-
-`seed.js` ต้อง import Prisma client จาก `prisma/generated/` แต่ NestJS runtime ใช้จาก `dist/prisma/generated/` — สร้าง symlink ให้ทั้งสองชี้ไปที่เดียวกัน:
-
-```powershell
-# คัดลอก prisma generated ไปที่ dist (เหมือน Dockerfile COPY step)
+# คัดลอก prisma generated (compiled CJS) ไปที่ dist
 Copy-Item -Path "prisma\generated" -Destination "apps\api\dist\prisma\generated" -Recurse -Force
 
 # คัดลอก prisma config, schema, migrations, seed.js สำหรับ deploy commands
@@ -327,63 +398,6 @@ Copy-Item -Path "prisma\migrations" -Destination "apps\api\dist\prisma\migration
 ```
 
 > **หมายเหตุ**: ขั้นตอนนี้จำลองสิ่งที่ Dockerfile ทำในบรรทัด 110-125
-
----
-
-## 5. ตั้งค่า Environment Variables
-
-### 5.1 สร้างไฟล์ `.env`
-
-คัดลอก `.env.example` แล้วแก้ไข:
-
-```powershell
-Copy-Item .env.example .env
-notepad .env
-```
-
-### 5.2 ค่าที่ต้องตั้ง
-
-```ini
-# ─── Database ──────────────────────────────────────────────────
-DATABASE_URL=postgresql://postgres:YOUR_DB_PASSWORD@localhost:5432/sso_cancer?schema=public
-
-# ─── JWT Secrets (สร้างด้วย: openssl rand -hex 32) ─────────────
-JWT_SECRET=<64-char-hex>
-JWT_REFRESH_SECRET=<64-char-hex>
-
-# ─── Application ───────────────────────────────────────────────
-NODE_ENV=production
-API_PORT=4000
-CORS_ORIGIN=https://192.168.1.100
-
-# ─── Security ──────────────────────────────────────────────────
-MAX_FAILED_LOGIN_ATTEMPTS=5
-LOCKOUT_DURATION_SECONDS=900
-MAX_CONCURRENT_SESSIONS=5
-JWT_ACCESS_TTL=15m
-JWT_REFRESH_TTL=7d
-PASSWORD_HISTORY_COUNT=5
-SESSION_INACTIVITY_TIMEOUT=1800
-
-# ─── Encryption (สร้างด้วย: openssl rand -hex 32) ──────────────
-SETTINGS_ENCRYPTION_KEY=<64-char-hex>
-BACKUP_ENCRYPTION_KEY=<64-char-hex>
-```
-
-### 5.3 สร้าง Secrets
-
-เปิด **Git Bash** แล้วรัน:
-
-```bash
-openssl rand -hex 32    # → JWT_SECRET
-openssl rand -hex 32    # → JWT_REFRESH_SECRET
-openssl rand -hex 32    # → SETTINGS_ENCRYPTION_KEY
-openssl rand -hex 32    # → BACKUP_ENCRYPTION_KEY
-```
-
-> **สำคัญ**: ค่าทุกตัวต้องเป็น hex string 64 ตัวอักษร (256 bits)
-
-> **CORS_ORIGIN**: ห้ามใช้ `*` (wildcard) — API จะปิดตัวเองทันทีตอน startup
 
 ---
 
@@ -445,7 +459,7 @@ mkdir -p /c/nginx/ssl
 openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
   -keyout /c/nginx/ssl/key.pem \
   -out /c/nginx/ssl/cert.pem \
-  -subj '/CN=sso-cancer.hospital.local'
+  -subj '//CN=sso-cancer.hospital.local'
 ```
 
 ### 7.2 ตั้งค่า nginx.conf
@@ -481,7 +495,8 @@ http {
     }
 
     server {
-        listen 443 ssl http2;
+        listen 443 ssl;
+        http2 on;
         server_name _;
 
         ssl_certificate     C:/nginx/ssl/cert.pem;
@@ -585,7 +600,7 @@ module.exports = {
   apps: [
     {
       name: 'sso-cancer-api',
-      script: 'dist/apps/api/src/main.js',
+      script: 'apps/api/dist/apps/api/src/main.js',
       cwd: 'C:\\SSO_Cancer',
       env: {
         NODE_ENV: 'production',
@@ -691,10 +706,10 @@ pm2 monit
 
 ```powershell
 # เปิด port 80 (HTTP)
-New-NetFirewallRule -DisplayName "SSO Cancer HTTP" -Direction Inbound -Port 80 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "SSO Cancer HTTP" -Direction Inbound -LocalPort 80 -Protocol TCP -Action Allow
 
 # เปิด port 443 (HTTPS)
-New-NetFirewallRule -DisplayName "SSO Cancer HTTPS" -Direction Inbound -Port 443 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "SSO Cancer HTTPS" -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow
 ```
 
 > **หมายเหตุ**: ไม่ต้องเปิด port 3000, 4000, 5432 เพราะเข้าถึงผ่าน nginx เท่านั้น (localhost only)
@@ -740,9 +755,9 @@ git pull origin main
 # 3. ติดตั้ง dependencies (กรณีมีเพิ่ม)
 npm install
 
-# 4. Generate + compile Prisma client (ทำซ้ำขั้นตอน 4.3–4.6 ถ้า schema เปลี่ยน)
+# 4. Generate Prisma client (ทำซ้ำขั้นตอน 4.4 ถ้า schema เปลี่ยน)
 npx prisma generate --config prisma/prisma.config.ts
-# ... (ทำตามขั้นตอน 4.4 ทั้งหมด)
+# ... (ทำตามขั้นตอน 5.3 ทั้งหมด)
 
 # 5. Build
 cd apps\api && npm run build && cd ..\..
@@ -750,7 +765,7 @@ $env:NEXT_PUBLIC_API_URL = ""
 $env:API_INTERNAL_URL = "http://localhost:4000"
 cd apps\web && npm run build && cd ..\..
 
-# 6. คัดลอก Prisma generated ไป dist (ทำซ้ำขั้นตอน 4.8)
+# 6. คัดลอก Prisma generated ไป dist (ทำซ้ำขั้นตอน 5.5)
 Copy-Item -Path "prisma\generated" -Destination "apps\api\dist\prisma\generated" -Recurse -Force
 
 # 7. รัน migration
@@ -850,10 +865,13 @@ WHERE email = 'admin@sso-cancer.local';
 pm2 logs sso-cancer-api --lines 50
 
 # สาเหตุที่พบบ่อย:
+# - JWT_SECRET environment variable is required → ไม่มีไฟล์ .env หรือยังไม่ได้ตั้งค่า (ดูขั้นตอน 4.3)
 # - DATABASE_URL ผิด → แก้ใน .env
 # - Port ถูกใช้อยู่แล้ว → netstat -an | findstr ":4000"
-# - Prisma client ไม่ได้ compile → ทำตามขั้นตอน 4.4 ใหม่
+# - Prisma client ไม่ได้ compile → ทำตามขั้นตอน 5.3 ใหม่
 ```
+
+> **สาเหตุ #1 ที่พบบ่อยที่สุด**: ลืมสร้างไฟล์ `.env` — API อ่าน `.env` จาก root ของ repo (`C:\SSO_Cancer\.env`) ทุกครั้งที่ start
 
 ### เข้าเว็บไม่ได้ (Connection refused)
 
@@ -893,7 +911,7 @@ C:\nginx\nginx.exe -s reload
 Error: Cannot find module 'prisma/generated/prisma/client'
 ```
 
-แก้ไข: ทำขั้นตอน 4.3–4.4 ใหม่ทั้งหมด แล้ว rebuild API
+แก้ไข: ทำขั้นตอน 4.4 + 5.1–5.3 ใหม่ทั้งหมด แล้ว rebuild API
 
 ### Line ending issues
 
