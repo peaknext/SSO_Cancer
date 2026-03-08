@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { HelpButton } from '@/components/shared/help-button';
 import {
   Upload,
   FileSpreadsheet,
@@ -363,7 +364,10 @@ export default function AipnCatalogPage() {
     <div className="space-y-8">
       {/* Page header */}
       <div>
-        <h1 className="font-heading text-xl font-bold">บัญชียา/อุปกรณ์ AIPN</h1>
+        <h1 className="font-heading text-xl font-bold flex items-center gap-2">
+          บัญชียา/อุปกรณ์ AIPN
+          <HelpButton section="set-aipn-catalog" />
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
           อัปเดตบัญชี EquipdevAIPN จาก สปส. และดูรายการที่มีอยู่ในระบบ
         </p>

@@ -10,6 +10,7 @@ import {
   LogOut,
   User,
   KeyRound,
+  BookOpen,
   ChevronRight,
   Languages,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ const breadcrumbMap: Record<string, string> = {
   '/settings/app': 'ตั้งค่าระบบ',
   '/settings/ai': 'ตั้งค่า AI',
   '/settings/audit-logs': 'บันทึกกิจกรรม',
+  '/user-manual': 'คู่มือใช้งาน',
 };
 
 interface TopbarProps {
@@ -179,6 +181,16 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               >
                 <KeyRound className="h-4 w-4" />
                 เปลี่ยนรหัสผ่าน
+              </button>
+              <button
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  router.push('/user-manual');
+                }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-sidebar-foreground hover:bg-white/15 dark:hover:bg-white/8 transition-colors"
+              >
+                <BookOpen className="h-4 w-4" />
+                คู่มือใช้งาน
               </button>
               <div className="my-1 border-t" />
               <button

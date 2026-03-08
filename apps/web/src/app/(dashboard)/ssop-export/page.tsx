@@ -27,6 +27,7 @@ import { TableSkeleton } from '@/components/shared/loading-skeleton';
 import { Modal } from '@/components/ui/modal';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { HelpButton } from '@/components/shared/help-button';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -271,6 +272,7 @@ export default function SsopExportPage() {
           <h1 className="font-heading text-2xl font-bold text-foreground flex items-center gap-2">
             <FileArchive className="h-6 w-6 text-primary" />
             ส่งออก SSOP 0.93
+            <HelpButton section="ssop-export" />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             SSOP Electronic Claims — สร้างไฟล์เบิกค่ารักษาพยาบาลผู้ป่วยนอก

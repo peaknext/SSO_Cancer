@@ -35,6 +35,7 @@ import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
+import { HelpButton } from '@/components/shared/help-button';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -583,6 +584,7 @@ export default function ProtocolAnalysisPage() {
           <h1 className="font-heading text-2xl font-bold text-foreground flex items-center gap-2">
             <SearchCheck className="h-6 w-6 text-primary" />
             วิเคราะห์โปรโตคอล
+            <HelpButton section="protocol-analysis" />
           </h1>
           <p className="text-sm text-muted-foreground">
             เลือก HN &rarr; VN เพื่อดูรายละเอียดและจับคู่โปรโตคอล

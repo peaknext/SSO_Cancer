@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { HelpButton } from '@/components/shared/help-button';
 import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, X, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,7 +124,10 @@ export default function ImportPage() {
             วิเคราะห์โปรโตคอล
           </Link>
         </Button>
-        <h1 className="font-heading text-xl font-bold">นำเข้าข้อมูลผู้ป่วย</h1>
+        <h1 className="font-heading text-xl font-bold flex items-center gap-2">
+          นำเข้าข้อมูลผู้ป่วย
+          <HelpButton section="protocol-analysis-import" />
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
           อัปโหลดไฟล์ .xlsx เพื่อนำเข้าข้อมูลการเข้ารับบริการ
         </p>

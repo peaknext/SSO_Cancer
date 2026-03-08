@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { HelpButton } from '@/components/shared/help-button';
 import { FlaskConical, Plus } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -141,6 +142,7 @@ export default function RegimensPage() {
           <h1 className="font-heading text-2xl font-bold text-foreground flex items-center gap-2">
             <FlaskConical className="h-6 w-6 text-primary" />
             สูตรยา
+            <HelpButton section="regimens" />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Regimens — {response?.meta?.total ?? 0} รายการ

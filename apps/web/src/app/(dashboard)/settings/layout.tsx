@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { Users, Settings, ScrollText, Brain, Database, Pill } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
+import { HelpButton } from '@/components/shared/help-button';
 
 const settingsTabs = [
   { label: 'ผู้ใช้งาน', labelEn: 'Users', href: '/settings/users', icon: Users },
@@ -34,7 +35,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-2xl font-bold text-foreground">ตั้งค่า</h1>
+        <h1 className="font-heading text-2xl font-bold text-foreground flex items-center gap-2">
+          ตั้งค่า
+          <HelpButton section="settings" />
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">System Settings & Administration</p>
       </div>
 

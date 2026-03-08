@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { HelpButton } from '@/components/shared/help-button';
 import { FileText, Plus } from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -187,6 +188,7 @@ export default function ProtocolsPage() {
           <h1 className="font-heading text-2xl font-bold text-foreground flex items-center gap-2">
             <FileText className="h-6 w-6 text-primary" />
             โปรโตคอล
+            <HelpButton section="protocols" />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Treatment Protocols — {response?.meta?.total ?? 0} รายการ

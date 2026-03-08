@@ -11,6 +11,7 @@ import { SearchInput } from '@/components/shared/search-input';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { HelpButton } from '@/components/shared/help-button';
 import { CodeBadge } from '@/components/shared/code-badge';
 import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/shared/loading-skeleton';
@@ -232,6 +233,7 @@ export default function CancerPatientsPage() {
           <h1 className="font-heading text-2xl font-bold text-foreground flex items-center gap-2">
             <Users className="h-6 w-6 text-primary" />
             ผู้ป่วยมะเร็ง
+            <HelpButton section="cancer-patients" />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Cancer Patients — {response?.meta?.total ?? 0} ราย

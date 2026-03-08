@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Microscope } from 'lucide-react';
+import { HelpButton } from '@/components/shared/help-button';
 import { usePaginatedApi } from '@/hooks/use-api';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
@@ -99,6 +100,7 @@ export default function CancerSitesPage() {
         <h1 className="font-heading text-2xl font-bold text-foreground flex items-center gap-2">
           <Microscope className="h-6 w-6 text-primary" />
           ตำแหน่งมะเร็ง
+          <HelpButton section="cancer-sites" />
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Cancer Sites — {response?.meta?.total ?? 0} รายการ
