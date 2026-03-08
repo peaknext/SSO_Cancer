@@ -90,7 +90,7 @@ export function generateBilltranXml(
         billMuad: item.billingGroup,
         lcCode: item.hospitalCode,
         stdCode,
-        desc: item.description,
+        desc: item.description || item.dfsText || '',
         qty: String(item.quantity),
         up: formatAmount(item.unitPrice),
         chargeAmt: formatAmount(chargeAmt),

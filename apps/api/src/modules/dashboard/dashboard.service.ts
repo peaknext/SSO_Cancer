@@ -527,6 +527,58 @@ export class DashboardService {
     });
   }
 
+  /** Patients who have visits but no active PatientCase — need case number assignment */
+  async getPatientsWithoutCases(): Promise<
+    { id: number; hn: string; fullName: string; firstTreatmentDate: string | null; visitVn: string | null }[]
+  > {
+    return this.withCache('patients-without-cases', async () => {
+      // Find patients with NO active case
+      const patients = await this.prisma.patient.findMany({
+        where: {
+          isActive: true,
+          cases: { none: { isActive: true } },
+          // Must have at least one visit
+          visits: { some: {} },
+        },
+        select: { id: true, hn: true, fullName: true },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
+
+      if (patients.length === 0) return [];
+
+      // For each patient, find earliest visit with cancer diagnosis (C*) + Z51 secondary
+      const results = await Promise.all(
+        patients.map(async (p) => {
+          const visit = await this.prisma.patientVisit.findFirst({
+            where: {
+              hn: p.hn,
+              primaryDiagnosis: { startsWith: 'C' },
+              secondaryDiagnoses: { contains: 'Z51', mode: 'insensitive' },
+            },
+            orderBy: { visitDate: 'asc' },
+            select: { vn: true, visitDate: true },
+          });
+          return {
+            id: p.id,
+            hn: p.hn,
+            fullName: p.fullName,
+            firstTreatmentDate: visit?.visitDate?.toISOString().slice(0, 10) ?? null,
+            visitVn: visit?.vn ?? null,
+          };
+        }),
+      );
+
+      // Sort by firstTreatmentDate ASC (oldest = most urgent), nulls last
+      return results.sort((a, b) => {
+        if (!a.firstTreatmentDate && !b.firstTreatmentDate) return 0;
+        if (!a.firstTreatmentDate) return 1;
+        if (!b.firstTreatmentDate) return -1;
+        return a.firstTreatmentDate.localeCompare(b.firstTreatmentDate);
+      });
+    });
+  }
+
   private async withCache<T>(key: string, fn: () => Promise<T>): Promise<T> {
     const cached = this.cache.get(key);
     if (cached && cached.expiresAt > Date.now()) {

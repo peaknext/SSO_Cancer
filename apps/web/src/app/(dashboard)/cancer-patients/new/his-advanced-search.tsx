@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 
 interface HisAdvancedSearchProps {
   onSelectPatient: (patient: HisPatient) => void;
+  onImportAll?: (patient: HisPatient) => void;
+  importingHn?: string | null;
   previewing: boolean;
 }
 
@@ -37,7 +39,7 @@ function getDefaultDateRange(): { from: string; to: string } {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function HisAdvancedSearch({ onSelectPatient, previewing }: HisAdvancedSearchProps) {
+export function HisAdvancedSearch({ onSelectPatient, onImportAll, importingHn, previewing }: HisAdvancedSearchProps) {
   const defaults = getDefaultDateRange();
 
   // Filter state
@@ -73,11 +75,19 @@ export function HisAdvancedSearch({ onSelectPatient, previewing }: HisAdvancedSe
   };
 
   const setPreviousMonth = () => {
-    const today = new Date();
-    const firstOfPrev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const lastOfPrev = new Date(today.getFullYear(), today.getMonth(), 0);
+    const ref = dateFrom ? new Date(dateFrom) : new Date();
+    const firstOfPrev = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
+    const lastOfPrev = new Date(ref.getFullYear(), ref.getMonth(), 0);
     setDateFrom(formatDate(firstOfPrev));
     setDateTo(formatDate(lastOfPrev));
+  };
+
+  const setNextMonth = () => {
+    const ref = dateFrom ? new Date(dateFrom) : new Date();
+    const firstOfNext = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+    const lastOfNext = new Date(ref.getFullYear(), ref.getMonth() + 2, 0);
+    setDateFrom(formatDate(firstOfNext));
+    setDateTo(formatDate(lastOfNext));
   };
 
   const canSearch = dateValidation.valid && !searching;
@@ -162,6 +172,15 @@ export function HisAdvancedSearch({ onSelectPatient, previewing }: HisAdvancedSe
             >
               เดือนปัจจุบัน
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={setNextMonth}
+              className="shrink-0 text-xs"
+            >
+              เดือนถัดไป
+            </Button>
           </div>
           {dateValidation.error && (
             <p className="text-xs text-destructive">{dateValidation.error}</p>
@@ -189,7 +208,7 @@ export function HisAdvancedSearch({ onSelectPatient, previewing }: HisAdvancedSe
                   'focus:ring-2 focus:ring-primary focus:ring-offset-2',
                 )}
               />
-              <span className="text-sm">Z510 — เคมีบำบัด</span>
+              <span className="text-sm">Z510 — รังสีรักษา</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -201,7 +220,7 @@ export function HisAdvancedSearch({ onSelectPatient, previewing }: HisAdvancedSe
                   'focus:ring-2 focus:ring-primary focus:ring-offset-2',
                 )}
               />
-              <span className="text-sm">Z511 — รังสีรักษา</span>
+              <span className="text-sm">Z511 — เคมีบำบัด</span>
             </label>
           </div>
         </div>
@@ -236,6 +255,8 @@ export function HisAdvancedSearch({ onSelectPatient, previewing }: HisAdvancedSe
         <PatientSearchResults
           results={results}
           onSelect={onSelectPatient}
+          onImportAll={onImportAll}
+          importingHn={importingHn}
           disabled={previewing}
         />
 

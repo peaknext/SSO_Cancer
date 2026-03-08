@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import Link from 'next/link';
 import {
@@ -292,6 +292,16 @@ export default function ProtocolAnalysisPage() {
   useEffect(() => {
     fetchPatients();
   }, [fetchPatients]);
+
+  // ─── Refetch on window focus (picks up newly imported patients) ─
+  const fetchPatientsRef = useRef(fetchPatients);
+  fetchPatientsRef.current = fetchPatients;
+
+  useEffect(() => {
+    const onFocus = () => fetchPatientsRef.current();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   // ─── Fetch visits for selected HN (with same filters) ─────
   useEffect(() => {

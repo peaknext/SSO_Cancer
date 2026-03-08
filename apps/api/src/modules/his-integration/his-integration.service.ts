@@ -11,6 +11,7 @@ import {
   HisSearchPreviewResult,
 } from './types/his-api.types';
 import { AdvancedSearchDto } from './dto/advanced-search.dto';
+import { normalizeHn } from '../../common/utils/normalize-hn';
 
 /** M-06 fix: Validate and sanitize ICD-10 code format */
 function sanitizeIcd10(code: string | null | undefined): string {
@@ -28,6 +29,7 @@ function sanitizePatientName(name: string | null | undefined): string {
   if (!name) return '';
   return String(name).trim().slice(0, 200);
 }
+
 
 type TxClient = Parameters<Parameters<PrismaService['$transaction']>[0]>[0];
 
@@ -91,10 +93,11 @@ export class HisIntegrationService {
   async preview(hn: string, from?: string, to?: string): Promise<PreviewResult> {
     const hisData = await this.hisClient.fetchPatientWithVisits(hn, 'hn', from, to);
 
-    // Check if patient already exists
+    // Check if patient already exists (search both normalized and raw HN)
     const existingPatient = await this.prisma.patient.findFirst({
       where: {
         OR: [
+          { hn: normalizeHn(hisData.patient.hn) },
           { hn: hisData.patient.hn },
           ...(hisData.patient.citizenId ? [{ citizenId: hisData.patient.citizenId }] : []),
         ],
@@ -209,7 +212,7 @@ export class HisIntegrationService {
 
     // 7. Count total linked visits for this patient (outside transaction, read-only)
     const linkedVisitCount = await this.prisma.patientVisit.count({
-      where: { hn },
+      where: { hn: normalizeHn(hn) },
     });
 
     return {
@@ -228,14 +231,19 @@ export class HisIntegrationService {
   private async upsertPatient(tx: TxClient, p: HisPatientSearchResult): Promise<number> {
     const existing = await tx.patient.findFirst({
       where: {
-        OR: [{ hn: p.hn }, ...(p.citizenId ? [{ citizenId: p.citizenId }] : [])],
+        OR: [
+          { hn: normalizeHn(p.hn) },
+          { hn: p.hn }, // also match raw HN for previously imported data
+          ...(p.citizenId ? [{ citizenId: p.citizenId }] : []),
+        ],
       },
       select: { id: true },
     });
 
     // M-06 fix: Sanitize HIS patient data before saving
+    const normalizedHn = normalizeHn(p.hn);
     const data = {
-      hn: p.hn,
+      hn: normalizedHn,
       citizenId: p.citizenId,
       fullName: sanitizePatientName(p.fullName),
       titleName: sanitizePatientName(p.titleName) || null,
@@ -266,6 +274,9 @@ export class HisIntegrationService {
     patientId: number,
     hn: string,
   ): Promise<void> {
+    // Normalize HN: strip leading zeros to match CSV format
+    const normalizedHn = normalizeHn(hn);
+
     // M-06 fix: Sanitize ICD-10 codes from HIS before processing
     const sanitizedPrimaryDx = sanitizeIcd10(visit.primaryDiagnosis);
 
@@ -274,23 +285,35 @@ export class HisIntegrationService {
 
     // Normalize diagnosis codes
     const primaryDx = sanitizedPrimaryDx.replace(/\./g, '').toUpperCase();
+    // Secondary diagnoses are comma-separated — sanitize each code individually
     const secondaryDx = visit.secondaryDiagnoses
-      ? sanitizeIcd10(visit.secondaryDiagnoses).replace(/\./g, '').toUpperCase()
+      ? visit.secondaryDiagnoses
+          .split(',')
+          .map((c) => sanitizeIcd10(c.trim()).replace(/\./g, '').toUpperCase())
+          .filter(Boolean)
+          .join(',')
       : null;
 
     // Build medicationsRaw from structured array (for protocol matching compatibility)
     const meds = visit.medications ?? [];
-    const medicationsRaw = meds.length > 0
-      ? meds
-          .map((m) => `${m.hospitalCode || ''} - ${m.medicationName} ${m.quantity || ''} ${m.unit || ''}`.trim())
-          .join('\n')
-      : null;
+    // Fallback: extract drug info from billingItems (billingGroup=3) when medications array is empty
+    const drugBillingItems = (visit.billingItems ?? []).filter((b) => b.billingGroup === '3');
+    let medicationsRaw: string | null = null;
+    if (meds.length > 0) {
+      medicationsRaw = meds
+        .map((m) => `${m.hospitalCode || ''} - ${m.medicationName} ${m.quantity || ''} ${m.unit || ''}`.trim())
+        .join('\n');
+    } else if (drugBillingItems.length > 0) {
+      medicationsRaw = drugBillingItems
+        .map((b) => `${b.hospitalCode || ''} - ${b.dfsText || b.description}`.trim())
+        .join('\n');
+    }
 
     // Create visit record
     const createdVisit = await tx.patientVisit.create({
       data: {
         importId,
-        hn,
+        hn: normalizedHn,
         vn: visit.vn,
         visitDate: new Date(visit.visitDate),
         primaryDiagnosis: primaryDx,
@@ -317,8 +340,13 @@ export class HisIntegrationService {
     });
 
     // Create VisitMedication + VisitBillingItem records
-    await this.createVisitMedications(tx, createdVisit.id, meds);
+    const medCount = await this.createVisitMedications(tx, createdVisit.id, meds);
     await this.createVisitBillingItems(tx, createdVisit.id, visit.billingItems ?? []);
+
+    // Fallback: create VisitMedication from drug billing items if medications array was empty
+    if (medCount === 0 && drugBillingItems.length > 0) {
+      await this.createMedicationsFromBillingItems(tx, createdVisit.id, drugBillingItems);
+    }
   }
 
   /** Search + preview: single call returns patient + enriched visits with completeness */
@@ -342,10 +370,12 @@ export class HisIntegrationService {
       type as 'hn' | 'citizen_id',
     );
 
-    // Check if patient already exists in our DB
+    // Check if patient already exists in our DB (search both raw and normalized HN)
+    const normalizedHn = normalizeHn(hisData.patient.hn);
     const existingPatient = await this.prisma.patient.findFirst({
       where: {
         OR: [
+          { hn: normalizedHn },
           { hn: hisData.patient.hn },
           ...(hisData.patient.citizenId ? [{ citizenId: hisData.patient.citizenId }] : []),
         ],
@@ -371,7 +401,7 @@ export class HisIntegrationService {
     });
     const protocolDrugNames = protocolDrugs.map((d) => d.genericName.toLowerCase());
 
-    // Enrich each visit
+    // Enrich each visit (normalize billing items for preview display)
     const enrichedVisits = hisData.visits.map((visit) => {
       const meds = visit.medications ?? [];
       const hasProtocolDrugs = meds.some((med) => {
@@ -380,8 +410,25 @@ export class HisIntegrationService {
           (drugName) => medName.includes(drugName) || drugName.includes(medName),
         );
       });
+      // Normalize billing items so preview shows corrected fields
+      const normalizedVisit = visit.billingItems
+        ? {
+            ...visit,
+            billingItems: visit.billingItems.map((item) => {
+              const n = this.normalizeBillingItem(item);
+              return {
+                ...item,
+                description: n.description,
+                claimUnitPrice: n.claimUnitPrice,
+                aipnCode: n.aipnCode ?? undefined,
+                stdCode: n.stdCode ?? undefined,
+                tmtCode: n.tmtCode ?? undefined,
+              };
+            }),
+          }
+        : visit;
       return {
-        visit,
+        visit: normalizedVisit,
         isCancerRelated: isCancerRelatedIcd10(visit.primaryDiagnosis),
         isAlreadyImported: existingVnSet.has(visit.vn),
         completeness: analyzeVisitCompleteness(visit),
@@ -504,6 +551,34 @@ export class HisIntegrationService {
     return count;
   }
 
+  /** Fallback: create VisitMedication records from drug billing items (billingGroup=3) */
+  private async createMedicationsFromBillingItems(
+    tx: TxClient,
+    visitId: number,
+    drugItems: NonNullable<HisVisit['billingItems']>,
+  ): Promise<number> {
+    let count = 0;
+    for (const item of drugItems) {
+      const drugName = item.dfsText || item.description;
+      const resolvedDrugId = drugName
+        ? await this.importService.resolveDrug(drugName)
+        : null;
+      await tx.visitMedication.create({
+        data: {
+          visitId,
+          rawLine: `${item.hospitalCode || ''} - ${drugName}`.trim(),
+          hospitalCode: item.hospitalCode || null,
+          medicationName: drugName || null,
+          quantity: item.quantity != null ? String(item.quantity) : null,
+          unit: item.packsize || null,
+          resolvedDrugId,
+        },
+      });
+      count++;
+    }
+    return count;
+  }
+
   /** Create VisitBillingItem records (extracted helper for reuse) */
   private async createVisitBillingItems(
     tx: TxClient,
@@ -512,29 +587,70 @@ export class HisIntegrationService {
   ): Promise<number> {
     let count = 0;
     for (const item of billingItems) {
+      const normalized = this.normalizeBillingItem(item);
       await tx.visitBillingItem.create({
         data: {
           visitId,
-          hospitalCode: item.hospitalCode,
-          aipnCode: item.aipnCode ? String(item.aipnCode) : null,
-          tmtCode: item.tmtCode ? String(item.tmtCode) : null,
-          stdCode: item.stdCode ? String(item.stdCode) : null,
-          billingGroup: item.billingGroup,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          claimUnitPrice: item.claimUnitPrice ?? item.unitPrice,
-          claimCategory: item.claimCategory || 'OP1',
-          dfsText: item.dfsText || null,
-          packsize: item.packsize || null,
-          sigCode: item.sigCode || null,
-          sigText: item.sigText || null,
-          supplyDuration: item.supplyDuration || null,
+          hospitalCode: normalized.hospitalCode,
+          aipnCode: normalized.aipnCode,
+          tmtCode: normalized.tmtCode,
+          stdCode: normalized.stdCode,
+          billingGroup: normalized.billingGroup,
+          description: normalized.description,
+          quantity: normalized.quantity,
+          unitPrice: normalized.unitPrice,
+          claimUnitPrice: normalized.claimUnitPrice,
+          claimCategory: normalized.claimCategory || 'OP1',
+          dfsText: normalized.dfsText || null,
+          packsize: normalized.packsize || null,
+          sigCode: normalized.sigCode || null,
+          sigText: normalized.sigText || null,
+          supplyDuration: normalized.supplyDuration || null,
         },
       });
       count++;
     }
     return count;
+  }
+
+  /**
+   * Normalize HIS billing item to handle known field swaps:
+   * 1. description empty but dfsText has drug name → use dfsText as description
+   * 2. claimUnitPrice is pre-multiplied total (qty × unitPrice) → divide by qty
+   *
+   * Note: aipnCode = hospitalCode is valid (hospitals may use same local code as AIPN code)
+   */
+  private normalizeBillingItem(item: NonNullable<HisVisit['billingItems']>[number]) {
+    // Fallback description from dfsText when HIS sends description empty
+    const description = item.description || item.dfsText || '';
+
+    // HIS sends claimUnitPrice as pre-multiplied total — divide by qty to get per-unit
+    let claimUnitPrice = item.claimUnitPrice ?? item.unitPrice;
+    if (
+      item.quantity > 0 &&
+      claimUnitPrice !== item.unitPrice &&
+      claimUnitPrice === item.quantity * item.unitPrice
+    ) {
+      claimUnitPrice = claimUnitPrice / item.quantity;
+    }
+
+    return {
+      hospitalCode: item.hospitalCode?.slice(0, 20),
+      aipnCode: item.aipnCode ? String(item.aipnCode).slice(0, 20) : null,
+      tmtCode: item.tmtCode ? String(item.tmtCode).slice(0, 30) : null,
+      stdCode: item.stdCode ? String(item.stdCode).slice(0, 20) : null,
+      billingGroup: item.billingGroup?.slice(0, 5),
+      description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      claimUnitPrice,
+      claimCategory: item.claimCategory?.slice(0, 5),
+      dfsText: item.dfsText,
+      packsize: item.packsize?.slice(0, 20),
+      sigCode: item.sigCode?.slice(0, 20),
+      sigText: item.sigText,
+      supplyDuration: item.supplyDuration?.slice(0, 10),
+    };
   }
 
   /** Sync an already-imported visit with latest data from HIS */
@@ -687,10 +803,22 @@ export class HisIntegrationService {
       drugKeywords: dto.drugNames,
     });
 
+    // 4. Cross-check which HNs already exist in our Patient table (normalize to strip leading zeros)
+    const normalizedHns = [...new Set(results.map((p) => normalizeHn(p.hn)))];
+    const existingPatients = normalizedHns.length > 0
+      ? await this.prisma.patient.findMany({
+          where: { hn: { in: normalizedHns }, isActive: true },
+          select: { hn: true, id: true },
+        })
+      : [];
+    const existingHnMap = new Map(existingPatients.map((p) => [p.hn, p.id]));
+
     // Map matchingVisitCount → totalVisitCount for frontend compatibility
     return results.map((p) => ({
       ...p,
       totalVisitCount: p.matchingVisitCount ?? p.totalVisitCount,
+      existsInSystem: existingHnMap.has(normalizeHn(p.hn)),
+      existingPatientId: existingHnMap.get(normalizeHn(p.hn)) ?? null,
     }));
   }
 

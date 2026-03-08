@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,7 +12,7 @@ import {
   Search,
   AlertCircle,
   X,
-  Lock,
+  FlaskConical,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,10 @@ import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { HisPatientCard } from './his-patient-card';
 import { HisVisitTimeline } from './his-visit-timeline';
+import { HisAdvancedSearch } from './his-advanced-search';
+import type { HisPatient } from './patient-search-results';
 import type { VisitCompleteness } from './his-completeness-badge';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 
 // =====================================================
 // Types (matching backend HisSearchPreviewResult)
@@ -65,10 +68,20 @@ interface HisPreviewVisit {
     medications?: { hospitalCode: string; medicationName: string; quantity?: string; unit?: string }[];
     billingItems?: {
       hospitalCode: string;
+      aipnCode?: string;
+      tmtCode?: string;
+      stdCode?: string;
       billingGroup: string;
       description: string;
+      dfsText?: string;
       quantity: number;
       unitPrice: number;
+      claimUnitPrice?: number;
+      claimCategory?: string;
+      packsize?: string;
+      sigCode?: string;
+      sigText?: string;
+      supplyDuration?: string;
     }[];
   };
   isCancerRelated: boolean;
@@ -115,8 +128,17 @@ export default function PatientCreatePage() {
   // Step machine
   const [step, setStep] = useState<Step>('search');
 
-  // HIS search state
-  const [searchQuery, setSearchQuery] = useState('');
+  // Search tab: simple vs advanced (persisted)
+  const [searchTab, setSearchTab, tabHydrated] = usePersistedState<'simple' | 'advanced'>(
+    'cancer-patients-new:searchTab',
+    'simple',
+  );
+
+  // HIS search state (persisted)
+  const [searchQuery, setSearchQuery, queryHydrated] = usePersistedState(
+    'cancer-patients-new:searchQuery',
+    '',
+  );
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
@@ -125,6 +147,9 @@ export default function PatientCreatePage() {
   const [importingVn, setImportingVn] = useState<string | null>(null);
   const [importedVns, setImportedVns] = useState<Set<string>>(new Set());
   const [syncingVn, setSyncingVn] = useState<string | null>(null);
+
+  // Bulk import state (advanced search)
+  const [importingHn, setImportingHn] = useState<string | null>(null);
 
   // General error
   const [error, setError] = useState<string | null>(null);
@@ -142,6 +167,62 @@ export default function PatientCreatePage() {
   // =====================================================
   // Handlers
   // =====================================================
+
+  /** When a patient is selected from advanced search, switch to simple search flow */
+  const handleAdvancedSelectPatient = useCallback(
+    async (patient: HisPatient) => {
+      const q = patient.hn;
+      setSearchQuery(q);
+      setSearchTab('simple');
+      setSearching(true);
+      setSearchError(null);
+      setError(null);
+      try {
+        const result = await apiClient.get<HisSearchPreviewResult>(
+          `/his-integration/search-preview?q=${encodeURIComponent(q)}&type=hn`,
+        );
+        setSearchResult(result);
+        setImportedVns(new Set());
+        setStep('results');
+      } catch (err: any) {
+        const msg = err?.error?.message || err?.message || 'ไม่สามารถดึงข้อมูลจาก HIS ได้';
+        setSearchError(msg);
+      } finally {
+        setSearching(false);
+      }
+    },
+    [],
+  );
+
+  /** Bulk import all cancer visits for a new patient from advanced search */
+  const handleImportAll = useCallback(
+    async (patient: HisPatient) => {
+      setImportingHn(patient.hn);
+      setError(null);
+      try {
+        const result = await apiClient.post<{
+          patientId: number;
+          importedVisits: number;
+          linkedVisitCount: number;
+        }>(`/his-integration/import/${encodeURIComponent(patient.hn)}`);
+        toast.success(
+          `นำเข้าผู้ป่วย ${patient.fullName} สำเร็จ — ${result.importedVisits} visits`,
+          {
+            action: {
+              label: 'ดูข้อมูลผู้ป่วย',
+              onClick: () => router.push(`/cancer-patients/${result.patientId}`),
+            },
+          },
+        );
+      } catch (err: any) {
+        const msg = err?.error?.message || err?.message || 'ไม่สามารถนำเข้าข้อมูลได้';
+        toast.error(`นำเข้าผู้ป่วยล้มเหลว`, { description: msg });
+      } finally {
+        setImportingHn(null);
+      }
+    },
+    [router],
+  );
 
   const handleSearch = useCallback(async () => {
     const q = searchQuery.trim();
@@ -243,6 +324,8 @@ export default function PatientCreatePage() {
     }
   };
 
+  const filtersHydrated = tabHydrated && queryHydrated;
+
   const resetToSearch = () => {
     setStep('search');
     setSearchResult(null);
@@ -285,69 +368,91 @@ export default function PatientCreatePage() {
       )}
 
       {/* ==================== STEP: SEARCH ==================== */}
-      <div className={cn('space-y-6', step !== 'search' && 'hidden')}>
+      <div className={cn('space-y-6', step !== 'search' && 'hidden', !filtersHydrated && 'opacity-0')}>
         {/* Tab bar */}
         <div className="flex border-b">
           <button
-            className="px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2 border-primary text-primary"
+            className={cn(
+              'px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2',
+              searchTab === 'simple'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+            onClick={() => setSearchTab('simple')}
           >
             ค้นหาผู้ป่วย
           </button>
           <button
-            className="px-4 py-2.5 text-sm font-medium -mb-px text-muted-foreground/50 cursor-not-allowed flex items-center gap-1.5"
-            disabled
-            title="รอ endpoint พร้อม"
+            className={cn(
+              'px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2 flex items-center gap-1.5',
+              searchTab === 'advanced'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+            onClick={() => setSearchTab('advanced')}
           >
-            <Lock className="h-3 w-3" />
+            <FlaskConical className="h-3.5 w-3.5" />
             ค้นหาขั้นสูงจาก HIS
           </button>
         </div>
 
-        {/* Search card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              ค้นหาจากระบบ HIS
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="กรอก HN หรือเลขบัตรประชาชน 13 หลัก"
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="flex-1"
-                autoFocus
-              />
-              <Button onClick={handleSearch} disabled={searching || !searchQuery.trim()}>
-                {searching ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-                <span className="ml-1.5 hidden sm:inline">ค้นหา</span>
-              </Button>
-            </div>
-
-            {/* Search error */}
-            {searchError && (
-              <div className="text-sm text-destructive flex items-center gap-1.5">
-                <AlertCircle className="h-3.5 w-3.5" />
-                {searchError}
+        {/* Simple search */}
+        {searchTab === 'simple' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                ค้นหาจากระบบ HIS
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="กรอก HN หรือเลขบัตรประชาชน 13 หลัก"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="flex-1"
+                  autoFocus
+                />
+                <Button onClick={handleSearch} disabled={searching || !searchQuery.trim()}>
+                  {searching ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                  <span className="ml-1.5 hidden sm:inline">ค้นหา</span>
+                </Button>
               </div>
-            )}
 
-            {/* Loading */}
-            {searching && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                กำลังค้นหาจาก HIS...
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              {/* Search error */}
+              {searchError && (
+                <div className="text-sm text-destructive flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {searchError}
+                </div>
+              )}
+
+              {/* Loading */}
+              {searching && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  กำลังค้นหาจาก HIS...
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Advanced search */}
+        {searchTab === 'advanced' && (
+          <HisAdvancedSearch
+            onSelectPatient={handleAdvancedSelectPatient}
+            onImportAll={handleImportAll}
+            importingHn={importingHn}
+            previewing={searching}
+          />
+        )}
 
         {/* Manual registration link */}
         <div className="text-center">

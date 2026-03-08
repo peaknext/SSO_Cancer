@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,11 +20,15 @@ export interface HisPatient {
   mainHospitalCode?: string;
   totalVisitCount?: number;
   matchingVisitCount?: number;
+  existsInSystem?: boolean;
+  existingPatientId?: number | null;
 }
 
 interface PatientSearchResultsProps {
   results: HisPatient[];
   onSelect: (patient: HisPatient) => void;
+  onImportAll?: (patient: HisPatient) => void;
+  importingHn?: string | null;
   disabled?: boolean;
 }
 
@@ -47,6 +52,8 @@ function calculateAge(dob: string): number {
 export function PatientSearchResults({
   results,
   onSelect,
+  onImportAll,
+  importingHn,
   disabled,
 }: PatientSearchResultsProps) {
   const [filter, setFilter] = useState('');
@@ -94,19 +101,32 @@ export function PatientSearchResults({
       {/* Patient list */}
       <div className="divide-y rounded-lg border">
         {paged.map((p) => (
-          <button
+          <div
             key={p.hn}
             className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex items-center justify-between gap-4"
-            onClick={() => onSelect(p)}
-            disabled={disabled}
           >
-            <div className="min-w-0">
+            <button
+              className="min-w-0 flex-1 text-left"
+              onClick={() => onSelect(p)}
+              disabled={disabled || importingHn === p.hn}
+            >
               <div className="flex items-center gap-2">
                 <span className="font-medium text-sm">{p.fullName}</span>
                 {p.gender && (
                   <Badge variant="outline" className="text-xs">
                     {p.gender === 'M' ? 'ชาย' : 'หญิง'}
                   </Badge>
+                )}
+                {p.existsInSystem != null && (
+                  p.existsInSystem ? (
+                    <Badge className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">
+                      อยู่ในระบบแล้ว
+                    </Badge>
+                  ) : (
+                    <Badge className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">
+                      ผู้ป่วยใหม่
+                    </Badge>
+                  )
                 )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
@@ -120,9 +140,30 @@ export function PatientSearchResults({
                   <span>{p.totalVisitCount} visits</span>
                 )}
               </div>
+            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {onImportAll && p.existsInSystem === false && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-7 gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onImportAll(p);
+                  }}
+                  disabled={disabled || importingHn != null}
+                >
+                  {importingHn === p.hn ? (
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <Download className="h-3 w-3" />
+                  )}
+                  นำเข้าทั้งหมด
+                </Button>
+              )}
+              <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90" />
             </div>
-            <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90 shrink-0" />
-          </button>
+          </div>
         ))}
       </div>
 

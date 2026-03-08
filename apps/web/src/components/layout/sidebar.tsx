@@ -79,6 +79,7 @@ const navItems: NavItem[] = [
     labelThai: 'ส่งออก SSOP',
     href: '/ssop-export',
     icon: FileArchive,
+    hidden: true,
   },
   {
     label: 'Billing',

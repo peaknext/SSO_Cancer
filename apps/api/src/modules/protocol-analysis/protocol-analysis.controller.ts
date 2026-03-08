@@ -29,6 +29,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums';
 import { createPaginatedResponse } from '../../common/dto/paginated-response.dto';
 import { Prisma } from '../../prisma';
+import { normalizeHn } from '../../common/utils/normalize-hn';
 
 @ApiTags('Protocol Analysis')
 @ApiBearerAuth()
@@ -251,7 +252,7 @@ export class ProtocolAnalysisController {
   ) {
     const { page = 1, limit = 50, sortOrder = 'desc', cancerSiteId, hasMedications, hasZ51, visitDateFrom, visitDateTo } = query;
 
-    const where: Prisma.PatientVisitWhereInput = { hn };
+    const where: Prisma.PatientVisitWhereInput = { hn: normalizeHn(hn) };
     if (cancerSiteId) {
       where.resolvedSiteId = cancerSiteId;
     }

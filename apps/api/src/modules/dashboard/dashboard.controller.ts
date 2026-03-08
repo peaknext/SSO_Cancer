@@ -125,6 +125,12 @@ export class DashboardController {
     );
   }
 
+  @Get('patients-without-cases')
+  @ApiOperation({ summary: 'Patients with visits but no active case number' })
+  async getPatientsWithoutCases() {
+    return this.dashboardService.getPatientsWithoutCases();
+  }
+
   @Get('recent-activity')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Last 10 audit log entries' })

@@ -37,10 +37,20 @@ interface HisMedication {
 
 interface HisBillingItem {
   hospitalCode: string;
+  aipnCode?: string;
+  tmtCode?: string;
+  stdCode?: string;
   billingGroup: string;
   description: string;
+  dfsText?: string;
   quantity: number;
   unitPrice: number;
+  claimUnitPrice?: number;
+  claimCategory?: string;
+  packsize?: string;
+  sigCode?: string;
+  sigText?: string;
+  supplyDuration?: string;
 }
 
 interface HisVisit {
@@ -446,40 +456,8 @@ function VisitTimelineEntry({
                   )}
                 </div>
 
-                {/* Billing items */}
-                <div>
-                  <h4 className="text-xs font-medium flex items-center gap-1.5 mb-1.5">
-                    <Receipt className="h-3.5 w-3.5 text-primary" />
-                    รายการค่ารักษา ({items.length})
-                  </h4>
-                  {items.length > 0 ? (
-                    <div className="rounded-md border divide-y">
-                      {items.slice(0, 10).map((item, i) => (
-                        <div key={i} className="px-3 py-1.5 text-xs flex items-center justify-between">
-                          <span className="truncate flex-1 mr-2">
-                            <span className="font-mono text-muted-foreground mr-1">
-                              [{item.billingGroup}]
-                            </span>
-                            {item.description}
-                          </span>
-                          <span className="text-muted-foreground tabular-nums font-mono whitespace-nowrap">
-                            {item.quantity} x {item.unitPrice.toLocaleString()}
-                          </span>
-                        </div>
-                      ))}
-                      {items.length > 10 && (
-                        <div className="px-3 py-1.5 text-xs text-muted-foreground text-center">
-                          ... อีก {items.length - 10} รายการ
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-xs text-warning py-1">
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      ยังไม่มีข้อมูลค่ารักษา
-                    </div>
-                  )}
-                </div>
+                {/* Billing items — SSOP-like detail */}
+                <BillingItemsTable items={items} />
 
                 {/* Missing fields */}
                 {completeness.missingFields.length > 0 && !isImported && (
@@ -572,6 +550,183 @@ function VisitTimelineEntry({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Billing Group Labels ────────────────────────────────────────────────────
+
+const BILLING_GROUP_LABELS: Record<string, string> = {
+  '1': 'ค่าห้อง/อาหาร',
+  '2': 'อุปกรณ์การแพทย์',
+  '3': 'ค่ายา',
+  '4': 'เวชภัณฑ์',
+  '5': 'บริการโลหิต',
+  '6': 'วินิจฉัยเทคนิค',
+  '7': 'ห้องปฏิบัติการ',
+  '8': 'วินิจฉัยอื่น',
+  '9': 'บริการอื่น',
+  '10': 'เวชภัณฑ์อื่น',
+  '11': 'ทันตกรรม',
+  '12': 'ผู้ป่วยนอก',
+  '13': 'กายภาพ',
+  '14': 'แพทย์แผนไทย',
+  '15': 'หอผู้ป่วย',
+  '16': 'อื่นๆ',
+};
+
+const BILLING_GROUP_COLORS: Record<string, string> = {
+  '3': 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/25',
+  '7': 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/25',
+  '8': 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/25',
+  '12': 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/25',
+  '16': 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/25',
+};
+
+function getBillingGroupColor(group: string) {
+  return BILLING_GROUP_COLORS[group] || 'bg-muted text-muted-foreground border-border';
+}
+
+// ─── Billing Items Table (SSOP-like) ────────────────────────────────────────
+
+function BillingItemsTable({ items }: { items: HisBillingItem[] }) {
+  const [showAll, setShowAll] = useState(false);
+
+  // Group items by billingGroup
+  const grouped = items.reduce<Record<string, HisBillingItem[]>>((acc, item) => {
+    const g = item.billingGroup || '16';
+    if (!acc[g]) acc[g] = [];
+    acc[g].push(item);
+    return acc;
+  }, {});
+
+  const groupKeys = Object.keys(grouped).sort((a, b) => parseInt(a) - parseInt(b));
+  const totalAmount = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
+  const totalClaim = items.reduce((sum, i) => sum + i.quantity * (i.claimUnitPrice ?? i.unitPrice), 0);
+
+  const visibleItems = showAll ? items : items.slice(0, 15);
+  const hasMore = items.length > 15;
+
+  return (
+    <div>
+      <h4 className="text-xs font-medium flex items-center gap-1.5 mb-1.5">
+        <Receipt className="h-3.5 w-3.5 text-primary" />
+        รายการค่ารักษา ({items.length})
+        {items.length > 0 && (
+          <span className="ml-auto text-[10px] font-mono text-muted-foreground tabular-nums">
+            รวม {totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+            {totalClaim !== totalAmount && (
+              <span className="ml-1.5 text-primary">
+                เบิก {totalClaim.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+              </span>
+            )}
+          </span>
+        )}
+      </h4>
+      {items.length > 0 ? (
+        <div className="rounded-md border overflow-hidden">
+          {/* Table header */}
+          <div className="grid grid-cols-[32px_60px_1fr_55px_70px_70px] gap-0 bg-muted/50 px-2 py-1 text-[10px] text-muted-foreground font-medium border-b">
+            <span>กลุ่ม</span>
+            <span>รหัส</span>
+            <span>รายการ</span>
+            <span className="text-right">จำนวน</span>
+            <span className="text-right">ราคา</span>
+            <span className="text-right">เบิก</span>
+          </div>
+          {/* Items */}
+          <div className="divide-y">
+            {(showAll ? groupKeys : null)
+              ? groupKeys.map((gk) => (
+                  <div key={gk}>
+                    {/* Group header */}
+                    <div className="bg-muted/30 px-2 py-0.5 text-[10px] text-muted-foreground font-medium flex items-center gap-1.5">
+                      <span className={cn(
+                        'inline-flex items-center rounded px-1 py-0 text-[9px] font-bold border',
+                        getBillingGroupColor(gk),
+                      )}>
+                        {gk}
+                      </span>
+                      {BILLING_GROUP_LABELS[gk] || `กลุ่ม ${gk}`}
+                      <span className="ml-auto tabular-nums">
+                        ({grouped[gk].length})
+                      </span>
+                    </div>
+                    {grouped[gk].map((item, i) => (
+                      <BillingItemRow key={`${gk}-${i}`} item={item} />
+                    ))}
+                  </div>
+                ))
+              : visibleItems.map((item, i) => (
+                  <BillingItemRow key={i} item={item} />
+                ))}
+          </div>
+          {/* Show more / less */}
+          {hasMore && (
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="w-full px-3 py-1.5 text-[10px] text-primary hover:bg-primary/5 transition-colors border-t font-medium"
+            >
+              {showAll
+                ? 'ยุบรายการ'
+                : `แสดงทั้งหมด ${items.length} รายการ (จัดกลุ่มตามหมวด)`}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 text-xs text-warning py-1">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          ยังไม่มีข้อมูลค่ารักษา
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BillingItemRow({ item }: { item: HisBillingItem }) {
+  const isDrug = item.billingGroup === '3';
+  const desc = item.description || item.dfsText || '-';
+  const drugCode = item.tmtCode || item.aipnCode || item.stdCode || item.hospitalCode;
+  const amount = item.quantity * item.unitPrice;
+  const claimAmount = item.quantity * (item.claimUnitPrice ?? item.unitPrice);
+
+  return (
+    <div className="group">
+      <div className="grid grid-cols-[32px_60px_1fr_55px_70px_70px] gap-0 px-2 py-1 text-[11px] items-start hover:bg-muted/20">
+        <span className={cn(
+          'inline-flex items-center justify-center rounded px-0 py-0 text-[9px] font-bold border w-5 h-4 mt-0.5',
+          getBillingGroupColor(item.billingGroup),
+        )}>
+          {item.billingGroup}
+        </span>
+        <span className="font-mono text-[10px] text-muted-foreground truncate mt-0.5" title={drugCode}>
+          {drugCode?.slice(-7) || '-'}
+        </span>
+        <span className="truncate pr-1" title={desc}>
+          {desc}
+        </span>
+        <span className="text-right font-mono text-[10px] tabular-nums text-muted-foreground mt-0.5">
+          {item.quantity}
+        </span>
+        <span className="text-right font-mono text-[10px] tabular-nums mt-0.5">
+          {amount.toLocaleString()}
+        </span>
+        <span className={cn(
+          'text-right font-mono text-[10px] tabular-nums mt-0.5',
+          claimAmount !== amount ? 'text-primary font-medium' : 'text-muted-foreground',
+        )}>
+          {claimAmount.toLocaleString()}
+        </span>
+      </div>
+      {/* Drug detail row — sigText, packsize */}
+      {isDrug && (item.sigText || item.packsize) && (
+        <div className="px-2 pb-1 pl-[94px] text-[10px] text-muted-foreground leading-tight">
+          {item.sigText && <span>{item.sigText}</span>}
+          {item.packsize && (
+            <span className="ml-2 font-mono">pack: {item.packsize}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
