@@ -21,6 +21,12 @@ export class ExportPatientsDto {
   @IsInt()
   sourceHospitalId?: number;
 
+  @ApiPropertyOptional({ description: 'กรองตามชื่อยา (generic name)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  drugName?: string;
+
   @ApiPropertyOptional({ description: 'Comma-separated field keys to include' })
   @IsOptional()
   @IsString()

@@ -331,6 +331,7 @@ export default function CancerPatientsPage() {
           search: search || undefined,
           cancerSiteId: cancerSiteId || undefined,
           sourceHospitalId: sourceHospitalId || undefined,
+          drugName: drugName || undefined,
         }}
       />
     </div>

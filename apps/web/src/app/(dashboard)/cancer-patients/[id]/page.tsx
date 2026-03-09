@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useCallback, useEffect, useRef } from 'react';
+import { use, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -8,10 +8,12 @@ import {
   CheckCircle2,
   ChevronsUpDown,
   Calendar,
+  Filter,
   FolderOpen,
   Loader2,
   Pencil,
   Plus,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/use-api';
@@ -24,12 +26,14 @@ import { Skeleton } from '@/components/shared/loading-skeleton';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Modal } from '@/components/ui/modal';
 import { apiClient } from '@/lib/api-client';
+import { Select } from '@/components/ui/select';
 import { PatientDetail, TopMatch, VisitExportBatch, formatThaiDate, maskCitizenId } from './components/types';
 import { CaseCard } from './components/case-card';
 import { VisitTimelineEntry } from './components/visit-timeline-entry';
 import { CreateCaseModal } from './components/create-case-modal';
 import { EditPatientModal } from './components/edit-patient-modal';
 import { HisImportPanel } from './components/his-import-panel';
+import { BillingOverviewPanel } from './components/billing-overview-panel';
 
 // ─── Assign Case Confirm Dialog ──────────────────────────────────────────────
 
@@ -250,6 +254,40 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const [topMatches, setTopMatches] = useState<Record<string, TopMatch>>({});
   const [loadingMatches, setLoadingMatches] = useState(false);
 
+  // ─── Visit filter states (client-side, no API change) ────────────────────
+  const [filterCaseId, setFilterCaseId] = useState('');
+  const [filterBillingStatus, setFilterBillingStatus] = useState('');
+  const [filterProtocol, setFilterProtocol] = useState('');
+
+  const filteredVisits = useMemo(() => {
+    if (!patient?.visits) return [];
+    return patient.visits.filter((v) => {
+      // Filter by case
+      if (filterCaseId === 'none' && v.case !== null) return false;
+      if (filterCaseId && filterCaseId !== 'none' && String(v.case?.id) !== filterCaseId) return false;
+
+      // Filter by protocol
+      if (filterProtocol === 'confirmed' && !v.confirmedProtocol) return false;
+      if (filterProtocol === 'unconfirmed' && !!v.confirmedProtocol) return false;
+
+      // Filter by latest billing claim status
+      if (filterBillingStatus) {
+        const active = v.billingClaims.filter((bc) => bc.isActive);
+        if (filterBillingStatus === 'none') {
+          if (active.length > 0) return false;
+        } else {
+          if (active.length === 0) return false;
+          const latest = active.reduce((a, b) => (b.roundNumber > a.roundNumber ? b : a));
+          if (latest.status !== filterBillingStatus) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [patient?.visits, filterCaseId, filterBillingStatus, filterProtocol]);
+
+  const hasActiveFilter = filterCaseId || filterBillingStatus || filterProtocol;
+
   // Fetch SSOP export batch status for all visits
   const [visitExportMap, setVisitExportMap] = useState<Record<number, VisitExportBatch[]>>({});
 
@@ -344,6 +382,22 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
       }
       const selectedCase = patient.cases.find((c) => String(c.id) === caseId);
       const visit = patient.visits.find((v) => v.vn === vn);
+
+      // F: Skip dialog when visit has no confirmed protocol and no case protocol conflict
+      const hasConfirmedProtocol = !!visit?.confirmedProtocol;
+      const hasConflict =
+        selectedCase?.protocol &&
+        visit?.confirmedProtocol &&
+        selectedCase.protocol.id !== visit.confirmedProtocol.id;
+
+      if (!hasConfirmedProtocol && !hasConflict) {
+        apiClient
+          .patch(`/cancer-patients/visits/${vn}/assign-case`, { caseId: Number(caseId) })
+          .then(() => { toast.success('กำหนดเคสสำเร็จ'); refetch(); })
+          .catch(() => toast.error('ไม่สามารถกำหนดเคสได้'));
+        return;
+      }
+
       setPendingCaseAssign({
         vn,
         caseId: Number(caseId),
@@ -451,7 +505,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
         </Button>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-wrap">
-            <CodeBadge code={patient.hn} className="text-sm px-3 py-1" />
+            <CodeBadge code={patient.hn} className="text-sm px-3 py-1" copyable />
             <h1 className="font-heading text-xl font-bold text-foreground">
               {patient.fullName}
             </h1>
@@ -491,6 +545,9 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
           </CardContent>
         </Card>
       </div>
+
+      {/* ─── Billing Overview ───────────────────────────────────────────────── */}
+      {patient.visits.length > 0 && <BillingOverviewPanel visits={patient.visits} />}
 
       {/* ─── Cases Section ──────────────────────────────────────────────────── */}
       <div>
@@ -547,19 +604,84 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 size="sm"
                 variant="ghost"
                 className="h-7 text-xs gap-1 text-muted-foreground"
-                onClick={expandedVisits.size === patient.visits.length ? collapseAll : expandAll}
+                onClick={expandedVisits.size >= patient.visits.length ? collapseAll : expandAll}
               >
                 <ChevronsUpDown className="h-3.5 w-3.5" />
-                {expandedVisits.size === patient.visits.length ? 'ยุบทั้งหมด' : 'ขยายทั้งหมด'}
+                {expandedVisits.size >= patient.visits.length ? 'ยุบทั้งหมด' : 'ขยายทั้งหมด'}
               </Button>
             </div>
           )}
         </div>
 
+        {/* D — Visit filter bar */}
+        {patient.visits.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2 mb-3 glass-light rounded-xl px-3 py-2">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <Select
+              value={filterCaseId}
+              onChange={setFilterCaseId}
+              options={[
+                { value: 'none', label: 'ไม่มีเคส' },
+                ...patient.cases.map((c) => ({
+                  value: String(c.id),
+                  label: c.caseNumber + (c.protocol ? ` — ${c.protocol.nameThai}` : ''),
+                })),
+              ]}
+              placeholder="ทุกเคส"
+              className="h-7 text-xs w-40"
+            />
+            <Select
+              value={filterProtocol}
+              onChange={setFilterProtocol}
+              options={[
+                { value: 'confirmed', label: 'ยืนยันแล้ว' },
+                { value: 'unconfirmed', label: 'ยังไม่ยืนยัน' },
+              ]}
+              placeholder="ทุกสถานะโปรโตคอล"
+              className="h-7 text-xs w-44"
+            />
+            <Select
+              value={filterBillingStatus}
+              onChange={setFilterBillingStatus}
+              options={[
+                { value: 'none', label: 'ยังไม่เรียกเก็บ' },
+                { value: 'PENDING', label: 'รอผล' },
+                { value: 'APPROVED', label: 'ผ่าน' },
+                { value: 'REJECTED', label: 'ไม่ผ่าน' },
+              ]}
+              placeholder="ทุกสถานะเรียกเก็บ"
+              className="h-7 text-xs w-44"
+            />
+            {hasActiveFilter && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterCaseId('');
+                  setFilterBillingStatus('');
+                  setFilterProtocol('');
+                }}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+                ล้าง
+              </button>
+            )}
+            <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+              {filteredVisits.length}/{patient.visits.length} visits
+            </span>
+          </div>
+        )}
+
         {patient.visits.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground text-sm">
               ยังไม่มี visit ที่เชื่อมโยงกับผู้ป่วยนี้
+            </CardContent>
+          </Card>
+        ) : filteredVisits.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground text-sm">
+              ไม่พบ visit ที่ตรงกับตัวกรองที่เลือก
             </CardContent>
           </Card>
         ) : (
@@ -568,7 +690,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
             <div className="absolute left-[19px] top-3 bottom-3 w-px bg-border" />
 
             <div className="space-y-1">
-              {patient.visits.map((visit) => {
+              {filteredVisits.map((visit) => {
                 const isExpanded = expandedVisits.has(visit.vn);
                 return (
                   <VisitTimelineEntry

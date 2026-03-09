@@ -5,19 +5,48 @@ import {
   ChevronDown,
   ChevronUp,
   CreditCard,
+  ExternalLink,
   FileArchive,
+  Pill,
   Plus,
   SearchCheck,
 } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CodeBadge } from '@/components/shared/code-badge';
 import { cn } from '@/lib/utils';
-import { Visit, PatientCase, TopMatch, VisitExportBatch, formatThaiDate } from './types';
+import { Visit, VisitMedication, PatientCase, TopMatch, VisitExportBatch, formatThaiDate } from './types';
 import { BillingClaimRow } from './billing-claim-row';
 import { AddBillingClaimForm } from './add-billing-claim-form';
+
+function MedicationChip({ med }: { med: VisitMedication }) {
+  const category = med.resolvedDrug?.drugCategory ?? '';
+  const name = med.resolvedDrug?.genericName ?? med.medicationName;
+  const isResolved = !!med.resolvedDrug;
+
+  const colorClass = isResolved
+    ? category === 'chemotherapy'
+      ? 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-800'
+      : category === 'hormonal'
+        ? 'bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-800'
+        : 'bg-teal-50 text-teal-700 ring-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:ring-teal-800'
+    : 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800';
+
+  return (
+    <span className={cn(
+      'inline-flex items-center gap-1 text-[11px] font-medium rounded-md px-2 py-0.5 ring-1 ring-inset',
+      colorClass,
+    )}>
+      {name}
+      {med.quantity && med.unit && (
+        <span className="opacity-60 font-normal">{med.quantity} {med.unit}</span>
+      )}
+    </span>
+  );
+}
 
 export function VisitTimelineEntry({
   visit,
@@ -76,7 +105,7 @@ export function VisitTimelineEntry({
           <span className="text-xs text-muted-foreground w-[80px] shrink-0 tabular-nums">
             {formatThaiDate(visit.visitDate)}
           </span>
-          <CodeBadge code={visit.vn} />
+          <CodeBadge code={visit.vn} copyable />
           {visit.case ? (
             <Badge variant="default" className="text-[10px]">
               {visit.case.caseNumber}
@@ -161,8 +190,45 @@ export function VisitTimelineEntry({
                   </div>
                 )}
 
+                {/* Medications */}
+                {visit.medications && visit.medications.length > 0 && (
+                  <div className="pt-2 border-t border-border/50">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                        <Pill className="h-3.5 w-3.5" />
+                        รายการยา ({visit.medications.length})
+                      </span>
+                      <Link
+                        href={`/protocol-analysis?vn=${visit.vn}&hn=${visit.hn}`}
+                        className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-2.5 w-2.5" />
+                        ดูการวิเคราะห์
+                      </Link>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {visit.medications.map((med) => (
+                        <MedicationChip key={med.id} med={med} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Protocol — confirmed or best match */}
                 <div className="pt-2 border-t border-border/50">
+                  {(!visit.medications || visit.medications.length === 0) && (
+                    <div className="flex justify-end mb-1">
+                      <Link
+                        href={`/protocol-analysis?vn=${visit.vn}&hn=${visit.hn}`}
+                        className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-2.5 w-2.5" />
+                        ดูการวิเคราะห์
+                      </Link>
+                    </div>
+                  )}
                   {visit.confirmedProtocol ? (
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">

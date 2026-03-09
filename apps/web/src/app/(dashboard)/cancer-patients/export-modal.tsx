@@ -30,6 +30,7 @@ interface ExportModalProps {
     search?: string;
     cancerSiteId?: string;
     sourceHospitalId?: string;
+    drugName?: string;
   };
 }
 
@@ -70,6 +71,7 @@ export function ExportModal({ open, onClose, total, filters }: ExportModalProps)
       if (filters.search) params.set('search', filters.search);
       if (filters.cancerSiteId) params.set('cancerSiteId', filters.cancerSiteId);
       if (filters.sourceHospitalId) params.set('sourceHospitalId', filters.sourceHospitalId);
+      if (filters.drugName) params.set('drugName', filters.drugName);
 
       const url = `/api/v1/cancer-patients/export?${params.toString()}`;
       const token = apiClient.getAccessToken();

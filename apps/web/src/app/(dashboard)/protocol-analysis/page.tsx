@@ -226,6 +226,20 @@ export default function ProtocolAnalysisPage() {
   const [filterDateTo, setFilterDateTo, h8] = usePersistedState('pa:dateTo', '');
   const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7 && h8;
 
+  // Pre-select HN/VN from URL params (from "ดูการวิเคราะห์" link in patient detail)
+  const appliedUrlParams = useRef(false);
+  useEffect(() => {
+    if (!filtersHydrated || appliedUrlParams.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const urlHn = params.get('hn');
+    const urlVn = params.get('vn');
+    if (urlHn || urlVn) {
+      appliedUrlParams.current = true;
+      if (urlHn) setSelectedHn(urlHn);
+      if (urlVn) setSelectedVn(urlVn);
+    }
+  }, [filtersHydrated]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Transient state (not persisted)
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);

@@ -44,6 +44,15 @@ export interface PatientCase {
   _count?: { visits: number };
 }
 
+export interface VisitMedication {
+  id: number;
+  medicationName: string;
+  quantity: number | null;
+  unit: string | null;
+  resolvedDrug: { id: number; genericName: string; drugCategory: string } | null;
+  resolvedAipnCode: string | null;
+}
+
 export interface Visit {
   id: number;
   vn: string;
@@ -54,6 +63,7 @@ export interface Visit {
   hpi: string | null;
   doctorNotes: string | null;
   confirmedAt: string | null;
+  medications: VisitMedication[];
   case: {
     id: number;
     caseNumber: string;

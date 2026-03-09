@@ -255,7 +255,7 @@ export class CancerPatientsService {
   };
 
   async exportExcel(query: ExportPatientsDto): Promise<Buffer> {
-    const { search, cancerSiteId, sourceHospitalId, fields } = query;
+    const { search, cancerSiteId, sourceHospitalId, drugName, fields } = query;
 
     // Parse requested fields (default: all)
     const allKeys = Object.keys(CancerPatientsService.EXPORT_FIELD_MAP);
@@ -280,6 +280,28 @@ export class CancerPatientsService {
     if (sourceHospitalId) caseFilter.sourceHospitalId = sourceHospitalId;
     if (Object.keys(caseFilter).length > 0) {
       where.cases = { some: caseFilter };
+    }
+
+    if (drugName) {
+      const escaped = drugName.replace(/[%_\\]/g, '\\$&');
+      const pattern = `%${escaped}%`;
+      const rows = await this.prisma.$queryRaw<{ hn: string }[]>`
+        SELECT DISTINCT pv.hn
+        FROM patient_visits pv
+        JOIN visit_medications vm ON vm.visit_id = pv.id
+        JOIN drugs d ON d.id = vm.resolved_drug_id
+        WHERE d.generic_name ILIKE ${pattern}
+          AND d.is_active = true
+      `;
+      if (rows.length === 0) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const XLSX = require('xlsx');
+        const ws = XLSX.utils.json_to_sheet([]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Patients');
+        return Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }));
+      }
+      where.hn = { in: rows.map((r) => r.hn) };
     }
 
     const patients = await this.prisma.patient.findMany({
@@ -421,6 +443,18 @@ export class CancerPatientsService {
           billingClaims: {
             where: { isActive: true },
             orderBy: { roundNumber: 'asc' },
+          },
+          medications: {
+            select: {
+              id: true,
+              medicationName: true,
+              quantity: true,
+              unit: true,
+              resolvedDrug: {
+                select: { id: true, genericName: true, drugCategory: true },
+              },
+              resolvedAipnCode: true,
+            },
           },
         },
         orderBy: { visitDate: 'desc' },
