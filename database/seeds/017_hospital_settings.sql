@@ -6,6 +6,12 @@ INSERT INTO app_settings (setting_key, setting_value, description, setting_group
   ('his_api_timeout', '30000', 'Timeout สำหรับเรียก HIS API (มิลลิวินาที)', 'hospital')
 ON CONFLICT (setting_key) DO NOTHING;
 
+-- HIS nightly auto-scan settings
+INSERT INTO app_settings (setting_key, setting_value, description, setting_group) VALUES
+  ('his_nightly_scan_enabled', 'false', 'เปิด/ปิด การสแกนหา Visit ใหม่จาก HIS อัตโนมัติทุกคืน 01.00 น.', 'hospital'),
+  ('his_nightly_scan_last_result', '', 'ผลการสแกนล่าสุด (system-managed JSON — ห้ามแก้ด้วยมือ)', 'hospital')
+ON CONFLICT (setting_key) DO NOTHING;
+
 -- SSOP export settings
 INSERT INTO app_settings (setting_key, setting_value, description, setting_group) VALUES
   ('ssop_care_account', '1', 'รหัสแนวบริหารจัดการ OPServices.CareAccount (1=รพ.หลัก, 9=รพ.เฉพาะทางมะเร็ง)', 'ssop'),

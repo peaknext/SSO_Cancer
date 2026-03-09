@@ -382,8 +382,23 @@ export class DashboardService {
     });
   }
 
-  async getZ51BillingStats() {
-    return this.withCache('z51-billing-stats', async () => {
+  async getZ51BillingStats(dateFrom?: string, dateTo?: string) {
+    const cacheKey =
+      dateFrom || dateTo ? `z51-billing-stats-${dateFrom ?? ''}-${dateTo ?? ''}` : 'z51-billing-stats';
+    return this.withCache(cacheKey, async () => {
+      const params: string[] = [];
+      const dateClauses: string[] = [];
+      let idx = 1;
+      if (dateFrom) {
+        dateClauses.push(`AND pv.visit_date >= $${idx}::date`);
+        params.push(dateFrom);
+        idx++;
+      }
+      if (dateTo) {
+        dateClauses.push(`AND pv.visit_date <= $${idx}::date`);
+        params.push(dateTo);
+      }
+      const dateFilter = dateClauses.join(' ');
       const rows = await this.prisma.$queryRawUnsafe<
         [{
           totalZ51Visits: number;
@@ -392,10 +407,12 @@ export class DashboardService {
           rejectedZ51Visits: number;
           billedZ51Visits: number;
         }]
-      >(`
+      >(
+        `
         WITH z51_visits AS (
-          SELECT id FROM patient_visits
-          WHERE secondary_diagnoses ILIKE '%Z51%'
+          SELECT pv.id FROM patient_visits pv
+          WHERE pv.secondary_diagnoses ILIKE '%Z51%'
+          ${dateFilter}
         ),
         latest_claims AS (
           SELECT DISTINCT ON (vbc.visit_id)
@@ -410,7 +427,9 @@ export class DashboardService {
           COALESCE((SELECT COUNT(*) FROM latest_claims WHERE status = 'PENDING'), 0)::int AS "pendingZ51Visits",
           COALESCE((SELECT COUNT(*) FROM latest_claims WHERE status = 'REJECTED'), 0)::int AS "rejectedZ51Visits",
           (SELECT COUNT(*) FROM latest_claims)::int AS "billedZ51Visits"
-      `);
+        `,
+        ...params,
+      );
       return rows[0];
     });
   }
@@ -577,6 +596,44 @@ export class DashboardService {
         return a.firstTreatmentDate.localeCompare(b.firstTreatmentDate);
       });
     });
+  }
+
+  async getNightlyScanSummary() {
+    const [enabledSetting, lastResultSetting] = await Promise.all([
+      this.prisma.appSetting.findUnique({ where: { settingKey: 'his_nightly_scan_enabled' } }),
+      this.prisma.appSetting.findUnique({ where: { settingKey: 'his_nightly_scan_last_result' } }),
+    ]);
+
+    const enabled = enabledSetting?.settingValue === 'true';
+    let lastScan: Record<string, unknown> | null = null;
+    let scanDate: string | null = null;
+
+    try {
+      if (lastResultSetting?.settingValue) {
+        lastScan = JSON.parse(lastResultSetting.settingValue) as Record<string, unknown>;
+        scanDate = typeof lastScan.date === 'string' ? lastScan.date : null;
+      }
+    } catch {
+      // ignore malformed JSON
+    }
+
+    let recentImports: unknown[] = [];
+    if (scanDate) {
+      const from = new Date(`${scanDate}T00:00:00+07:00`);
+      const to = new Date(`${scanDate}T23:59:59+07:00`);
+      recentImports = await this.prisma.patientImport.findMany({
+        where: {
+          importedByUserId: null,
+          source: 'HIS_API',
+          importedVisits: { gt: 0 },
+          createdAt: { gte: from, lte: to },
+        },
+        include: { patient: { select: { id: true, hn: true, fullName: true } } },
+        orderBy: { createdAt: 'asc' },
+      });
+    }
+
+    return { enabled, lastScan, recentImports };
   }
 
   private async withCache<T>(key: string, fn: () => Promise<T>): Promise<T> {

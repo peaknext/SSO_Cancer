@@ -78,8 +78,13 @@ export class DashboardController {
 
   @Get('z51-billing-stats')
   @ApiOperation({ summary: 'Z51x visit counts with billing status breakdown' })
-  async getZ51BillingStats() {
-    return this.dashboardService.getZ51BillingStats();
+  @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'YYYY-MM-DD' })
+  @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'YYYY-MM-DD' })
+  async getZ51BillingStats(
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.dashboardService.getZ51BillingStats(dateFrom, dateTo);
   }
 
   @Get('z51-actionable-visits')
@@ -136,5 +141,11 @@ export class DashboardController {
   @ApiOperation({ summary: 'Last 10 audit log entries' })
   async getRecentActivity() {
     return this.dashboardService.getRecentActivity();
+  }
+
+  @Get('nightly-scan')
+  @ApiOperation({ summary: 'HIS nightly scan status and recent imports' })
+  async getNightlyScan() {
+    return this.dashboardService.getNightlyScanSummary();
   }
 }

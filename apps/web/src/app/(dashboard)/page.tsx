@@ -20,8 +20,13 @@ import {
   X,
   Receipt,
   UserPlus,
+  ScanSearch,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth-store';
 import { useApi } from '@/hooks/use-api';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import { apiClient } from '@/lib/api-client';
 import { StatCard } from '@/components/dashboard/stat-card';
 import {
@@ -217,6 +222,284 @@ function SectionLabel({ children, dot }: { children: React.ReactNode; dot?: stri
 }
 
 /* ═══════════════════════════════════════════
+   NIGHTLY SCAN TYPES
+   ═══════════════════════════════════════════ */
+
+interface NightlyScanLastResult {
+  date: string;
+  startedAt: string;
+  finishedAt?: string;
+  status: 'success' | 'error';
+  totalScanned: number;
+  newPatients: number;
+  newVisits: number;
+  skipped: number;
+  errors: number;
+  error?: string;
+}
+
+interface NightlyScanImport {
+  id: number;
+  hn: string;
+  importedVisits: number;
+  patient: { id: number; hn: string; fullName: string } | null;
+}
+
+interface NightlyScanSummary {
+  enabled: boolean;
+  lastScan: NightlyScanLastResult | null;
+  recentImports: NightlyScanImport[];
+}
+
+/* ═══════════════════════════════════════════
+   NIGHTLY SCAN WIDGET
+   ═══════════════════════════════════════════ */
+
+function NightlyScanWidget() {
+  const { data: scanData, refetch: refetchScan } = useApi<NightlyScanSummary>('/dashboard/nightly-scan');
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const [toggling, setToggling] = useState(false);
+
+  const handleToggle = async () => {
+    if (!isAdmin || toggling || !scanData) return;
+    setToggling(true);
+    try {
+      const newValue = scanData.enabled ? 'false' : 'true';
+      await apiClient.patch('/app-settings/his_nightly_scan_enabled', { settingValue: newValue });
+      refetchScan();
+    } catch {
+      // ignore
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  if (!scanData) {
+    return (
+      <div className="space-y-3">
+        <SectionLabel dot="bg-slate-400">การสแกน HIS อัตโนมัติ</SectionLabel>
+        <div className="glass glass-noise relative overflow-hidden rounded-xl p-4">
+          <div className="h-5 w-48 animate-pulse rounded bg-muted/50" />
+          <div className="mt-2 h-3 w-72 animate-pulse rounded bg-muted/30" />
+        </div>
+      </div>
+    );
+  }
+
+  const { enabled, lastScan, recentImports } = scanData;
+  const dotColor = enabled ? 'bg-emerald-500' : 'bg-slate-400';
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel dot={dotColor}>การสแกน HIS อัตโนมัติ</SectionLabel>
+
+      <div className="glass glass-noise relative overflow-hidden rounded-xl">
+        {/* Header */}
+        <div className="p-4 border-b border-glass-border-subtle">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <ScanSearch className={cn('h-4 w-4', enabled ? 'text-primary' : 'text-muted-foreground')} />
+              <div>
+                <h2 className="font-heading text-sm font-semibold">การสแกน HIS อัตโนมัติ</h2>
+                {lastScan ? (
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="text-xs text-muted-foreground">
+                      สแกนล่าสุด:{' '}
+                      <span className="text-foreground font-medium">
+                        {new Date(lastScan.date).toLocaleDateString('th-TH', {
+                          year: 'numeric', month: 'long', day: 'numeric',
+                        })}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground text-xs">•</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatShortDate(lastScan.startedAt)}
+                    </span>
+                    {lastScan.status === 'success' ? (
+                      <Badge variant="success" className="text-[10px] px-1.5 py-0">สำเร็จ</Badge>
+                    ) : (
+                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0">ข้อผิดพลาด</Badge>
+                    )}
+                  </div>
+                ) : enabled ? (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    ยังไม่มีผลการสแกน — ระบบจะสแกนอัตโนมัติทุกคืน 01.00 น.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    ปิดใช้งานอยู่ — เปิดใช้งานเพื่อสแกนหา visit ใหม่จาก HIS อัตโนมัติทุกคืน 01.00 น.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Admin toggle */}
+            {isAdmin && (
+              <button
+                onClick={handleToggle}
+                disabled={toggling}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all shrink-0',
+                  'border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  enabled
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                    : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/50',
+                  toggling && 'opacity-50 cursor-not-allowed',
+                )}
+              >
+                {enabled ? (
+                  <ToggleRight className="h-4 w-4" />
+                ) : (
+                  <ToggleLeft className="h-4 w-4" />
+                )}
+                {enabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Stats row — only when there's a last scan */}
+        {lastScan && (
+          <div className="px-4 py-3 border-b border-glass-border-subtle">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5 rounded-lg bg-muted/30 px-3 py-1.5">
+                <ScanSearch className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">พบจาก HIS</span>
+                <span className="text-sm font-bold tabular-nums text-foreground">{lastScan.totalScanned}</span>
+                <span className="text-xs text-muted-foreground">ราย</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5">
+                <CircleCheckBig className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-xs text-emerald-700 dark:text-emerald-300">นำเข้าใหม่</span>
+                <span className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{lastScan.newPatients}</span>
+                <span className="text-xs text-emerald-700 dark:text-emerald-300">ราย</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs text-primary/80">visit ใหม่</span>
+                <span className="text-sm font-bold tabular-nums text-primary">{lastScan.newVisits}</span>
+                <span className="text-xs text-primary/80">ครั้ง</span>
+              </div>
+              {lastScan.errors > 0 && (
+                <div className="flex items-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-1.5">
+                  <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                  <span className="text-xs text-destructive">ข้อผิดพลาด</span>
+                  <span className="text-sm font-bold tabular-nums text-destructive">{lastScan.errors}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Error banner */}
+        {lastScan?.status === 'error' && lastScan.error && (
+          <div className="mx-4 mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+            <span className="font-medium">ข้อผิดพลาด: </span>{lastScan.error}
+          </div>
+        )}
+
+        {/* Patient list */}
+        {lastScan && recentImports.length > 0 ? (
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-glass-border-subtle">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">
+                      HN
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      ชื่อ-สกุล
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">
+                      Visit ใหม่
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">
+                      ดูข้อมูล
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentImports.map((imp) => (
+                    <tr
+                      key={imp.id}
+                      className="border-b border-glass-border-subtle last:border-0 transition-colors hover:bg-primary/[0.02] dark:hover:bg-primary/[0.04]"
+                    >
+                      <td className="px-4 py-3">
+                        <CodeBadge code={imp.patient?.hn ?? imp.hn} />
+                      </td>
+                      <td className="px-4 py-3 font-medium">
+                        {imp.patient?.fullName ?? '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                          <CalendarDays className="h-3 w-3" />
+                          {imp.importedVisits} visit
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {imp.patient ? (
+                          <Link
+                            href={`/cancer-patients/${imp.patient.id}`}
+                            className="text-xs font-medium text-primary hover:underline transition-colors"
+                          >
+                            ดูข้อมูล →
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="md:hidden divide-y divide-glass-border-subtle">
+              {recentImports.map((imp) => (
+                <div key={imp.id} className="p-4 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CodeBadge code={imp.patient?.hn ?? imp.hn} />
+                      <span className="font-medium text-sm">{imp.patient?.fullName ?? '—'}</span>
+                    </div>
+                    {imp.patient && (
+                      <Link
+                        href={`/cancer-patients/${imp.patient.id}`}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        ดูข้อมูล →
+                      </Link>
+                    )}
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    <CalendarDays className="h-3 w-3" />
+                    {imp.importedVisits} visit ใหม่
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : lastScan && lastScan.newPatients === 0 ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">
+            ไม่พบผู้ป่วยหรือ visit ใหม่จากการสแกนล่าสุด
+          </div>
+        ) : !lastScan ? (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            {enabled
+              ? 'ระบบจะเริ่มสแกนอัตโนมัติในคืนถัดไปเวลา 01.00 น.'
+              : 'เปิดใช้งานการสแกนอัตโนมัติในปุ่มด้านบน'}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
    Z51 FILTER CONSTANTS
    ═══════════════════════════════════════════ */
 
@@ -239,13 +522,44 @@ const Z51_BILLING_FILTERS = [
 
 export default function DashboardPage() {
   const router = useRouter();
+
+  // ─── State hooks first (so derived paths are available before API hooks) ───
+  const [drugFilter, setDrugFilter] = useState('all');
+  const [extraVisits, setExtraVisits] = useState<Z51ActionableVisit[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadedAll, setLoadedAll] = useState(false);
+
+  // ─── Global period (date range) — filters Z51 stats + actionable table ───
+  const [periodFrom, setPeriodFrom, h2] = usePersistedState('dashboard_period_from', '');
+  const [periodTo, setPeriodTo, h3] = usePersistedState('dashboard_period_to', '');
+  const hasPeriod = periodFrom !== '' || periodTo !== '';
+
+  // ─── Z51 table filters (persisted) ───
+  const [z51DiagCode, setZ51DiagCode, h1] = usePersistedState('dashboard_z51_diag', '');
+  const [z51BillingStatus, setZ51BillingStatus, h4] = usePersistedState('dashboard_z51_billing', '');
+  const filtersHydrated = h1 && h2 && h3 && h4;
+
+  const hasZ51Filters = z51DiagCode !== '' || z51BillingStatus !== '';
+
+  // ─── Derived API paths (computed before hooks) ───
+  const z51StatsParams = new URLSearchParams();
+  if (periodFrom) z51StatsParams.set('dateFrom', periodFrom);
+  if (periodTo) z51StatsParams.set('dateTo', periodTo);
+  const z51StatsPath = `/dashboard/z51-billing-stats${z51StatsParams.size ? `?${z51StatsParams}` : ''}`;
+
+  const z51Params = new URLSearchParams({ offset: '0', limit: '20' });
+  if (z51DiagCode) z51Params.set('diagnosisCode', z51DiagCode);
+  if (periodFrom) z51Params.set('dateFrom', periodFrom);
+  if (periodTo) z51Params.set('dateTo', periodTo);
+  if (z51BillingStatus) z51Params.set('billingStatus', z51BillingStatus);
+
+  // ─── API hooks ───
   const { data: overview, isLoading: loadingOverview } =
     useApi<DashboardOverview>('/dashboard/overview');
   const { data: z51Stats } =
-    useApi<Z51BillingStats>('/dashboard/z51-billing-stats');
+    useApi<Z51BillingStats>(z51StatsPath, { enabled: filtersHydrated });
   const { data: visitsBySite } =
     useApi<VisitBySite[]>('/dashboard/visits-by-site');
-  const [drugFilter, setDrugFilter] = useState('all');
   const { data: topDrugs, isLoading: loadingTopDrugs } = useApi<TopDrug[]>(
     `/dashboard/top-drugs?category=${encodeURIComponent(drugFilter)}`,
   );
@@ -257,35 +571,17 @@ export default function DashboardPage() {
     useApi<AiStats>('/dashboard/ai-stats');
   const { data: patientsWithoutCases } =
     useApi<PatientWithoutCase[]>('/dashboard/patients-without-cases');
-
-  // ─── Z51 filter state ───
-  const [z51DiagCode, setZ51DiagCode] = useState('');
-  const [z51DateFrom, setZ51DateFrom] = useState('');
-  const [z51DateTo, setZ51DateTo] = useState('');
-  const [z51BillingStatus, setZ51BillingStatus] = useState('');
-  const hasZ51Filters =
-    z51DiagCode !== '' || z51DateFrom !== '' || z51DateTo !== '' || z51BillingStatus !== '';
-
-  // Build filtered URL for Z51 actionable visits
-  const z51Params = new URLSearchParams({ offset: '0', limit: '20' });
-  if (z51DiagCode) z51Params.set('diagnosisCode', z51DiagCode);
-  if (z51DateFrom) z51Params.set('dateFrom', z51DateFrom);
-  if (z51DateTo) z51Params.set('dateTo', z51DateTo);
-  if (z51BillingStatus) z51Params.set('billingStatus', z51BillingStatus);
-
   const { data: z51Response, isLoading: loadingZ51 } =
-    useApi<Z51ActionableResponse>(`/dashboard/z51-actionable-visits?${z51Params}`);
+    useApi<Z51ActionableResponse>(`/dashboard/z51-actionable-visits?${z51Params}`, {
+      enabled: filtersHydrated,
+    });
 
-  // Actionable visits — local state for load-more
-  const [extraVisits, setExtraVisits] = useState<Z51ActionableVisit[]>([]);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [loadedAll, setLoadedAll] = useState(false);
-
-  // Reset pagination when filters change
+  // Reset pagination when filters change (only after hydration)
   useEffect(() => {
+    if (!filtersHydrated) return;
     setExtraVisits([]);
     setLoadedAll(false);
-  }, [z51DiagCode, z51DateFrom, z51DateTo, z51BillingStatus]);
+  }, [z51DiagCode, periodFrom, periodTo, z51BillingStatus, filtersHydrated]);
 
   const allVisits = [...(z51Response?.data ?? []), ...extraVisits];
   const filteredTotal = z51Response?.total ?? 0;
@@ -305,8 +601,8 @@ export default function DashboardPage() {
         limit: '20',
       });
       if (z51DiagCode) loadMoreParams.set('diagnosisCode', z51DiagCode);
-      if (z51DateFrom) loadMoreParams.set('dateFrom', z51DateFrom);
-      if (z51DateTo) loadMoreParams.set('dateTo', z51DateTo);
+      if (periodFrom) loadMoreParams.set('dateFrom', periodFrom);
+      if (periodTo) loadMoreParams.set('dateTo', periodTo);
       if (z51BillingStatus) loadMoreParams.set('billingStatus', z51BillingStatus);
 
       const res = await apiClient.get<Z51ActionableResponse>(
@@ -321,7 +617,7 @@ export default function DashboardPage() {
     } finally {
       setLoadingMore(false);
     }
-  }, [allVisits.length, loadingMore, z51DiagCode, z51DateFrom, z51DateTo, z51BillingStatus]);
+  }, [allVisits.length, loadingMore, z51DiagCode, periodFrom, periodTo, z51BillingStatus]);
 
   if (loadingOverview) {
     return <DashboardSkeleton />;
@@ -342,22 +638,45 @@ export default function DashboardPage() {
             ภาพรวมข้อมูลโปรโตคอลรักษามะเร็ง — Protocol Data Overview
           </p>
         </div>
-        {stats?.visitDateRange && (
-          <div className="flex items-center gap-2 rounded-lg bg-card border border-glass-border-subtle px-3 py-2 text-xs text-muted-foreground shrink-0 shadow-sm">
-            <CalendarDays className="h-3.5 w-3.5 text-primary" />
-            <span>
-              ข้อมูลทั้งหมด{' '}
-              <span className="font-medium text-foreground">
-                {formatThaiDate(stats.visitDateRange.minDate)}
-              </span>
-              {' — '}
-              <span className="font-medium text-foreground">
-                {formatThaiDate(stats.visitDateRange.maxDate)}
-              </span>
-            </span>
-          </div>
-        )}
+
+        {/* Global period picker — filters Z51 stats cards + actionable visits */}
+        <div className="flex items-center gap-2 rounded-xl bg-card border border-glass-border-subtle px-3 py-2 shadow-sm shrink-0">
+          <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">ช่วงวันที่:</span>
+          <ThaiDatePicker
+            value={periodFrom}
+            onChange={setPeriodFrom}
+            placeholder="จากวันที่"
+            className="h-7 w-37 text-xs border-border/50"
+          />
+          <span className="text-muted-foreground text-xs">—</span>
+          <ThaiDatePicker
+            value={periodTo}
+            onChange={setPeriodTo}
+            placeholder="ถึงวันที่"
+            className="h-7 w-37 text-xs border-border/50"
+          />
+          {hasPeriod && (
+            <button
+              onClick={() => { setPeriodFrom(''); setPeriodTo(''); }}
+              className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all"
+              title="ล้างช่วงวันที่"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Period context note */}
+      {hasPeriod && (
+        <p className="text-xs text-muted-foreground -mt-4">
+          <span className="text-primary font-medium">กรองอยู่:</span> Z51x Billing Stats และตาราง Visit ที่ต้องดำเนินการ ถูกกรองตามช่วงวันที่ที่เลือก
+        </p>
+      )}
+
+      {/* ─── Nightly HIS Auto-Scan ─── */}
+      <NightlyScanWidget />
 
       {/* ─── Z51x Billing Stats ─── */}
       <div className="space-y-3">
@@ -737,34 +1056,11 @@ export default function DashboardPage() {
                   ))}
                 </div>
 
-                {/* Separator */}
-                <div className="h-5 w-px bg-border/60 hidden sm:block" />
-
-                {/* Date range */}
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <ThaiDatePicker
-                    value={z51DateFrom}
-                    onChange={setZ51DateFrom}
-                    placeholder="จากวันที่"
-                    className="h-8 w-[168px] text-xs"
-                  />
-                  <span className="text-muted-foreground text-xs">—</span>
-                  <ThaiDatePicker
-                    value={z51DateTo}
-                    onChange={setZ51DateTo}
-                    placeholder="ถึงวันที่"
-                    className="h-8 w-[168px] text-xs"
-                  />
-                </div>
-
-                {/* Clear button */}
+                {/* Clear table filters button */}
                 {hasZ51Filters && (
                   <button
                     onClick={() => {
                       setZ51DiagCode('');
-                      setZ51DateFrom('');
-                      setZ51DateTo('');
                       setZ51BillingStatus('');
                     }}
                     className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all"
@@ -991,6 +1287,7 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
