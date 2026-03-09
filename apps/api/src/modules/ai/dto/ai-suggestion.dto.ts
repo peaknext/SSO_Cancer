@@ -9,10 +9,10 @@ import { ApiProperty } from '@nestjs/swagger';
 export class ValidateKeyDto {
   @ApiProperty({
     description: 'AI provider name to validate (reads stored key from app_settings)',
-    enum: ['gemini', 'claude', 'openai'],
+    enum: ['gemini', 'claude', 'openai', 'ollama'],
   })
   @IsString()
   @IsNotEmpty()
-  @IsIn(['gemini', 'claude', 'openai'])
+  @IsIn(['gemini', 'claude', 'openai', 'ollama'])
   provider: string;
 }
