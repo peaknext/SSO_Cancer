@@ -48,7 +48,7 @@ export class AiService {
       map[s.settingKey] = s.settingValue;
     }
     // H-03: Decrypt sensitive settings
-    for (const key of ['ai_gemini_api_key', 'ai_claude_api_key', 'ai_openai_api_key']) {
+    for (const key of ['ai_gemini_api_key', 'ai_claude_api_key', 'ai_openai_api_key', 'ai_ollama_api_key']) {
       if (map[key]) map[key] = decryptValue(map[key]);
     }
     this.settingsCache = { data: map, expiresAt: Date.now() + this.SETTINGS_CACHE_TTL };
@@ -125,6 +125,7 @@ export class AiService {
       model,
       maxTokens: parseInt(settings['ai_max_tokens'] || '2048'),
       temperature: parseFloat(settings['ai_temperature'] || '0.3'),
+      ...(providerName === 'ollama' && { baseUrl: settings['ai_ollama_base_url'] }),
     };
 
     let aiResponse: AiCompletionResponse;
@@ -257,7 +258,8 @@ export class AiService {
     }
 
     const provider = this.providerFactory.getProvider(providerName);
-    const valid = await provider.validateApiKey(apiKey);
+    const baseUrl = providerName === 'ollama' ? settings['ai_ollama_base_url'] : undefined;
+    const valid = await (provider as any).validateApiKey(apiKey, baseUrl);
     return { provider: providerName, valid };
   }
 

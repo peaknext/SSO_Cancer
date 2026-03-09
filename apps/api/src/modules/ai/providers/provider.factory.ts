@@ -3,6 +3,7 @@ import { AiProvider } from './ai-provider.interface';
 import { GeminiProvider } from './gemini.provider';
 import { ClaudeProvider } from './claude.provider';
 import { OpenAiProvider } from './openai.provider';
+import { OllamaProvider } from './ollama.provider';
 
 @Injectable()
 export class AiProviderFactory {
@@ -12,10 +13,12 @@ export class AiProviderFactory {
     private readonly geminiProvider: GeminiProvider,
     private readonly claudeProvider: ClaudeProvider,
     private readonly openAiProvider: OpenAiProvider,
+    private readonly ollamaProvider: OllamaProvider,
   ) {
     this.providers.set('gemini', this.geminiProvider);
     this.providers.set('claude', this.claudeProvider);
     this.providers.set('openai', this.openAiProvider);
+    this.providers.set('ollama', this.ollamaProvider);
   }
 
   getProvider(name: string): AiProvider {

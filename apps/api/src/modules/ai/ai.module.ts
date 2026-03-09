@@ -4,6 +4,7 @@ import { AiService } from './ai.service';
 import { GeminiProvider } from './providers/gemini.provider';
 import { ClaudeProvider } from './providers/claude.provider';
 import { OpenAiProvider } from './providers/openai.provider';
+import { OllamaProvider } from './providers/ollama.provider';
 import { AiProviderFactory } from './providers/provider.factory';
 import { ProtocolAnalysisModule } from '../protocol-analysis/protocol-analysis.module';
 
@@ -15,6 +16,7 @@ import { ProtocolAnalysisModule } from '../protocol-analysis/protocol-analysis.m
     GeminiProvider,
     ClaudeProvider,
     OpenAiProvider,
+    OllamaProvider,
     AiProviderFactory,
   ],
   exports: [AiService],

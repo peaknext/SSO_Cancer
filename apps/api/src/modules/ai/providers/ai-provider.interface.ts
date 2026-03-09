@@ -3,6 +3,7 @@ export interface AiProviderConfig {
   model: string;
   maxTokens: number;
   temperature: number;
+  baseUrl?: string;
 }
 
 export interface AiCompletionRequest {

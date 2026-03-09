@@ -27,6 +27,7 @@ const seedFiles = [
   '015_sso_protocol_drugs.sql',
   '016_hospitals.sql',
   '017_hospital_settings.sql',
+  '018_ollama_ai_settings.sql',
 ];
 
 async function main() {

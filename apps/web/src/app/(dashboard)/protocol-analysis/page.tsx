@@ -228,6 +228,9 @@ export default function ProtocolAnalysisPage() {
 
   // Pre-select HN/VN from URL params (from "ดูการวิเคราะห์" link in patient detail)
   const appliedUrlParams = useRef(false);
+  // pendingUrlVn holds the VN from URL params until visits finish loading
+  // (the selectedHn effect resets selectedVn when HN changes, so we restore VN after visits load)
+  const pendingUrlVn = useRef<string | null>(null);
   useEffect(() => {
     if (!filtersHydrated || appliedUrlParams.current) return;
     const params = new URLSearchParams(window.location.search);
@@ -235,8 +238,9 @@ export default function ProtocolAnalysisPage() {
     const urlVn = params.get('vn');
     if (urlHn || urlVn) {
       appliedUrlParams.current = true;
+      if (urlVn) pendingUrlVn.current = urlVn;
       if (urlHn) setSelectedHn(urlHn);
-      if (urlVn) setSelectedVn(urlVn);
+      else if (urlVn) setSelectedVn(urlVn);
     }
   }, [filtersHydrated]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -344,7 +348,14 @@ export default function ProtocolAnalysisPage() {
       .get<PaginatedResponse<VisitSummary>>(
         `/protocol-analysis/patients/${selectedHn}/visits?${params}`,
       )
-      .then((res) => setVisits(res.data))
+      .then((res) => {
+        setVisits(res.data);
+        // Restore VN from URL params if pending (selectedHn effect resets selectedVn above)
+        if (pendingUrlVn.current) {
+          setSelectedVn(pendingUrlVn.current);
+          pendingUrlVn.current = null;
+        }
+      })
       .catch(() => setVisits([]))
       .finally(() => setLoadingVisits(false));
   }, [selectedHn, filterSiteId, filterHasMeds, filterHasZ51, filterDateFrom, filterDateTo, filtersHydrated]);

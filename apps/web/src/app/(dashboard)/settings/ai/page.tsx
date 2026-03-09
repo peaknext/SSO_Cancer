@@ -37,9 +37,10 @@ interface GroupedSettings {
 }
 
 const PROVIDERS = [
-  { value: 'gemini', label: 'Google Gemini', color: 'text-blue-600 dark:text-blue-400' },
-  { value: 'claude', label: 'Anthropic Claude', color: 'text-orange-600 dark:text-orange-400' },
-  { value: 'openai', label: 'OpenAI', color: 'text-green-600 dark:text-green-400' },
+  { value: 'gemini', label: 'Google Gemini', color: 'text-blue-600 dark:text-blue-400', baseUrlField: null },
+  { value: 'claude', label: 'Anthropic Claude', color: 'text-orange-600 dark:text-orange-400', baseUrlField: null },
+  { value: 'openai', label: 'OpenAI', color: 'text-green-600 dark:text-green-400', baseUrlField: null },
+  { value: 'ollama', label: 'Ollama (Self-hosted)', color: 'text-purple-600 dark:text-purple-400', baseUrlField: 'ai_ollama_base_url' },
 ];
 
 export default function AiSettingsPage() {
@@ -372,6 +373,28 @@ export default function AiSettingsPage() {
                   )}
                 </div>
               </div>
+
+              {/* Base URL (Ollama only) */}
+              {provider.baseUrlField && (
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Base URL</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={getValue(provider.baseUrlField)}
+                      onChange={(e) => isSuperAdmin && setValue(provider.baseUrlField!, e.target.value)}
+                      placeholder="https://ollama.peaknext.cloud"
+                      className="h-8 text-sm font-mono max-w-sm"
+                      disabled={!isSuperAdmin}
+                    />
+                    {dirty.has(provider.baseUrlField) && (
+                      <Button size="sm" onClick={() => saveKey(provider.baseUrlField!)} disabled={saving === provider.baseUrlField}>
+                        <Save className="h-3 w-3 mr-1" />
+                        บันทึก
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         );
