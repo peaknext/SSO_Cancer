@@ -258,14 +258,15 @@ export function ProtocolCombobox({
                 <span className="text-[11px] text-muted-foreground hidden sm:inline">
                   {selectedProtocol.cancerSite.nameThai}
                 </span>
-                <button
-                  type="button"
-                  onClick={clearSelection}
-                  className="rounded-full p-0.5 hover:bg-muted transition-colors"
+                <span
+                  role="button"
                   tabIndex={-1}
+                  onClick={clearSelection}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') clearSelection(e as unknown as React.MouseEvent); }}
+                  className="rounded-full p-0.5 hover:bg-muted transition-colors cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                </button>
+                </span>
               </span>
             </>
           ) : (

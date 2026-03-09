@@ -5,6 +5,7 @@ import {
   HisPatientSearchResult,
   HisPatientData,
   HisVisit,
+  extractDiagnosesFromArray,
 } from './types/his-api.types';
 import { decryptValue } from '../../common/utils/crypto.util';
 
@@ -324,20 +325,48 @@ export class HisApiClient {
     }
   }
 
-  /** Normalize HIS visit data — handle missing arrays and empty string dates */
+  /**
+   * Normalize HIS visit data — handle missing arrays, empty string dates,
+   * diagnoses array (trim diagType, filter ICD-9 from primary), and new SKS fields.
+   */
   private normalizeHisVisit(visit: Record<string, any>): HisVisit {
+    // Normalize diagnoses array: trim diagType trailing spaces (HOSxP char field padding)
+    const rawDiagnoses = Array.isArray(visit.diagnoses) ? visit.diagnoses : [];
+    const diagnoses = rawDiagnoses.map((dx: any) => ({
+      diagCode: dx.diagCode?.trim() || '',
+      diagType: dx.diagType?.trim() || '',
+      diagTerm: dx.diagTerm || null,
+    }));
+
+    // If structured diagnoses array available, reconstruct primary/secondary with ICD-9 filtering
+    let primaryDiagnosis = visit.primaryDiagnosis || null;
+    let secondaryDiagnoses = visit.secondaryDiagnoses || null;
+
+    if (diagnoses.length > 0) {
+      const extracted = extractDiagnosesFromArray(diagnoses);
+      if (extracted.primaryDiagnosis) {
+        primaryDiagnosis = extracted.primaryDiagnosis;
+      }
+      if (extracted.secondaryDiagnoses) {
+        secondaryDiagnoses = extracted.secondaryDiagnoses;
+      }
+    }
+
     return {
       ...visit,
+      diagnoses,
       medications: Array.isArray(visit.medications) ? visit.medications : [],
       billingItems: Array.isArray(visit.billingItems) ? visit.billingItems : [],
-      primaryDiagnosis: visit.primaryDiagnosis || null,
+      primaryDiagnosis,
+      secondaryDiagnoses,
       nextAppointmentDate: visit.nextAppointmentDate?.trim() || null,
       prescriptionTime: visit.prescriptionTime?.trim() || null,
       serviceClass: visit.serviceClass?.trim() || null,
       serviceType: visit.serviceType?.trim() || null,
-      visitType: visit.visitType || null,
-      dischargeType: visit.dischargeType || null,
+      visitType: visit.visitType?.trim() || null,
+      dischargeType: visit.dischargeType?.trim() || null,
       dayCover: visit.dayCover || null,
+      receiptNo: visit.receiptNo?.trim() || null,
     } as HisVisit;
   }
 

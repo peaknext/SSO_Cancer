@@ -331,8 +331,8 @@ export class ProtocolAnalysisController {
         confirmedRegimen: { select: { id: true, regimenCode: true, regimenName: true } },
         confirmedByUser: { select: { id: true, fullName: true, fullNameThai: true } },
         visitBillingItems: {
-          where: { isActive: true },
-          select: { hospitalCode: true, aipnCode: true },
+          where: { isActive: true, billingGroup: '3' },
+          select: { hospitalCode: true, sksDrugCode: true },
         },
       },
     });
@@ -341,18 +341,18 @@ export class ProtocolAnalysisController {
 
     // ── Resolve AIPN codes for each medication ──────────────────────
     // Two strategies in priority order:
-    //  1. Billing items: hospitalCode → aipnCode (HIS import)
+    //  1. Billing items: hospitalCode → sksDrugCode (TMT TPU = AIPN code)
     //  2. Name match: resolvedDrug.genericName → SsoAipnItem.description ILIKE
-    // Note: hospitalCode (hospital internal, 1500000+) ≠ AIPN code (national, 55825–1353186)
+    // sksDrugCode IS the real TMT TPU code = sso_aipn_items.code
 
     const medAipnCodes = new Map<number, number>(); // med.id → aipnCode
 
-    // Strategy 1: billing items (HIS import provides explicit aipnCode per hospitalCode)
+    // Strategy 1: billing items — sksDrugCode is the TMT TPU code (= AIPN code)
     const hospToAipn = new Map<string, number>();
     for (const item of visit.visitBillingItems) {
-      if (item.hospitalCode && item.aipnCode) {
-        const parsed = parseInt(item.aipnCode, 10);
-        if (!isNaN(parsed)) hospToAipn.set(item.hospitalCode, parsed);
+      if (item.hospitalCode && item.sksDrugCode) {
+        const parsed = parseInt(item.sksDrugCode, 10);
+        if (!isNaN(parsed) && parsed > 0) hospToAipn.set(item.hospitalCode, parsed);
       }
     }
     for (const med of visit.medications) {
@@ -460,6 +460,7 @@ export class ProtocolAnalysisController {
 
       return {
         ...med,
+        resolvedAipnCode: aipnCode ?? med.resolvedAipnCode ?? null,
         aipnPricing: aipnPrice
           ? {
               rate: aipnPrice.rate,
@@ -653,8 +654,8 @@ export class ProtocolAnalysisController {
           include: { resolvedDrug: { select: { genericName: true } } },
         },
         visitBillingItems: {
-          where: { isActive: true },
-          select: { hospitalCode: true, aipnCode: true },
+          where: { isActive: true, billingGroup: '3' },
+          select: { hospitalCode: true, sksDrugCode: true },
         },
         confirmedProtocol: {
           select: { protocolCode: true, nameEnglish: true },
@@ -669,12 +670,12 @@ export class ProtocolAnalysisController {
       );
     }
 
-    // Resolve AIPN codes: billing items first, then name-based fallback
+    // Resolve AIPN codes: sksDrugCode (TMT TPU = AIPN code) first, then name-based fallback
     const billingAipnMap = new Map<string, number>();
     for (const item of visit.visitBillingItems) {
-      if (item.hospitalCode && item.aipnCode) {
-        const parsed = parseInt(item.aipnCode, 10);
-        if (!isNaN(parsed)) billingAipnMap.set(item.hospitalCode, parsed);
+      if (item.hospitalCode && item.sksDrugCode) {
+        const parsed = parseInt(item.sksDrugCode, 10);
+        if (!isNaN(parsed) && parsed > 0) billingAipnMap.set(item.hospitalCode, parsed);
       }
     }
     const seen = new Set<number>();

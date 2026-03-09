@@ -9,6 +9,7 @@ import { ImportPatientDto } from './dto/import-patient.dto';
 import { AdvancedSearchDto } from './dto/advanced-search.dto';
 import { ImportSingleVisitDto } from './dto/import-single-visit.dto';
 import { SyncVisitDto } from './dto/sync-visit.dto';
+import { BatchSyncDto } from './dto/batch-sync.dto';
 
 @ApiTags('HIS Integration')
 @ApiBearerAuth()
@@ -86,6 +87,24 @@ export class HisIntegrationController {
     );
   }
 
+  @Post('batch-sync')
+  @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'ซิงค์ข้อมูลหลาย visit พร้อมกันกับข้อมูลล่าสุดจาก HIS' })
+  batchSync(
+    @Body() dto: BatchSyncDto,
+    @Query() searchDto: SearchPatientDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    const type = searchDto.type || (/^\d{13}$/.test(searchDto.q?.trim()) ? 'citizen_id' : 'hn');
+    return this.hisService.batchSyncVisits(
+      dto.hn,
+      dto.vns,
+      searchDto.q,
+      type as 'hn' | 'citizen_id',
+      userId,
+    );
+  }
+
   @Post('search/advanced')
   @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'ค้นหาผู้ป่วยขั้นสูงจาก HIS (ตามเกณฑ์ทางคลินิก)' })
@@ -98,6 +117,20 @@ export class HisIntegrationController {
   @ApiOperation({ summary: 'รายชื่อยาที่ใช้ในโปรโตคอล (สำหรับ filter ค้นหาขั้นสูง)' })
   getProtocolDrugNames() {
     return this.hisService.getProtocolDrugNames();
+  }
+
+  @Post('backfill-aipn')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Backfill AIPN codes สำหรับ VisitMedication ที่มีอยู่ (one-time)' })
+  backfillAipnCodes() {
+    return this.hisService.backfillAipnCodes();
+  }
+
+  @Post('purge-visits')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'ล้างข้อมูล visit ทั้งหมด (SUPER_ADMIN only)' })
+  purgeVisits() {
+    return this.hisService.purgeAllVisits();
   }
 
   @Get('health')

@@ -29,6 +29,7 @@ const groupLabels: Record<string, string> = {
   auth: 'การยืนยันตัวตน (Authentication)',
   display: 'การแสดงผล (Display)',
   hospital: 'สถานพยาบาล / HIS (Hospital & HIS Integration)',
+  ssop: 'SSOP Export',
   system: 'ระบบ (System)',
 };
 

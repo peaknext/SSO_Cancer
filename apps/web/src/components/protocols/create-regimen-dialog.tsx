@@ -244,7 +244,7 @@ export function CreateRegimenDialog({ open, onClose, onSuccess }: CreateRegimenD
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto">
           {/* ─── Regimen Info ─────────────────────────────────────────── */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wide">

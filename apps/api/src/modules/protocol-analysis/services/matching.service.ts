@@ -319,6 +319,18 @@ export class MatchingService {
       }
     }
 
+    // Step 3c: Collect validated AIPN codes from medications (for code-based formulary check)
+    // Only non-supportive drugs are included for formulary scoring
+    const visitAipnCodes = new Set<number>();
+    for (const med of visit.medications) {
+      if (
+        med.resolvedAipnCode &&
+        med.resolvedDrug?.drugCategory?.toLowerCase() !== 'supportive'
+      ) {
+        visitAipnCodes.add(med.resolvedAipnCode);
+      }
+    }
+
     // Step 3.5: Get previously confirmed protocol IDs for this patient
     const confirmedProtocolIds = new Set<number>();
     if (visit.hn) {
@@ -383,15 +395,18 @@ export class MatchingService {
       },
     });
 
-    // Step 5.5: Load formulary drug names for all candidate protocols
-    // Pass visit date to filter by AIPN dateEffective
+    // Step 5.5: Load formulary data for all candidate protocols
+    const protocolCodes = protocols.map((p) => p.protocolCode);
+    // Name-based formulary map (existing path, filtered by visit date)
     const formularyNameMap =
       visitResolvedDrugNames.size > 0
-        ? await this.formularyService.getFormularyDrugNames(
-            protocols.map((p) => p.protocolCode),
-            visit.visitDate,
-          )
+        ? await this.formularyService.getFormularyDrugNames(protocolCodes, visit.visitDate)
         : new Map<string, Set<string>>();
+    // AIPN code-based formulary map (new path — deterministic)
+    const formularyAipnMap =
+      visitAipnCodes.size > 0
+        ? await this.formularyService.getFormularyAipnSets(protocolCodes)
+        : new Map<string, Set<number>>();
 
     // Step 6: Score each protocol
     const results: MatchResult[] = [];
@@ -442,20 +457,51 @@ export class MatchingService {
           const preferenceScore = pr.isPreferred ? 5 : 0;
 
           // Formulary compliance scoring (up to 20 points)
+          // Hybrid: code-based for meds with AIPN codes, name-based for others
           let formularyScore = 0;
           let formularyCompliance: FormularyCompliance | null = null;
-          if (visitResolvedDrugNames.size > 0) {
+          const hasAnyFormularyData = visitResolvedDrugNames.size > 0 || visitAipnCodes.size > 0;
+          if (hasAnyFormularyData) {
             const formularyNames = formularyNameMap.get(protocol.protocolCode);
+            const formularyAipns = formularyAipnMap.get(protocol.protocolCode);
+
+            let compliantCount = 0;
+            let totalChecked = 0;
+            const checkedNames = new Set<string>();
+
+            // Path 1: Code-based matching (deterministic, highest priority)
+            if (formularyAipns && formularyAipns.size > 0) {
+              for (const aipnCode of visitAipnCodes) {
+                totalChecked++;
+                if (formularyAipns.has(aipnCode)) compliantCount++;
+              }
+              // Track which drug names were already checked via code path
+              // to avoid double-counting in name-based path
+              for (const med of visit.medications) {
+                if (med.resolvedAipnCode && med.resolvedDrug?.genericName) {
+                  checkedNames.add(med.resolvedDrug.genericName.toLowerCase());
+                }
+              }
+            }
+
+            // Path 2: Name-based matching (fallback for meds without AIPN codes)
             if (formularyNames && formularyNames.size > 0) {
-              const visitDrugArray = [...visitResolvedDrugNames];
-              const compliantCount = visitDrugArray.filter((name) =>
-                formularyNames.has(name),
-              ).length;
-              const ratio = compliantCount / visitDrugArray.length;
+              for (const name of visitResolvedDrugNames) {
+                if (checkedNames.has(name)) continue; // already checked via code path
+                totalChecked++;
+                if (formularyNames.has(name)) compliantCount++;
+              }
+            } else if (totalChecked === 0) {
+              // No formulary data at all — skip scoring
+              totalChecked = 0;
+            }
+
+            if (totalChecked > 0) {
+              const ratio = compliantCount / totalChecked;
               formularyScore = Math.round(ratio * 20);
               formularyCompliance = {
                 compliantCount,
-                totalChecked: visitDrugArray.length,
+                totalChecked,
                 ratio: Math.round(ratio * 100),
               };
             }
@@ -512,21 +558,40 @@ export class MatchingService {
         }
 
         if (bestRegimen) {
-          // Compute formulary compliance for the best regimen
+          // Compute formulary compliance for the best regimen (same hybrid logic)
           let bestFormulary: FormularyCompliance | null = null;
-          if (visitResolvedDrugNames.size > 0) {
+          if (visitResolvedDrugNames.size > 0 || visitAipnCodes.size > 0) {
             const formularyNames = formularyNameMap.get(protocol.protocolCode);
+            const formularyAipns = formularyAipnMap.get(protocol.protocolCode);
+            let compliantCount = 0;
+            let totalChecked = 0;
+            const checkedNames = new Set<string>();
+
+            if (formularyAipns && formularyAipns.size > 0) {
+              for (const aipnCode of visitAipnCodes) {
+                totalChecked++;
+                if (formularyAipns.has(aipnCode)) compliantCount++;
+              }
+              for (const med of visit.medications) {
+                if (med.resolvedAipnCode && med.resolvedDrug?.genericName) {
+                  checkedNames.add(med.resolvedDrug.genericName.toLowerCase());
+                }
+              }
+            }
+
             if (formularyNames && formularyNames.size > 0) {
-              const visitDrugArray = [...visitResolvedDrugNames];
-              const compliantCount = visitDrugArray.filter((name) =>
-                formularyNames.has(name),
-              ).length;
+              for (const name of visitResolvedDrugNames) {
+                if (checkedNames.has(name)) continue;
+                totalChecked++;
+                if (formularyNames.has(name)) compliantCount++;
+              }
+            }
+
+            if (totalChecked > 0) {
               bestFormulary = {
                 compliantCount,
-                totalChecked: visitDrugArray.length,
-                ratio: Math.round(
-                  (compliantCount / visitDrugArray.length) * 100,
-                ),
+                totalChecked,
+                ratio: Math.round((compliantCount / totalChecked) * 100),
               };
             }
           }

@@ -561,6 +561,7 @@ export class CancerPatientsService {
         patientId,
         protocolId: dto.protocolId ?? null,
         notes: dto.notes ?? null,
+        vcrCode: dto.vcrCode || null,
         referralDate: dto.referralDate ? new Date(dto.referralDate) : null,
         admissionDate: dto.admissionDate ? new Date(dto.admissionDate) : null,
         sourceHospitalId: dto.sourceHospitalId ?? null,
@@ -629,6 +630,9 @@ export class CancerPatientsService {
     }
     if (sourceHospitalId !== undefined) {
       data.sourceHospitalId = sourceHospitalId;
+    }
+    if (dto.vcrCode !== undefined) {
+      data.vcrCode = dto.vcrCode || null;
     }
     if (dto.status === 'COMPLETED' && !patientCase.closedAt) {
       data.closedAt = new Date();

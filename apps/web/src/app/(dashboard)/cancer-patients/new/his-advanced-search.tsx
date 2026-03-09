@@ -8,7 +8,7 @@ import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CancerSiteMultiSelect } from '@/components/shared/cancer-site-multi-select';
 import { DrugMultiSelect } from '@/components/shared/drug-multi-select';
-import { PatientSearchResults, HisPatient } from './patient-search-results';
+import { PatientSearchResults, HisPatient } from '../components/patient-search-results';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 

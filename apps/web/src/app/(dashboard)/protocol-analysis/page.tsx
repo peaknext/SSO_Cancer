@@ -66,6 +66,7 @@ interface VisitMedication {
   id: number;
   rawLine: string;
   hospitalCode: string | null;
+  resolvedAipnCode: number | null;
   medicationName: string | null;
   quantity: string | null;
   unit: string | null;
@@ -992,9 +993,9 @@ export default function ProtocolAnalysisPage() {
                           <tr key={med.id} className="border-b last:border-0">
                             <td className="py-1.5 px-2">
                               <div className="font-medium">{med.medicationName || med.rawLine}</div>
-                              {med.hospitalCode && (
+                              {med.resolvedAipnCode && (
                                 <span className="text-[10px] text-foreground/50 font-mono">
-                                  รหัส: {med.hospitalCode}
+                                  TMT: {med.resolvedAipnCode}
                                 </span>
                               )}
                             </td>

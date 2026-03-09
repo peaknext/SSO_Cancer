@@ -296,8 +296,10 @@ export class HisIntegrationService {
 
     // Build medicationsRaw from structured array (for protocol matching compatibility)
     const meds = visit.medications ?? [];
-    // Fallback: extract drug info from billingItems (billingGroup=3) when medications array is empty
-    const drugBillingItems = (visit.billingItems ?? []).filter((b) => b.billingGroup === '3');
+    // Fallback: extract drug info from billingItems (billingGroup=3/03) when medications array is empty
+    const drugBillingItems = (visit.billingItems ?? []).filter(
+      (b) => b.billingGroup === '3' || b.billingGroup === '03',
+    );
     let medicationsRaw: string | null = null;
     if (meds.length > 0) {
       medicationsRaw = meds
@@ -325,8 +327,8 @@ export class HisIntegrationService {
         serviceEndTime: visit.serviceEndTime ? new Date(visit.serviceEndTime) : null,
         physicianLicenseNo: visit.physicianLicenseNo || null,
         clinicCode: visit.clinicCode || null,
-        // SSOP 0.93 fields
-        billNo: visit.billNo || null,
+        // SSOP 0.93 fields (receiptNo fallback for billNo — HIS may send either)
+        billNo: visit.billNo || visit.receiptNo || null,
         visitType: visit.visitType || null,
         dischargeType: visit.dischargeType || null,
         nextAppointmentDate: visit.nextAppointmentDate ? new Date(visit.nextAppointmentDate) : null,
@@ -340,8 +342,9 @@ export class HisIntegrationService {
     });
 
     // Create VisitMedication + VisitBillingItem records
-    const medCount = await this.createVisitMedications(tx, createdVisit.id, meds);
-    await this.createVisitBillingItems(tx, createdVisit.id, visit.billingItems ?? []);
+    const allBillingItems = visit.billingItems ?? [];
+    const medCount = await this.createVisitMedications(tx, createdVisit.id, meds, allBillingItems);
+    await this.createVisitBillingItems(tx, createdVisit.id, allBillingItems);
 
     // Fallback: create VisitMedication from drug billing items if medications array was empty
     if (medCount === 0 && drugBillingItems.length > 0) {
@@ -529,12 +532,21 @@ export class HisIntegrationService {
     tx: TxClient,
     visitId: number,
     medications: HisVisit['medications'] extends (infer T)[] | undefined ? NonNullable<HisVisit['medications']>[number][] : never[],
+    billingItems?: NonNullable<HisVisit['billingItems']>,
   ): Promise<number> {
     let count = 0;
     for (const med of medications) {
-      const resolvedDrugId = med.medicationName
-        ? await this.importService.resolveDrug(med.medicationName)
-        : null;
+      // Find matching billing item by hospitalCode to get sksDrugCode for AIPN resolution
+      const matchingItem = billingItems?.find(
+        (b) => (b.billingGroup === '3' || b.billingGroup === '03') && b.hospitalCode === med.hospitalCode,
+      );
+      const sksDrugCode = matchingItem?.sksDrugCode || null;
+      const dfsText = matchingItem?.sksDfsText || matchingItem?.dfsText || null;
+
+      const resolved = med.medicationName
+        ? await this.importService.resolveDrug(med.medicationName, sksDrugCode, dfsText)
+        : { drugId: null, aipnCode: sksDrugCode ? await this.importService.resolveAipnCode(sksDrugCode) : null };
+
       await tx.visitMedication.create({
         data: {
           visitId,
@@ -543,7 +555,8 @@ export class HisIntegrationService {
           medicationName: med.medicationName || null,
           quantity: med.quantity || null,
           unit: med.unit || null,
-          resolvedDrugId,
+          resolvedDrugId: resolved.drugId,
+          resolvedAipnCode: resolved.aipnCode,
         },
       });
       count++;
@@ -559,10 +572,12 @@ export class HisIntegrationService {
   ): Promise<number> {
     let count = 0;
     for (const item of drugItems) {
-      const drugName = item.dfsText || item.description;
-      const resolvedDrugId = drugName
-        ? await this.importService.resolveDrug(drugName)
-        : null;
+      const dfsText = item.sksDfsText || item.dfsText || null;
+      const drugName = dfsText || item.description;
+      const resolved = drugName
+        ? await this.importService.resolveDrug(drugName, item.sksDrugCode, dfsText)
+        : { drugId: null, aipnCode: item.sksDrugCode ? await this.importService.resolveAipnCode(item.sksDrugCode) : null };
+
       await tx.visitMedication.create({
         data: {
           visitId,
@@ -571,7 +586,8 @@ export class HisIntegrationService {
           medicationName: drugName || null,
           quantity: item.quantity != null ? String(item.quantity) : null,
           unit: item.packsize || null,
-          resolvedDrugId,
+          resolvedDrugId: resolved.drugId,
+          resolvedAipnCode: resolved.aipnCode,
         },
       });
       count++;
@@ -606,6 +622,10 @@ export class HisIntegrationService {
           sigCode: normalized.sigCode || null,
           sigText: normalized.sigText || null,
           supplyDuration: normalized.supplyDuration || null,
+          sksDrugCode: normalized.sksDrugCode,
+          stdGroup: normalized.stdGroup,
+          sksDfsText: normalized.sksDfsText,
+          sksReimbPrice: normalized.sksReimbPrice,
         },
       });
       count++;
@@ -618,20 +638,31 @@ export class HisIntegrationService {
    * 1. description empty but dfsText has drug name → use dfsText as description
    * 2. claimUnitPrice is pre-multiplied total (qty × unitPrice) → divide by qty
    *
-   * Note: aipnCode = hospitalCode is valid (hospitals may use same local code as AIPN code)
+   * Note: sksDrugCode is the real TMT TPU code = sso_aipn_items.code (AIPN code)
+   *        aipnCode field from HIS may be unreliable — always prefer sksDrugCode for drug matching
    */
   private normalizeBillingItem(item: NonNullable<HisVisit['billingItems']>[number]) {
-    // Fallback description from dfsText when HIS sends description empty
-    const description = item.description || item.dfsText || '';
+    // Fallback description chain: description → sksDfsText → dfsText
+    const description = item.description || item.sksDfsText || item.dfsText || '';
 
-    // HIS sends claimUnitPrice as pre-multiplied total — divide by qty to get per-unit
+    // Fallback dfsText chain: sksDfsText → dfsText (prefer SKS description if available)
+    const dfsText = item.sksDfsText || item.dfsText || null;
+
+    // HIS sometimes sends claimUnitPrice as a pre-multiplied total instead of per-unit.
+    // Detect both cases: qty×unitPrice OR qty×sksReimbPrice, and divide back to per-unit.
     let claimUnitPrice = item.claimUnitPrice ?? item.unitPrice;
-    if (
-      item.quantity > 0 &&
-      claimUnitPrice !== item.unitPrice &&
-      claimUnitPrice === item.quantity * item.unitPrice
-    ) {
-      claimUnitPrice = claimUnitPrice / item.quantity;
+    if (item.quantity > 0 && claimUnitPrice !== item.unitPrice) {
+      if (claimUnitPrice === item.quantity * item.unitPrice) {
+        // Case 1: total of sell price (qty × unitPrice)
+        claimUnitPrice = claimUnitPrice / item.quantity;
+      } else if (
+        item.sksReimbPrice != null &&
+        item.sksReimbPrice !== item.unitPrice &&
+        claimUnitPrice === item.quantity * item.sksReimbPrice
+      ) {
+        // Case 2: total of reimb price (qty × sksReimbPrice)
+        claimUnitPrice = claimUnitPrice / item.quantity;
+      }
     }
 
     return {
@@ -645,11 +676,16 @@ export class HisIntegrationService {
       unitPrice: item.unitPrice,
       claimUnitPrice,
       claimCategory: item.claimCategory?.slice(0, 5),
-      dfsText: item.dfsText,
+      dfsText,
       packsize: item.packsize?.slice(0, 20),
       sigCode: item.sigCode?.slice(0, 20),
       sigText: item.sigText,
       supplyDuration: item.supplyDuration?.slice(0, 10),
+      // SKS fields (TMT/SSO standard codes from HOSxP)
+      sksDrugCode: item.sksDrugCode ? String(item.sksDrugCode).slice(0, 30) : null,
+      stdGroup: item.stdGroup ? String(item.stdGroup).slice(0, 10) : null,
+      sksDfsText: item.sksDfsText || null,
+      sksReimbPrice: item.sksReimbPrice ?? null,
     };
   }
 
@@ -687,7 +723,11 @@ export class HisIntegrationService {
     const resolvedSiteId = await this.importService.resolveIcd10(sanitizedPrimaryDx);
     const primaryDx = sanitizedPrimaryDx.replace(/\./g, '').toUpperCase();
     const secondaryDx = freshVisit.secondaryDiagnoses
-      ? sanitizeIcd10(freshVisit.secondaryDiagnoses).replace(/\./g, '').toUpperCase()
+      ? freshVisit.secondaryDiagnoses
+          .split(',')
+          .map((c) => sanitizeIcd10(c.trim()).replace(/\./g, '').toUpperCase())
+          .filter(Boolean)
+          .join(',')
       : null;
     const meds = freshVisit.medications ?? [];
     const medicationsRaw = meds.length > 0
@@ -721,7 +761,7 @@ export class HisIntegrationService {
           serviceEndTime: freshVisit.serviceEndTime ? new Date(freshVisit.serviceEndTime) : null,
           physicianLicenseNo: freshVisit.physicianLicenseNo || null,
           clinicCode: freshVisit.clinicCode || null,
-          billNo: freshVisit.billNo || null,
+          billNo: freshVisit.billNo || freshVisit.receiptNo || null,
           visitType: freshVisit.visitType || null,
           dischargeType: freshVisit.dischargeType || null,
           nextAppointmentDate: freshVisit.nextAppointmentDate ? new Date(freshVisit.nextAppointmentDate) : null,
@@ -742,8 +782,9 @@ export class HisIntegrationService {
         await this.upsertPatient(tx, hisData.patient);
 
         // Re-create medications and billing items
-        const medsCount = await this.createVisitMedications(tx, existing.id, meds);
-        const itemsCount = await this.createVisitBillingItems(tx, existing.id, freshVisit.billingItems ?? []);
+        const freshBillingItems = freshVisit.billingItems ?? [];
+        const medsCount = await this.createVisitMedications(tx, existing.id, meds, freshBillingItems);
+        const itemsCount = await this.createVisitBillingItems(tx, existing.id, freshBillingItems);
 
         return { medsCount, itemsCount };
       },
@@ -761,6 +802,38 @@ export class HisIntegrationService {
       medicationsCount: result.medsCount,
       billingItemsCount: result.itemsCount,
     };
+  }
+
+  /** Batch sync multiple already-imported visits with fresh data from HIS */
+  async batchSyncVisits(
+    hn: string,
+    vns: string[],
+    query: string,
+    queryType: 'hn' | 'citizen_id',
+    userId: number,
+  ): Promise<{
+    synced: number;
+    failed: number;
+    results: { vn: string; success: boolean; updatedFields?: string[]; error?: string }[];
+  }> {
+    const results: { vn: string; success: boolean; updatedFields?: string[]; error?: string }[] = [];
+    let synced = 0;
+    let failed = 0;
+
+    for (const vn of vns) {
+      try {
+        const result = await this.syncVisit(vn, query, queryType, userId);
+        results.push({ vn, success: true, updatedFields: result.updatedFields });
+        synced++;
+      } catch (err: any) {
+        const message = err?.message || err?.response?.message || 'Unknown error';
+        results.push({ vn, success: false, error: message });
+        failed++;
+        this.logger.warn(`Batch sync failed for VN ${vn}: ${message}`);
+      }
+    }
+
+    return { synced, failed, results };
   }
 
   /** Advanced search — search patients from HIS by clinical criteria */
@@ -844,6 +917,124 @@ export class HisIntegrationService {
       },
       orderBy: { genericName: 'asc' },
     });
+  }
+
+  /** Backfill resolvedAipnCode on existing VisitMedication records using VisitBillingItem.sksDrugCode */
+  async backfillAipnCodes(): Promise<{
+    processed: number;
+    updatedAipn: number;
+    updatedDrug: number;
+  }> {
+    // Find medications without resolvedAipnCode that have billing items with sksDrugCode
+    const medications = await this.prisma.visitMedication.findMany({
+      where: { resolvedAipnCode: null },
+      select: { id: true, visitId: true, hospitalCode: true, resolvedDrugId: true, medicationName: true },
+    });
+
+    let updatedAipn = 0;
+    let updatedDrug = 0;
+
+    for (const med of medications) {
+      // Find matching billing item by visitId + hospitalCode
+      const billingItem = med.hospitalCode
+        ? await this.prisma.visitBillingItem.findFirst({
+            where: {
+              visitId: med.visitId,
+              hospitalCode: med.hospitalCode,
+              billingGroup: '3',
+              sksDrugCode: { not: null },
+            },
+            select: { sksDrugCode: true },
+          })
+        : null;
+
+      if (!billingItem?.sksDrugCode) continue;
+
+      let aipnCode = await this.importService.resolveAipnCode(billingItem.sksDrugCode);
+
+      // Tier 0.5 fallback: text-based resolution from dfsText
+      if (!aipnCode) {
+        const billItemText = await this.prisma.visitBillingItem.findFirst({
+          where: {
+            visitId: med.visitId,
+            hospitalCode: med.hospitalCode || undefined,
+            billingGroup: '3',
+          },
+          select: { sksDfsText: true, dfsText: true },
+        });
+        const textDfs = billItemText?.sksDfsText || billItemText?.dfsText || null;
+        aipnCode = await this.importService.resolveAipnByText(textDfs);
+      }
+
+      if (!aipnCode) continue;
+
+      const updateData: { resolvedAipnCode: number; resolvedDrugId?: number } = {
+        resolvedAipnCode: aipnCode,
+      };
+      updatedAipn++;
+
+      // Also try to resolve drugId if missing
+      if (!med.resolvedDrugId) {
+        const drugId = await this.importService.resolveDrugByAipnCode(aipnCode);
+        if (drugId) {
+          updateData.resolvedDrugId = drugId;
+          updatedDrug++;
+        }
+      }
+
+      await this.prisma.visitMedication.update({
+        where: { id: med.id },
+        data: updateData,
+      });
+    }
+
+    this.logger.log(`Backfill complete: ${medications.length} processed, ${updatedAipn} AIPN codes set, ${updatedDrug} drugs resolved`);
+
+    return { processed: medications.length, updatedAipn, updatedDrug };
+  }
+
+  /** Purge all visit data (XLSX + HIS imports) — keeps Patients and PatientCases intact */
+  async purgeAllVisits(): Promise<{
+    deletedVisits: number;
+    deletedImports: number;
+    deletedBatches: number;
+  }> {
+    const [visitCount, importCount, batchCount] = await Promise.all([
+      this.prisma.patientVisit.count(),
+      this.prisma.patientImport.count(),
+      this.prisma.billingExportBatch.count(),
+    ]);
+
+    if (visitCount === 0 && importCount === 0 && batchCount === 0) {
+      return { deletedVisits: 0, deletedImports: 0, deletedBatches: 0 };
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // Unlink visits from patient cases (SetNull — PatientVisit.caseId)
+      await tx.patientVisit.updateMany({
+        where: { caseId: { not: null } },
+        data: { caseId: null },
+      });
+
+      // Delete all visits — cascades: VisitMedication, VisitBillingItem, VisitBillingClaim, AiSuggestion
+      await tx.patientVisit.deleteMany({});
+
+      // Delete import records
+      await tx.patientImport.deleteMany({});
+
+      // Delete stale export batches (visitIds become invalid)
+      await tx.billingExportBatch.deleteMany({});
+    });
+
+    this.logger.warn(
+      `Purged all visits: ${visitCount} visits, ${importCount} imports, ${batchCount} batches deleted`,
+    );
+
+    return {
+      deletedVisits: visitCount,
+      deletedImports: importCount,
+      deletedBatches: batchCount,
+    };
   }
 
   /** Health check for HIS API connectivity */

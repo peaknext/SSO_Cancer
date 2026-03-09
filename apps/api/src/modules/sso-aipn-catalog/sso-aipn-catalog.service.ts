@@ -205,6 +205,75 @@ export class SsoAipnCatalogService {
     return map;
   }
 
+  /** Get AIPN rate map: code → [{rate, dateEffective, dateExpiry}] for ClaimUP resolution */
+  async getAipnRateMap(): Promise<
+    Map<number, Array<{ rate: number; dateEffective: Date; dateExpiry: Date }>>
+  > {
+    const items = await this.prisma.ssoAipnItem.findMany({
+      where: { isActive: true },
+      select: { code: true, rate: true, dateEffective: true, dateExpiry: true },
+      orderBy: { dateEffective: 'asc' },
+    });
+    const map = new Map<number, Array<{ rate: number; dateEffective: Date; dateExpiry: Date }>>();
+    for (const item of items) {
+      if (!map.has(item.code)) map.set(item.code, []);
+      map.get(item.code)!.push({
+        rate: Number(item.rate),
+        dateEffective: item.dateEffective,
+        dateExpiry: item.dateExpiry,
+      });
+    }
+    return map;
+  }
+
+  // ─── Generic Name Index (for text-based drug matching) ───────────────────
+
+  private genericIndex: Map<string, { code: number; dosage: string }[]> | null = null;
+  private genericIndexExpiry = 0;
+
+  /**
+   * Get cached in-memory index: generic drug name → AIPN codes.
+   * Extracts generic names from SsoAipnItem descriptions (billingGroup='03' only).
+   * Cache TTL: 5 minutes.
+   */
+  async getGenericNameIndex(): Promise<Map<string, { code: number; dosage: string }[]>> {
+    const now = Date.now();
+    if (this.genericIndex && now < this.genericIndexExpiry) {
+      return this.genericIndex;
+    }
+
+    const items = await this.prisma.ssoAipnItem.findMany({
+      where: { billingGroup: '03', isActive: true },
+      select: { code: true, description: true },
+    });
+
+    const index = new Map<string, { code: number; dosage: string }[]>();
+
+    for (const item of items) {
+      // Extract generic name: "BRAND (...) (generic_name DOSAGE) ..." → "generic_name"
+      const nameMatch = item.description.match(/\)\s*\(([^()]+?)\s+\d/);
+      if (!nameMatch) continue;
+
+      const genericName = nameMatch[1].trim().toLowerCase();
+      if (!genericName) continue;
+
+      // Extract dosage: "...) (generic_name 300 mg/50 mL) ..." → "300 mg/50 mL"
+      const dosageMatch = item.description.match(
+        /\)\s*\([^()]+?\s+(\d[\d.,/\s]*(?:mg|g|ml|mcg|iu|unit)\b[^)]*)\)/i,
+      );
+      const dosage = dosageMatch ? dosageMatch[1].trim().toLowerCase() : '';
+
+      if (!index.has(genericName)) {
+        index.set(genericName, []);
+      }
+      index.get(genericName)!.push({ code: item.code, dosage });
+    }
+
+    this.genericIndex = index;
+    this.genericIndexExpiry = now + 5 * 60 * 1000; // 5-minute TTL
+    return index;
+  }
+
   // ─── Import: Parse & Diff ─────────────────────────────────────────────────
 
   async parseAndDiff(buffer: Buffer): Promise<AipnDiffResult> {

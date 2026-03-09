@@ -257,7 +257,7 @@ export function EditRegimenDrugsDialog({
         </div>
 
         {/* ── Body ── */}
-        <div className="px-6 py-5 space-y-5">
+        <div className="px-6 py-5 space-y-5 overflow-y-auto">
           {isLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-10 w-full rounded-lg" />

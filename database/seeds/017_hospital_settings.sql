@@ -8,5 +8,6 @@ ON CONFLICT (setting_key) DO NOTHING;
 
 -- SSOP export settings
 INSERT INTO app_settings (setting_key, setting_value, description, setting_group) VALUES
-  ('ssop_care_account', '1', 'รหัสแนวบริหารจัดการ OPServices.CareAccount (1=รพ.หลัก, 9=รพ.เฉพาะทางมะเร็ง)', 'ssop')
+  ('ssop_care_account', '1', 'รหัสแนวบริหารจัดการ OPServices.CareAccount (1=รพ.หลัก, 9=รพ.เฉพาะทางมะเร็ง)', 'ssop'),
+  ('ssop_session_no_start', '1', 'หมายเลขงวดเริ่มต้น SSOP Export — ถ้ามี batch ก่อนหน้าที่สูงกว่า จะใช้ค่าที่สูงกว่าเสมอ', 'ssop')
 ON CONFLICT (setting_key) DO NOTHING;

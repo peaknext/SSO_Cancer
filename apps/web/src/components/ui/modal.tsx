@@ -9,6 +9,8 @@ const maxWidthMap = {
   md: 'max-w-105',
   lg: 'max-w-128',
   xl: 'max-w-3xl',
+  '2xl': 'max-w-5xl',
+  full: 'max-w-[95vw]',
 } as const;
 
 interface ModalProps {
@@ -69,7 +71,7 @@ export function Modal({ open, onClose, children, maxWidth = 'md' }: ModalProps) 
       {/* Dialog */}
       <div
         className={cn(
-          'relative z-10 w-full mx-4 rounded-2xl glass-heavy glass-noise shadow-2xl max-h-[90vh] overflow-y-auto',
+          'relative z-10 w-full mx-4 rounded-2xl glass-heavy glass-noise shadow-2xl max-h-[90vh] overflow-hidden',
           'transition-all duration-200 ease-out',
           maxWidthMap[maxWidth],
           animateIn

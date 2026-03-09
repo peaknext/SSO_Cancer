@@ -11,6 +11,7 @@ import {
   Users,
   Search,
   AlertCircle,
+  CheckCircle2,
   X,
   FlaskConical,
 } from 'lucide-react';
@@ -21,11 +22,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import { HisPatientCard } from './his-patient-card';
-import { HisVisitTimeline } from './his-visit-timeline';
+import { HisPatientCard } from '../components/his-patient-card';
+import { HisVisitTimeline } from '../components/his-visit-timeline';
 import { HisAdvancedSearch } from './his-advanced-search';
-import type { HisPatient } from './patient-search-results';
-import type { VisitCompleteness } from './his-completeness-badge';
+import type { HisPatient } from '../components/patient-search-results';
+import type { VisitCompleteness } from '../components/his-completeness-badge';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 
 // =====================================================
@@ -205,15 +206,8 @@ export default function PatientCreatePage() {
           importedVisits: number;
           linkedVisitCount: number;
         }>(`/his-integration/import/${encodeURIComponent(patient.hn)}`);
-        toast.success(
-          `นำเข้าผู้ป่วย ${patient.fullName} สำเร็จ — ${result.importedVisits} visits`,
-          {
-            action: {
-              label: 'ดูข้อมูลผู้ป่วย',
-              onClick: () => router.push(`/cancer-patients/${result.patientId}`),
-            },
-          },
-        );
+        toast.success(`นำเข้าผู้ป่วย ${patient.fullName} สำเร็จ — ${result.importedVisits} visits`);
+        router.push(`/cancer-patients/${result.patientId}`);
       } catch (err: any) {
         const msg = err?.error?.message || err?.message || 'ไม่สามารถนำเข้าข้อมูลได้';
         toast.error(`นำเข้าผู้ป่วยล้มเหลว`, { description: msg });
@@ -300,6 +294,28 @@ export default function PatientCreatePage() {
     },
     [searchResult, searchQuery],
   );
+
+  /** Bulk import all new cancer visits from simple search results */
+  const handleImportAllSimple = useCallback(async () => {
+    if (!searchResult) return;
+    const hn = searchResult.patient.hn;
+    setImportingHn(hn);
+    setError(null);
+    try {
+      const result = await apiClient.post<{
+        patientId: number;
+        importedVisits: number;
+        linkedVisitCount: number;
+      }>(`/his-integration/import/${encodeURIComponent(hn)}`);
+      toast.success(`นำเข้า ${result.importedVisits} visits สำเร็จ`);
+      router.push(`/cancer-patients/${result.patientId}`);
+    } catch (err: any) {
+      const msg = err?.error?.message || err?.message || 'ไม่สามารถนำเข้าข้อมูลได้';
+      toast.error('นำเข้าล้มเหลว', { description: msg });
+    } finally {
+      setImportingHn(null);
+    }
+  }, [searchResult, router]);
 
   const handleManualSubmit = async (values: PatientFormValues) => {
     try {
@@ -479,13 +495,31 @@ export default function PatientCreatePage() {
             ค้นหาใหม่
           </Button>
 
+          {/* Banner: patient already in system — link to detail page */}
+          {searchResult.existingPatientId !== null && (
+            <div className="flex items-center gap-3 rounded-lg bg-primary/8 border border-primary/20 px-4 py-3">
+              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+              <div className="flex-1 text-sm">
+                <span className="font-medium">ผู้ป่วยนี้มีในระบบแล้ว</span>
+                <span className="text-muted-foreground ml-1">
+                  — สามารถนำเข้า visit ใหม่ได้จากหน้ารายละเอียด
+                </span>
+              </div>
+              <Button asChild size="sm" variant="outline" className="shrink-0 h-8 text-xs gap-1.5">
+                <Link href={`/cancer-patients/${searchResult.existingPatientId}`}>
+                  ไปที่หน้ารายละเอียด
+                </Link>
+              </Button>
+            </div>
+          )}
+
           {/* Patient card */}
           <HisPatientCard
             patient={searchResult.patient}
             existingPatientId={searchResult.existingPatientId}
           />
 
-          {/* Visit timeline with summary + per-visit import */}
+          {/* Visit timeline with summary + per-visit import + batch buttons */}
           <HisVisitTimeline
             visits={searchResult.visits}
             summary={searchResult.summary}
@@ -494,6 +528,9 @@ export default function PatientCreatePage() {
             onImportVisit={handleImportVisit}
             syncingVn={syncingVn}
             onSyncVisit={handleSyncVisit}
+            onImportAll={searchResult.summary.newImportable > 0 ? handleImportAllSimple : undefined}
+            importingAll={importingHn !== null}
+            onBatchSync={undefined}
           />
         </div>
       )}

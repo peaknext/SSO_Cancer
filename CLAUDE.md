@@ -168,7 +168,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `dashboard` — aggregation stats with 5-min in-memory cache (12 cached endpoints; `getRecentActivity` and `getZ51ActionableVisits` uncached)
 - `audit-logs` — paginated query + CSV export (ADMIN+)
 - `app-settings` — grouped key-value config (SUPER_ADMIN to edit). Settings groups: `ai` (10 keys), `hospital` (4 keys: `hospital_id`, `his_api_base_url`, `his_api_key`, `his_api_timeout`), `ssop` (1 key: `ssop_care_account`). `his_api_key` is in `SENSITIVE_KEYS` (masked in GET responses).
-- `protocol-analysis` — CSV/Excel import of hospital visit data, drug resolution (3-tier: exact→startsWith→contains), protocol matching with scoring, protocol confirmation (PATCH confirm/DELETE unconfirm per visit). Import service auto-links visits to existing Patient records by HN during import.
+- `protocol-analysis` — CSV/Excel import of hospital visit data, drug resolution (4-tier: see Drug Resolution below), protocol matching with scoring, protocol confirmation (PATCH confirm/DELETE unconfirm per visit). Import service auto-links visits to existing Patient records by HN during import.
 - `ai` — multi-provider AI suggestion engine (see AI Module below)
 - `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking), Excel export with field picker (EDITOR+). Additional endpoints: `GET /case-hospitals` (distinct hospitals in active cases), `GET /export` (Excel download with configurable fields). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
 - `sso-aipn-catalog` — Read-only SSO AIPN drug/equipment catalog with search, stats, code lookup
@@ -348,7 +348,17 @@ Module in `apps/api/src/modules/his-integration/` — connects to a hospital's H
 - `GET /protocol-drug-names` — protocol drug names for filter dropdown
 - `GET /health` (ADMIN+) — test HIS API connectivity
 
+**Additional endpoints**:
+
+- `POST /import-visit` — import single visit by VN
+- `PATCH /sync-visit` — sync already-imported visit with latest HIS data
+- `POST /batch-sync` — sync multiple visits at once
+- `POST /backfill-aipn` (SUPER_ADMIN) — backfill AIPN codes for existing VisitMedication records
+- `POST /purge-visits` (SUPER_ADMIN) — delete all visits, imports, and export batches (cascade)
+
 **Data flow**: `PatientImport.source` = `'HIS_API'` (vs `'EXCEL'` for CSV import). Reuses `ImportService.resolveIcd10()` and `ImportService.resolveDrug()` from `protocol-analysis` module. HIS API spec: `docs/HIS_API_REQUEST.md`.
+
+**Batch import script**: `scripts/batch-import-his.js` — imports all patients from HIS API with rate-limit-safe concurrency (1 req + 1.2s delay). Usage: `node scripts/batch-import-his.js [--concurrency 1] [--from 2024-01-01] [--to 2027-12-31]`. Retries on 429 with exponential backoff.
 
 ### SSOP Export Architecture
 
@@ -378,8 +388,35 @@ Module in `apps/api/src/modules/ssop-export/` — generates SSOP 0.93 compliant 
 - BillItems.SvRefID routing: drug items (billingGroup=3) → Dispensing.DispID, non-drug → OPServices.SvID
 - BILLDISP generates from drug items only; dispIdMap returned to billtran generator
 - CareAccount: configurable via `ssop_care_account` AppSetting (default "1", "9" for specialist hospitals)
-- DispensedItems.DrgID: `tmtCode || aipnCode` fallback chain
+- DispensedItems.DrgID: `sksDrugCode || tmtCode || aipnCode` fallback chain (sksDrugCode = real TMT TPU)
 - ZIP stored as `Bytes` in `BillingExportBatch.fileData` for re-download
+
+### Drug Code System (Critical)
+
+**`sksDrugCode` = TMT TPU code = `sso_aipn_items.code` — they are the SAME code system.** This is the authoritative drug identifier for AIPN pricing lookup, SSOP export, and formulary matching.
+
+HIS billing items have multiple code fields — only `sksDrugCode` is reliable:
+
+| Field | Source | What it is | Use for |
+|-------|--------|-----------|---------|
+| `sksDrugCode` | HOSxP `drugitems.sks_drug_code` | **Real TMT TPU code** | AIPN lookup, SSOP DrgID/STDCode |
+| `hospitalCode` | Hospital internal | Local item code (e.g. 1500000+) | Linking VisitMedication ↔ VisitBillingItem |
+| `aipnCode` | HIS API field | Unreliable — may equal hospitalCode | **DO NOT use for AIPN lookup** |
+| `tmtCode` | HOSxP `drugitems.tmt_tp_code` | TMT TP level code (6-digit) | Fallback only |
+
+**NEVER use `aipnCode` from VisitBillingItem to look up drug pricing.** Always use `sksDrugCode`.
+
+### Drug Resolution Tiers
+
+`ImportService.resolveDrug()` resolves a medication to a `Drug` record and AIPN code:
+
+| Tier | Input | Method |
+|------|-------|--------|
+| 0 | `sksDrugCode` | Exact lookup in `sso_aipn_items.code` |
+| 0.5 | `dfsText` (drug description) | Extract generic name → match AIPN index (cached Map) |
+| 1 | `medicationName` | Exact match on `Drug.genericName` or `DrugTradeName.tradeName` |
+| 2 | `medicationName` | startsWith match |
+| 3 | `medicationName` | contains match |
 
 ### Protocol Matching Scoring
 

@@ -166,5 +166,12 @@ export interface SsopVisitData {
     sigCode: string | null;
     sigText: string | null;
     supplyDuration: string | null;
+    // SKS fields (TMT/SSO standard codes)
+    sksDrugCode: string | null;
+    stdGroup: string | null;
+    sksDfsText: string | null;
+    sksReimbPrice: number | null;
+    /** AIPN max-reimbursement rate effective on visit date. ClaimUP = MIN(unitPrice, aipnRate). */
+    aipnRate: number | null;
   }[];
 }

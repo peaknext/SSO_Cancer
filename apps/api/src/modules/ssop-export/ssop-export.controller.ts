@@ -36,6 +36,13 @@ export class SsopExportController {
     });
   }
 
+  @Get('preview-ssop/:visitId')
+  @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'ดูตัวอย่างข้อมูล SSOP สำหรับ visit เดียว' })
+  previewSsopData(@Param('visitId', ParseIntPipe) visitId: number) {
+    return this.exportService.previewSsopData(visitId);
+  }
+
   @Post('preview')
   @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Preview ข้อมูลก่อน export SSOP' })
@@ -57,11 +64,13 @@ export class SsopExportController {
       userId,
     );
 
+    const sessNo = fileName.match(/_SSOPBIL_(\d{4})_/)?.[1] ?? '';
     res.set({
       'Content-Type': 'application/zip',
       'Content-Disposition': `attachment; filename="${fileName}"`,
       'Content-Length': buffer.length,
       'X-Batch-Id': String(batchId),
+      'X-Sess-No': sessNo,
     });
 
     res.end(buffer);
@@ -80,6 +89,17 @@ export class SsopExportController {
     }).catch(() => {});
   }
 
+  @Get('visit-export-status')
+  @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'ตรวจสอบว่า visits ถูก export ไปแล้วในงวดใดบ้าง' })
+  getVisitExportStatus(@Query('visitIds') visitIdsStr: string) {
+    const visitIds = (visitIdsStr || '')
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => !isNaN(n));
+    return this.exportService.getVisitExportStatus(visitIds);
+  }
+
   @Get('batches')
   @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'รายการ export batch ที่เคย export' })
@@ -88,6 +108,17 @@ export class SsopExportController {
     @Query('limit') limit?: number,
   ) {
     return this.exportService.listBatches(page || 1, Math.min(limit || 20, 100));
+  }
+
+  @Post('batches/:id/create-billing-claims')
+  @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'สร้างรอบการเรียกเก็บสำหรับ visits ในงวดนี้' })
+  createBillingClaims(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('dryRun') dryRun: string,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.exportService.createBillingClaimsFromBatch(id, userId, dryRun === 'true');
   }
 
   @Get('batches/:id/download')

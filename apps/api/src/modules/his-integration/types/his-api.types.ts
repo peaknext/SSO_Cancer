@@ -24,6 +24,12 @@ export interface HisMedication {
   unit?: string;
 }
 
+export interface HisDiagnosis {
+  diagCode: string;
+  diagType: string; // '1'=primary, '2'=comorbid, '3'=complication, '4'=other, '5'=external cause
+  diagTerm?: string | null;
+}
+
 export interface HisBillingItem {
   hospitalCode: string;
   aipnCode?: string;
@@ -41,6 +47,11 @@ export interface HisBillingItem {
   sigCode?: string;
   sigText?: string;
   supplyDuration?: string;
+  // SKS fields from HOSxP drugitems (TMT/SSO standard codes)
+  sksDrugCode?: string; // TMT TPU code (confirmed real TMT)
+  stdGroup?: string; // SSO standard billing group (from income.std_group)
+  sksDfsText?: string; // Drug description from drugitems.sks_dfs_text
+  sksReimbPrice?: number; // SSO reimbursement price from drugitems.sks_reimb_price
 }
 
 export interface HisVisit {
@@ -63,6 +74,8 @@ export interface HisVisit {
   serviceType?: string;
   prescriptionTime?: string;
   dayCover?: string;
+  receiptNo?: string;
+  diagnoses?: HisDiagnosis[];
   medications?: HisMedication[];
   billingItems?: HisBillingItem[];
 }
@@ -92,6 +105,62 @@ export function isCancerRelatedIcd10(icdCode: string): boolean {
   if (!icdCode) return false;
   const code = icdCode.replace(/\./g, '').toUpperCase();
   return CANCER_ICD10_PREFIXES.some((prefix) => code.startsWith(prefix));
+}
+
+/** Check if a code is ICD-9-CM procedure code (starts with digit, e.g. 9224, 9925) */
+export function isIcd9ProcedureCode(code: string): boolean {
+  if (!code) return false;
+  return /^\d/.test(code.trim());
+}
+
+/**
+ * Extract primary/secondary diagnoses from structured diagnoses array.
+ * Handles: trim diagType trailing spaces, filter ICD-9 from primary.
+ */
+export function extractDiagnosesFromArray(
+  diagnoses: HisDiagnosis[],
+): { primaryDiagnosis: string | null; secondaryDiagnoses: string | null } {
+  if (!diagnoses || diagnoses.length === 0) {
+    return { primaryDiagnosis: null, secondaryDiagnoses: null };
+  }
+
+  let primaryDiagnosis: string | null = null;
+  const secondaryCodes: string[] = [];
+
+  for (const dx of diagnoses) {
+    const diagType = dx.diagType?.trim();
+    const code = dx.diagCode?.trim();
+    if (!code) continue;
+
+    if (diagType === '1') {
+      // Primary diagnosis — only accept ICD-10 (starts with letter)
+      if (!isIcd9ProcedureCode(code)) {
+        primaryDiagnosis = code;
+      }
+      // ICD-9 in primary slot: skip it (don't put in secondary either)
+    } else {
+      // Secondary/other — keep all codes including ICD-9 procedure codes
+      secondaryCodes.push(code);
+    }
+  }
+
+  // Fallback: if no ICD-10 primary found, try first ICD-10 code from any diagType
+  if (!primaryDiagnosis) {
+    const firstIcd10 = diagnoses.find(
+      (dx) => dx.diagCode?.trim() && !isIcd9ProcedureCode(dx.diagCode.trim()),
+    );
+    if (firstIcd10) {
+      primaryDiagnosis = firstIcd10.diagCode.trim();
+      // Remove it from secondary if it was there
+      const idx = secondaryCodes.indexOf(primaryDiagnosis);
+      if (idx >= 0) secondaryCodes.splice(idx, 1);
+    }
+  }
+
+  return {
+    primaryDiagnosis,
+    secondaryDiagnoses: secondaryCodes.length > 0 ? secondaryCodes.join(',') : null,
+  };
 }
 
 // ─── Visit Completeness Analysis ─────────────────────────────────────────────

@@ -447,13 +447,15 @@ model VisitMedication {
   medicationName  String?   @map("medication_name") @db.VarChar(300)
   quantity        String?   @db.VarChar(50)
   unit            String?   @db.VarChar(50)
-  resolvedDrugId  Int?      @map("resolved_drug_id")
+  resolvedDrugId   Int?      @map("resolved_drug_id")
+  resolvedAipnCode Int?      @map("resolved_aipn_code")
 
   visit           PatientVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
   resolvedDrug    Drug?        @relation(fields: [resolvedDrugId], references: [id], onDelete: SetNull)
 
   @@index([visitId], map: "idx_visit_medications_visit_id")
   @@index([resolvedDrugId], map: "idx_visit_medications_resolved_drug_id")
+  @@index([resolvedAipnCode], map: "idx_visit_medications_aipn_code")
   @@map("visit_medications")
 }
 
@@ -672,6 +674,11 @@ model VisitBillingItem {
   sigCode        String?  @map("sig_code") @db.VarChar(20)
   sigText        String?  @map("sig_text") @db.Text
   supplyDuration String?  @map("supply_duration") @db.VarChar(10)
+  // SKS fields from HOSxP drugitems (TMT/SSO standard codes)
+  sksDrugCode    String?  @map("sks_drug_code") @db.VarChar(30)
+  stdGroup       String?  @map("std_group") @db.VarChar(10)
+  sksDfsText     String?  @map("sks_dfs_text") @db.Text
+  sksReimbPrice  Decimal? @map("sks_reimb_price") @db.Decimal(12, 2)
   isActive       Boolean  @default(true) @map("is_active")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)

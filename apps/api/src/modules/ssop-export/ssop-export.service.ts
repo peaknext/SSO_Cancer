@@ -1,10 +1,10 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import * as archiver from 'archiver';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SsoAipnCatalogService } from '../sso-aipn-catalog/sso-aipn-catalog.service';
-import { generateBilltranXml } from './generators/billtran.generator';
-import { generateBilldispXml } from './generators/billdisp.generator';
-import { generateOpServicesXml } from './generators/opservices.generator';
+import { generateBilltranXml, buildBilltranRecords } from './generators/billtran.generator';
+import { generateBilldispXml, buildBilldispRecords, resolveClaimUP } from './generators/billdisp.generator';
+import { generateOpServicesXml, buildOpServiceRecords } from './generators/opservices.generator';
 import {
   encodeWindows874,
   formatDateCompact,
@@ -12,7 +12,15 @@ import {
   formatAmount,
   getBangkokDateParts,
 } from './generators/encoding';
-import type { SsopVisitData } from './types/ssop.types';
+import type {
+  SsopVisitData,
+  BilltranRecord,
+  BillItemRecord,
+  OpServiceRecord,
+  OpDxRecord,
+  DispensingRecord,
+  DispensedItemRecord,
+} from './types/ssop.types';
 
 export interface ValidationIssue {
   visitId: number;
@@ -35,8 +43,11 @@ export class SsopExportService {
     invalid: ValidationIssue[];
     totalAmount: number;
   }> {
-    const visits = await this.loadVisitData(visitIds);
-    const aipnDateMap = await this.aipnCatalogService.getAipnDateMap();
+    const [aipnRateMap, aipnDateMap] = await Promise.all([
+      this.aipnCatalogService.getAipnRateMap(),
+      this.aipnCatalogService.getAipnDateMap(),
+    ]);
+    const visits = await this.loadVisitData(visitIds, aipnRateMap);
     const valid: { visitId: number; vn: string; amount: number }[] = [];
     const invalid: ValidationIssue[] = [];
 
@@ -44,7 +55,7 @@ export class SsopExportService {
       const issues = this.validateVisit(visit, aipnDateMap);
       if (issues.length === 0) {
         const amount = visit.billingItems.reduce(
-          (sum, item) => sum + item.quantity * item.claimUnitPrice,
+          (sum, item) => sum + item.quantity * resolveClaimUP(item),
           0,
         );
         valid.push({ visitId: visit.visitId, vn: visit.vn, amount });
@@ -63,8 +74,11 @@ export class SsopExportService {
     userId: number | null,
   ): Promise<{ buffer: Buffer; fileName: string; batchId: number }> {
     // Load and validate
-    const visits = await this.loadVisitData(visitIds);
-    const aipnDateMap = await this.aipnCatalogService.getAipnDateMap();
+    const [aipnRateMap, aipnDateMap] = await Promise.all([
+      this.aipnCatalogService.getAipnRateMap(),
+      this.aipnCatalogService.getAipnDateMap(),
+    ]);
+    const visits = await this.loadVisitData(visitIds, aipnRateMap);
     const validVisits = visits.filter((v) => this.validateVisit(v, aipnDateMap).length === 0);
 
     if (validVisits.length === 0) {
@@ -143,7 +157,7 @@ export class SsopExportService {
     const totalAmount = ssopVisits.reduce(
       (sum, v) =>
         sum +
-        v.billingItems.reduce((s, i) => s + i.quantity * i.claimUnitPrice, 0),
+        v.billingItems.reduce((s, i) => s + i.quantity * resolveClaimUP(i), 0),
       0,
     );
 
@@ -165,6 +179,180 @@ export class SsopExportService {
     });
 
     return { buffer: zipBuffer, fileName, batchId: batch.id };
+  }
+
+  /** Preview SSOP-formatted data for a single visit (read-only, no batch/session created) */
+  async previewSsopData(visitId: number): Promise<{
+    billtran: BilltranRecord;
+    billItems: BillItemRecord[];
+    opService: OpServiceRecord;
+    opDx: OpDxRecord[];
+    dispensing: DispensingRecord | null;
+    dispensedItems: DispensedItemRecord[];
+    validation: { valid: boolean; issues: string[] };
+  }> {
+    const [aipnRateMap, aipnDateMap] = await Promise.all([
+      this.aipnCatalogService.getAipnRateMap(),
+      this.aipnCatalogService.getAipnDateMap(),
+    ]);
+    const visits = await this.loadVisitData([visitId], aipnRateMap);
+    if (visits.length === 0) {
+      throw new NotFoundException('ไม่พบข้อมูล visit');
+    }
+
+    const visitData = visits[0];
+    const issues = this.validateVisit(visitData, aipnDateMap);
+
+    const { hcode } = await this.getHospitalSettings();
+    const careAccount = await this.getCareAccountSetting();
+
+    // Build temporary SVID map for this single visit
+    const svidMap = this.generateSvidMap([visitData]);
+
+    // Convert to SsopVisitData
+    const ssopVisit: SsopVisitData = {
+      vn: visitData.vn,
+      visitDate: visitData.visitDate,
+      serviceStartTime: visitData.serviceStartTime,
+      serviceEndTime: visitData.serviceEndTime,
+      physicianLicenseNo: visitData.physicianLicenseNo,
+      clinicCode: visitData.clinicCode,
+      primaryDiagnosis: visitData.primaryDiagnosis,
+      secondaryDiagnoses: visitData.secondaryDiagnoses,
+      patientHn: visitData.patientHn,
+      patientCitizenId: visitData.patientCitizenId,
+      patientFullName: visitData.patientFullName,
+      caseNumber: visitData.caseNumber,
+      vcrCode: visitData.vcrCode,
+      protocolCode: visitData.protocolCode,
+      mainHospitalCode: visitData.mainHospitalCode,
+      billNo: visitData.billNo,
+      visitType: visitData.visitType,
+      dischargeType: visitData.dischargeType,
+      nextAppointmentDate: visitData.nextAppointmentDate,
+      serviceClass: visitData.serviceClass,
+      typeServ: visitData.typeServ,
+      prescriptionTime: visitData.prescriptionTime,
+      dayCover: visitData.dayCover,
+      billingItems: visitData.billingItems,
+    };
+
+    // Build records — billdisp first to get dispIdMap
+    const dispResult = buildBilldispRecords(ssopVisit, hcode, svidMap);
+    const dispIdMap = new Map<string, string>();
+    if (dispResult) {
+      dispIdMap.set(ssopVisit.vn, dispResult.dispId);
+    }
+
+    const { tran, items } = buildBilltranRecords(
+      ssopVisit, hcode, svidMap, dispIdMap,
+    );
+    const { service, dxRecords } = buildOpServiceRecords(
+      ssopVisit, hcode, svidMap, careAccount,
+    );
+
+    return {
+      billtran: tran,
+      billItems: items,
+      opService: service,
+      opDx: dxRecords,
+      dispensing: dispResult?.dispensing ?? null,
+      dispensedItems: dispResult?.items ?? [],
+      validation: { valid: issues.length === 0, issues },
+    };
+  }
+
+  /** Preview or bulk-create VisitBillingClaims for all visits in a batch.
+   *
+   * dryRun=true  → return details only, no DB write
+   * dryRun=false → create PENDING claims for eligible visits + return details
+   *
+   * Skip logic:
+   *   latest claim = PENDING  → skip (already submitted, awaiting decision)
+   *   latest claim = APPROVED → skip (already approved, no need to resubmit)
+   *   no claim or latest = REJECTED → create new round (maxRound + 1)
+   */
+  async createBillingClaimsFromBatch(
+    batchId: number,
+    userId: number,
+    dryRun = false,
+  ): Promise<{
+    created: number;
+    skipped: number;
+    details: Array<{
+      visitId: number;
+      vn: string;
+      patientName: string;
+      action: 'CREATED' | 'SKIPPED';
+      skipReason?: 'ALREADY_PENDING' | 'ALREADY_APPROVED';
+      roundNumber?: number;
+    }>;
+  }> {
+    const batch = await this.prisma.billingExportBatch.findUnique({
+      where: { id: batchId },
+      select: { id: true, sessionNo: true, visitIds: true },
+    });
+    if (!batch) throw new NotFoundException('ไม่พบข้อมูล export batch');
+
+    const visitIds = batch.visitIds as number[];
+
+    // Load visits with their billing claims (latest round first)
+    const visits = await this.prisma.patientVisit.findMany({
+      where: { id: { in: visitIds } },
+      select: {
+        id: true,
+        vn: true,
+        patient: { select: { fullName: true } },
+        billingClaims: {
+          where: { isActive: true },
+          orderBy: { roundNumber: 'desc' },
+        },
+      },
+    });
+
+    const toCreate: Array<{ visitId: number; roundNumber: number }> = [];
+    const details: Array<{
+      visitId: number;
+      vn: string;
+      patientName: string;
+      action: 'CREATED' | 'SKIPPED';
+      skipReason?: 'ALREADY_PENDING' | 'ALREADY_APPROVED';
+      roundNumber?: number;
+    }> = [];
+
+    for (const visit of visits) {
+      const patientName = visit.patient?.fullName || visit.vn;
+
+      const latestClaim = visit.billingClaims[0] ?? null;
+      const maxRound = latestClaim?.roundNumber ?? 0;
+
+      if (latestClaim?.status === 'PENDING') {
+        details.push({ visitId: visit.id, vn: visit.vn, patientName, action: 'SKIPPED', skipReason: 'ALREADY_PENDING' });
+      } else if (latestClaim?.status === 'APPROVED') {
+        details.push({ visitId: visit.id, vn: visit.vn, patientName, action: 'SKIPPED', skipReason: 'ALREADY_APPROVED' });
+      } else {
+        const nextRound = maxRound + 1;
+        toCreate.push({ visitId: visit.id, roundNumber: nextRound });
+        details.push({ visitId: visit.id, vn: visit.vn, patientName, action: 'CREATED', roundNumber: nextRound });
+      }
+    }
+
+    if (!dryRun && toCreate.length > 0) {
+      const now = new Date();
+      const sessLabel = String(batch.sessionNo).padStart(4, '0');
+      await this.prisma.visitBillingClaim.createMany({
+        data: toCreate.map(({ visitId, roundNumber }) => ({
+          visitId,
+          roundNumber,
+          status: 'PENDING',
+          submittedAt: now,
+          notes: `SSOP Session ${sessLabel}`,
+          createdByUserId: userId,
+        })),
+      });
+    }
+
+    return { created: toCreate.length, skipped: details.length - toCreate.length, details };
   }
 
   /** List export batches */
@@ -291,7 +479,10 @@ export class SsopExportService {
   // =========================================================================
 
   /** Load enriched visit data with all relations needed for SSOP */
-  private async loadVisitData(visitIds: number[]) {
+  private async loadVisitData(
+    visitIds: number[],
+    aipnRateMap?: Map<number, Array<{ rate: number; dateEffective: Date; dateExpiry: Date }>>,
+  ) {
     const visits = await this.prisma.patientVisit.findMany({
       where: { id: { in: visitIds } },
       include: {
@@ -334,24 +525,46 @@ export class SsopExportService {
       typeServ: v.serviceType ?? undefined,
       prescriptionTime: v.prescriptionTime,
       dayCover: v.dayCover ?? undefined,
-      billingItems: v.visitBillingItems.map((item) => ({
-        hospitalCode: item.hospitalCode,
-        aipnCode: item.aipnCode,
-        tmtCode: item.tmtCode ?? null,
-        stdCode: item.stdCode ?? null,
-        billingGroup: item.billingGroup,
-        description: item.description,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        claimUnitPrice: Number(item.claimUnitPrice ?? item.unitPrice),
-        claimCategory: item.claimCategory,
-        // Drug/dispensing fields
-        dfsText: item.dfsText ?? null,
-        packsize: item.packsize ?? null,
-        sigCode: item.sigCode ?? null,
-        sigText: item.sigText ?? null,
-        supplyDuration: item.supplyDuration ?? null,
-      })),
+      billingItems: v.visitBillingItems.map((item) => {
+        // Resolve AIPN max-reimbursement rate effective on visit date
+        let aipnRate: number | null = null;
+        if (aipnRateMap && item.sksDrugCode) {
+          const code = parseInt(item.sksDrugCode, 10);
+          if (!isNaN(code)) {
+            const versions = aipnRateMap.get(code);
+            if (versions) {
+              const effective = versions.find(
+                (ver) => ver.dateEffective <= v.visitDate && ver.dateExpiry >= v.visitDate,
+              );
+              if (effective) aipnRate = effective.rate;
+            }
+          }
+        }
+        return {
+          hospitalCode: item.hospitalCode,
+          aipnCode: item.aipnCode,
+          tmtCode: item.tmtCode ?? null,
+          stdCode: item.stdCode ?? null,
+          billingGroup: item.billingGroup,
+          description: item.description,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          claimUnitPrice: Number(item.claimUnitPrice ?? item.unitPrice),
+          claimCategory: item.claimCategory,
+          // Drug/dispensing fields
+          dfsText: item.dfsText ?? null,
+          packsize: item.packsize ?? null,
+          sigCode: item.sigCode ?? null,
+          sigText: item.sigText ?? null,
+          supplyDuration: item.supplyDuration ?? null,
+          // SKS fields (TMT/SSO standard codes)
+          sksDrugCode: item.sksDrugCode ?? null,
+          stdGroup: item.stdGroup ?? null,
+          sksDfsText: item.sksDfsText ?? null,
+          sksReimbPrice: item.sksReimbPrice ? Number(item.sksReimbPrice) : null,
+          aipnRate,
+        };
+      }),
     }));
   }
 
@@ -392,7 +605,6 @@ export class SsopExportService {
 
     // SSO Cancer Care data checks
     if (!visit.caseNumber) issues.push('ไม่มีเลขที่เคส (Case Number)');
-    if (!visit.vcrCode) issues.push('ไม่มีรหัส Protocol QR Code (VCR Code)');
     if (!visit.protocolCode) issues.push('ไม่มีรหัส Protocol (ต้อง confirm protocol ก่อน)');
     if (!visit.mainHospitalCode) issues.push('ไม่มีรหัส รพ.ตามสิทธิ');
 
@@ -489,20 +701,28 @@ export class SsopExportService {
       where: { settingKey: 'hospital_id' },
     });
 
-    const hospitalId = hospitalIdSetting?.settingValue
-      ? parseInt(hospitalIdSetting.settingValue, 10)
-      : null;
+    const settingValue = hospitalIdSetting?.settingValue?.trim();
 
-    if (!hospitalId) {
+    if (!settingValue) {
       throw new BadRequestException(
         'ยังไม่ได้ตั้งค่าสถานพยาบาล — กรุณาตั้งค่า hospital_id ในหน้า Settings',
       );
     }
 
-    const hospital = await this.prisma.hospital.findUnique({
-      where: { id: hospitalId },
+    // Support both database ID and hcode5 — users naturally enter hcode5
+    const numericId = parseInt(settingValue, 10);
+    let hospital = await this.prisma.hospital.findUnique({
+      where: { id: numericId },
       select: { hcode5: true, nameThai: true },
     });
+
+    // If not found by ID, try as hcode5
+    if (!hospital) {
+      hospital = await this.prisma.hospital.findFirst({
+        where: { hcode5: settingValue },
+        select: { hcode5: true, nameThai: true },
+      });
+    }
 
     if (!hospital || !hospital.hcode5) {
       throw new BadRequestException('ไม่พบข้อมูลสถานพยาบาลหรือไม่มี hcode5');
@@ -556,13 +776,50 @@ export class SsopExportService {
   /** Reserve next session number scoped by hcode (atomic via transaction) */
   private async reserveSessionNo(hcode: string): Promise<number> {
     return this.prisma.$transaction(async (tx) => {
-      const last = await tx.billingExportBatch.findFirst({
-        where: { hcode },
-        orderBy: { sessionNo: 'desc' },
-        select: { sessionNo: true },
-      });
-      return (last?.sessionNo || 0) + 1;
+      const [last, startSetting] = await Promise.all([
+        tx.billingExportBatch.findFirst({
+          where: { hcode },
+          orderBy: { sessionNo: 'desc' },
+          select: { sessionNo: true },
+        }),
+        tx.appSetting.findUnique({
+          where: { settingKey: 'ssop_session_no_start' },
+          select: { settingValue: true },
+        }),
+      ]);
+      const startNo = Math.max(1, parseInt(startSetting?.settingValue || '1', 10) || 1);
+      const nextFromLast = (last?.sessionNo || 0) + 1;
+      return Math.max(startNo, nextFromLast);
     });
+  }
+
+  /** Return a map of visitId → export batches that include it */
+  async getVisitExportStatus(
+    visitIds: number[],
+  ): Promise<Record<number, Array<{ batchId: number; sessionNo: number; createdAt: string }>>> {
+    if (visitIds.length === 0) return {};
+
+    const batches = await this.prisma.billingExportBatch.findMany({
+      where: { isActive: true, visitIds: { hasSome: visitIds } },
+      select: { id: true, sessionNo: true, createdAt: true, visitIds: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const result: Record<number, Array<{ batchId: number; sessionNo: number; createdAt: string }>> =
+      {};
+    for (const batch of batches) {
+      for (const vid of batch.visitIds as number[]) {
+        if (visitIds.includes(vid)) {
+          if (!result[vid]) result[vid] = [];
+          result[vid].push({
+            batchId: batch.id,
+            sessionNo: batch.sessionNo,
+            createdAt: batch.createdAt.toISOString(),
+          });
+        }
+      }
+    }
+    return result;
   }
 
   /** Create ZIP buffer from file entries */

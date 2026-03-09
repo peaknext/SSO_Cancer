@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as XLSX from 'xlsx';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { SsoAipnCatalogService } from '../../sso-aipn-catalog/sso-aipn-catalog.service';
 import {
   ParsedVisitRow,
   ParsedMedication,
@@ -54,7 +55,10 @@ function excelSerialToDate(serial: number): string {
 
 @Injectable()
 export class ImportService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aipnCatalogService: SsoAipnCatalogService,
+  ) {}
 
   /**
    * Parse xlsx buffer and return preview (no DB write)
@@ -332,14 +336,162 @@ export class ImportService {
   }
 
   /**
-   * Resolve drug by medication name — 3-tier matching strategy
+   * Parse sksDrugCode (TMT TPU code string) to integer for SsoAipnItem lookup.
+   * Returns null if non-numeric, negative, or zero.
+   */
+  parseSksDrugCode(sksDrugCode: string | null | undefined): number | null {
+    if (!sksDrugCode) return null;
+    const trimmed = sksDrugCode.trim();
+    if (!trimmed) return null;
+    const parsed = parseInt(trimmed, 10);
+    if (isNaN(parsed) || parsed <= 0) return null;
+    // Reject non-purely-numeric strings like "123abc"
+    if (String(parsed) !== trimmed) return null;
+    return parsed;
+  }
+
+  /**
+   * Resolve sksDrugCode → validated AIPN code.
+   * Checks that the code exists in the SSO AIPN catalog (SsoAipnItem).
+   */
+  async resolveAipnCode(sksDrugCode: string | null | undefined): Promise<number | null> {
+    const code = this.parseSksDrugCode(sksDrugCode);
+    if (!code) return null;
+
+    const item = await this.prisma.ssoAipnItem.findFirst({
+      where: { code, isActive: true },
+      select: { code: true },
+    });
+    return item ? item.code : null;
+  }
+
+  /**
+   * Resolve Drug.id from a validated AIPN code by extracting the generic name
+   * from the SsoAipnItem description and matching against Drug.genericName.
+   * Format: "BRAND (MANUFACTURER, COUNTRY) (generic_name DOSAGE) ..."
+   */
+  async resolveDrugByAipnCode(aipnCode: number): Promise<number | null> {
+    const item = await this.prisma.ssoAipnItem.findFirst({
+      where: { code: aipnCode, isActive: true },
+      select: { description: true },
+    });
+    if (!item?.description) return null;
+
+    // Extract generic name: "...) (paclitaxel 300 mg/50 mL) ..." → "paclitaxel"
+    const match = item.description.match(/\)\s*\(([^()]+?)\s+\d/);
+    if (!match) return null;
+
+    const genericName = match[1].trim();
+    if (!genericName) return null;
+
+    const drug = await this.prisma.drug.findFirst({
+      where: { genericName: { equals: genericName, mode: 'insensitive' }, isActive: true },
+      select: { id: true },
+    });
+    return drug?.id ?? null;
+  }
+
+  /**
+   * Extract generic drug name and dosage from dfsText/sksDfsText.
+   * Input format: "paclitaxel 300 mg/50 mL injection" or "CISPLATIN 50 MG/100 ML"
+   * Returns: { genericName: "paclitaxel", dosage: "300 mg/50 ml" } or null
+   */
+  extractGenericFromDfsText(dfsText: string): { genericName: string; dosage: string | null } | null {
+    if (!dfsText) return null;
+    const trimmed = dfsText.trim();
+    if (!trimmed) return null;
+
+    // Match: generic name (letters/hyphens/spaces) followed by dosage (digit + unit)
+    const match = trimmed.match(
+      /^([a-z][a-z\s\-]+?)\s+(\d[\d.,/\s]*(?:mg|g|ml|mcg|iu|unit)\b[^]*?)(?:\s+(?:injection|infusion|solution|suspension|tablet|capsule|cream|ointment|concentrate|powder|oral|for)\b|$)/i,
+    );
+    if (match) {
+      return {
+        genericName: match[1].trim().toLowerCase(),
+        dosage: match[2].trim().toLowerCase(),
+      };
+    }
+
+    // Fallback: just extract the first word(s) before digits
+    const fallback = trimmed.match(/^([a-z][a-z\s\-]+?)\s+\d/i);
+    if (fallback) {
+      return {
+        genericName: fallback[1].trim().toLowerCase(),
+        dosage: null,
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Resolve AIPN code by text-matching dfsText against SsoAipnItem descriptions.
+   * Uses cached generic name index for O(1) lookup.
+   */
+  async resolveAipnByText(dfsText: string | null | undefined): Promise<number | null> {
+    if (!dfsText) return null;
+
+    const parsed = this.extractGenericFromDfsText(dfsText);
+    if (!parsed) return null;
+
+    const index = await this.aipnCatalogService.getGenericNameIndex();
+    const entries = index.get(parsed.genericName);
+    if (!entries || entries.length === 0) return null;
+
+    // If we have dosage, try to find a matching entry
+    if (parsed.dosage && entries.length > 1) {
+      // Normalize dosage for comparison: strip spaces, lowercase
+      const normalizedDosage = parsed.dosage.replace(/\s+/g, '');
+      const match = entries.find((e) => e.dosage.replace(/\s+/g, '') === normalizedDosage);
+      if (match) return match.code;
+    }
+
+    // Return any matching code (for formulary compliance, any code for the same generic works)
+    return entries[0].code;
+  }
+
+  /**
+   * Resolve drug by medication name — multi-tier matching strategy
+   * Tier 0: If sksDrugCode provided, resolve via AIPN code (exact code match)
+   * Tier 0.5: If dfsText provided, resolve via text-based generic name matching against AIPN catalog
    * Tier 1: Exact match (most precise, prevents false positives)
    * Tier 2: Starts-with match (handles names with trailing strength/form info)
    * Tier 3: Contains match (broadest fallback)
    * Each tier tries trade name first, then generic name.
    */
-  async resolveDrug(medicationName: string): Promise<number | null> {
-    if (!medicationName) return null;
+  async resolveDrug(
+    medicationName: string,
+    sksDrugCode?: string | null,
+    dfsText?: string | null,
+  ): Promise<{
+    drugId: number | null;
+    aipnCode: number | null;
+  }> {
+    // --- Tier 0: AIPN code-based resolution (most accurate) ---
+    let resolvedAipnCode: number | null = null;
+    if (sksDrugCode) {
+      resolvedAipnCode = await this.resolveAipnCode(sksDrugCode);
+      if (resolvedAipnCode) {
+        const drugId = await this.resolveDrugByAipnCode(resolvedAipnCode);
+        if (drugId) {
+          return { drugId, aipnCode: resolvedAipnCode };
+        }
+        // AIPN code valid but couldn't map to Drug — continue with name matching
+      }
+    }
+
+    // --- Tier 0.5: Text-based AIPN resolution from dfsText ---
+    if (!resolvedAipnCode && dfsText) {
+      resolvedAipnCode = await this.resolveAipnByText(dfsText);
+      if (resolvedAipnCode) {
+        const drugId = await this.resolveDrugByAipnCode(resolvedAipnCode);
+        if (drugId) {
+          return { drugId, aipnCode: resolvedAipnCode };
+        }
+      }
+    }
+
+    if (!medicationName) return { drugId: null, aipnCode: resolvedAipnCode };
 
     const nameUpper = medicationName.toUpperCase().trim();
 
@@ -358,7 +510,7 @@ export class ImportService {
         },
         select: { drugId: true },
       });
-      if (exactTrade) return exactTrade.drugId;
+      if (exactTrade) return { drugId: exactTrade.drugId, aipnCode: resolvedAipnCode };
 
       const exactGeneric = await this.prisma.drug.findFirst({
         where: {
@@ -367,7 +519,7 @@ export class ImportService {
         },
         select: { id: true },
       });
-      if (exactGeneric) return exactGeneric.id;
+      if (exactGeneric) return { drugId: exactGeneric.id, aipnCode: resolvedAipnCode };
     }
 
     for (const name of namesToTry) {
@@ -379,7 +531,7 @@ export class ImportService {
         },
         select: { drugId: true },
       });
-      if (startsWithTrade) return startsWithTrade.drugId;
+      if (startsWithTrade) return { drugId: startsWithTrade.drugId, aipnCode: resolvedAipnCode };
 
       const startsWithGeneric = await this.prisma.drug.findFirst({
         where: {
@@ -388,7 +540,7 @@ export class ImportService {
         },
         select: { id: true },
       });
-      if (startsWithGeneric) return startsWithGeneric.id;
+      if (startsWithGeneric) return { drugId: startsWithGeneric.id, aipnCode: resolvedAipnCode };
     }
 
     for (const name of namesToTry) {
@@ -401,7 +553,7 @@ export class ImportService {
         },
         select: { drugId: true },
       });
-      if (containsTrade) return containsTrade.drugId;
+      if (containsTrade) return { drugId: containsTrade.drugId, aipnCode: resolvedAipnCode };
 
       const containsGeneric = await this.prisma.drug.findFirst({
         where: {
@@ -410,10 +562,10 @@ export class ImportService {
         },
         select: { id: true },
       });
-      if (containsGeneric) return containsGeneric.id;
+      if (containsGeneric) return { drugId: containsGeneric.id, aipnCode: resolvedAipnCode };
     }
 
-    return null;
+    return { drugId: null, aipnCode: resolvedAipnCode };
   }
 
   /**
@@ -517,9 +669,9 @@ export class ImportService {
 
           for (const line of medLines) {
             const parsed = this.parseMedicationLine(line);
-            const resolvedDrugId = parsed.medicationName
+            const resolved = parsed.medicationName
               ? await this.resolveDrug(parsed.medicationName)
-              : null;
+              : { drugId: null, aipnCode: null };
 
             await this.prisma.visitMedication.create({
               data: {
@@ -529,7 +681,8 @@ export class ImportService {
                 medicationName: parsed.medicationName,
                 quantity: parsed.quantity,
                 unit: parsed.unit,
-                resolvedDrugId,
+                resolvedDrugId: resolved.drugId,
+                resolvedAipnCode: resolved.aipnCode,
               },
             });
           }

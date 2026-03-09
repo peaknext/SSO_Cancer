@@ -76,7 +76,7 @@ interface HisVisit {
   billingItems?: HisBillingItem[];
 }
 
-interface HisPreviewVisit {
+export interface HisPreviewVisit {
   visit: HisVisit;
   isCancerRelated: boolean;
   isAlreadyImported: boolean;
@@ -84,7 +84,7 @@ interface HisPreviewVisit {
   hasProtocolDrugs: boolean;
 }
 
-interface SummaryStats {
+export interface SummaryStats {
   totalVisits: number;
   cancerRelatedVisits: number;
   alreadyImported: number;
@@ -101,6 +101,11 @@ interface Props {
   onImportVisit: (vn: string, forceIncomplete: boolean) => void;
   syncingVn?: string | null;
   onSyncVisit?: (vn: string) => void;
+  // Batch action props
+  onImportAll?: () => void;
+  importingAll?: boolean;
+  onBatchSync?: () => void;
+  batchSyncing?: boolean;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -164,6 +169,10 @@ export function HisVisitTimeline({
   onImportVisit,
   syncingVn,
   onSyncVisit,
+  onImportAll,
+  importingAll,
+  onBatchSync,
+  batchSyncing,
 }: Props) {
   const [expandedVns, setExpandedVns] = useState<Set<string>>(new Set());
 
@@ -207,6 +216,39 @@ export function HisVisitTimeline({
 
       {/* Summary stats */}
       <VisitSummaryStats summary={summary} />
+
+      {/* Batch action buttons */}
+      {(onImportAll || onBatchSync) && (
+        <div className="flex items-center gap-2">
+          {onImportAll && summary.newImportable > 0 && (
+            <Button
+              size="sm"
+              className="h-8 text-xs gap-1.5 bg-success hover:bg-success/90 text-white"
+              onClick={onImportAll}
+              disabled={importingAll || importingVn !== null}
+            >
+              {importingAll ? (
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              นำเข้าทั้งหมด ({summary.newImportable})
+            </Button>
+          )}
+          {onBatchSync && summary.alreadyImported > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1.5"
+              onClick={onBatchSync}
+              disabled={batchSyncing || syncingVn !== null}
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5', batchSyncing && 'animate-spin')} />
+              {batchSyncing ? 'กำลังซิงค์...' : `ซิงค์ทั้งหมด (${summary.alreadyImported})`}
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Timeline */}
       {visits.length === 0 ? (
