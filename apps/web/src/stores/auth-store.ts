@@ -23,6 +23,7 @@ interface AuthStore {
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setAuth: (user: User, accessToken: string) => void;
+  setUser: (user: User) => void;
   clearAuth: () => void;
 }
 
@@ -132,6 +133,8 @@ export const useAuthStore = create<AuthStore>()(
         apiClient.setAccessToken(accessToken);
         set({ user, accessToken, isAuthenticated: true, isHydrating: false });
       },
+
+      setUser: (user: User) => set({ user }),
 
       clearAuth: () => {
         apiClient.setAccessToken(null);

@@ -11,6 +11,7 @@ import { UsersService } from '../users/users.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class AuthService {
@@ -255,6 +256,55 @@ export class AuthService {
       avatarUrl: user.avatarUrl,
       lastLoginAt: user.lastLoginAt,
     };
+  }
+
+  async updateProfile(userId: number, dto: UpdateProfileDto, ip: string, userAgent: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('USER_NOT_FOUND');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.fullName !== undefined && { fullName: dto.fullName }),
+        ...(dto.fullNameThai !== undefined && { fullNameThai: dto.fullNameThai }),
+        ...(dto.department !== undefined && { department: dto.department }),
+        ...(dto.position !== undefined && { position: dto.position }),
+        ...(dto.phoneNumber !== undefined && { phoneNumber: dto.phoneNumber }),
+      },
+      select: {
+        id: true, email: true, role: true, fullName: true, fullNameThai: true,
+        department: true, position: true, phoneNumber: true, avatarUrl: true,
+        lastLoginAt: true,
+      },
+    });
+
+    // Manual audit log (AuditLogInterceptor skips auth routes)
+    await this.logAudit(userId, 'UPDATE_PROFILE', 'User', userId, ip, userAgent);
+
+    return updated;
+  }
+
+  async getMySessions(userId: number) {
+    return this.prisma.session.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        ipAddress: true,
+        userAgent: true,
+        createdAt: true,
+        lastActivityAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async revokeMySession(userId: number, sessionId: number) {
+    const result = await this.prisma.session.deleteMany({
+      where: { id: sessionId, userId },
+    });
+    return { deleted: result.count > 0 };
   }
 
   private async generateTokens(

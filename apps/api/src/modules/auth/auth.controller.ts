@@ -2,12 +2,16 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
+  Delete,
   Body,
+  Param,
   Req,
   Res,
   UseGuards,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
@@ -17,6 +21,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -142,5 +147,35 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile' })
   async me(@CurrentUser('id') userId: number) {
     return this.authService.getMe(userId);
+  }
+
+  @Patch('profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user profile (personal fields only)' })
+  async updateProfile(
+    @CurrentUser('id') userId: number,
+    @Body() dto: UpdateProfileDto,
+    @Req() req: Request,
+  ) {
+    const ip = req.ip || req.socket.remoteAddress || '';
+    const userAgent = req.headers['user-agent'] || '';
+    return this.authService.updateProfile(userId, dto, ip, userAgent);
+  }
+
+  @Get('sessions')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List current user active sessions' })
+  async getMySessions(@CurrentUser('id') userId: number) {
+    return this.authService.getMySessions(userId);
+  }
+
+  @Delete('sessions/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Revoke own session by ID' })
+  async revokeMySession(
+    @CurrentUser('id') userId: number,
+    @Param('id', ParseIntPipe) sessionId: number,
+  ) {
+    return this.authService.revokeMySession(userId, sessionId);
   }
 }

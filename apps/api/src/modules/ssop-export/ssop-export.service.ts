@@ -3,7 +3,7 @@ import * as archiver from 'archiver';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SsoAipnCatalogService } from '../sso-aipn-catalog/sso-aipn-catalog.service';
 import { generateBilltranXml, buildBilltranRecords } from './generators/billtran.generator';
-import { generateBilldispXml, buildBilldispRecords, resolveClaimUP } from './generators/billdisp.generator';
+import { generateBilldispXml, buildBilldispRecords, resolveClaimUP, isDrugItem } from './generators/billdisp.generator';
 import { generateOpServicesXml, buildOpServiceRecords } from './generators/opservices.generator';
 import {
   encodeWindows874,
@@ -21,6 +21,18 @@ import type {
   DispensingRecord,
   DispensedItemRecord,
 } from './types/ssop.types';
+
+/** Valid ClaimCat values per สกส. T10/R20 spec */
+const VALID_CLAIM_CATEGORIES = new Set([
+  'OP1', 'RRT', 'P01', 'P02', 'P03', 'REF', 'EM1', 'EM2', 'OPF', 'OPR',
+]);
+
+/** Check if a diagnosis code is a cancer ICD-10 (C* or D0*) for ClaimCat smart default */
+function isCancerDiagnosis(diagnosis: string): boolean {
+  if (!diagnosis) return false;
+  const code = diagnosis.replace(/\./g, '').toUpperCase();
+  return code.startsWith('C') || code.startsWith('D0');
+}
 
 export interface ValidationIssue {
   visitId: number;
@@ -478,6 +490,31 @@ export class SsopExportService {
   // Private helpers
   // =========================================================================
 
+  /**
+   * Resolve ClaimCat for a billing item at export time.
+   * Smart default: cancer drug items on confirmed cancer visits → 'OPR'
+   */
+  private resolveClaimCategory(
+    rawCategory: string | null,
+    item: { stdGroup: string | null; billingGroup: string },
+    visit: {
+      primaryDiagnosis: string;
+      case?: { caseNumber?: string; protocol?: { protocolCode?: string } | null } | null;
+    },
+  ): string {
+    const category = rawCategory || 'OP1';
+    if (
+      category === 'OP1' &&
+      isDrugItem(item) &&
+      visit.case?.caseNumber &&
+      visit.case?.protocol?.protocolCode &&
+      isCancerDiagnosis(visit.primaryDiagnosis)
+    ) {
+      return 'OPR';
+    }
+    return category;
+  }
+
   /** Load enriched visit data with all relations needed for SSOP */
   private async loadVisitData(
     visitIds: number[],
@@ -550,7 +587,7 @@ export class SsopExportService {
           quantity: Number(item.quantity),
           unitPrice: Number(item.unitPrice),
           claimUnitPrice: Number(item.claimUnitPrice ?? item.unitPrice),
-          claimCategory: item.claimCategory,
+          claimCategory: this.resolveClaimCategory(item.claimCategory, item, v),
           // Drug/dispensing fields
           dfsText: item.dfsText ?? null,
           packsize: item.packsize ?? null,
@@ -576,7 +613,15 @@ export class SsopExportService {
       vn: string;
       visitDate: Date;
       primaryDiagnosis: string;
-      billingItems: { quantity: number; claimUnitPrice: number; aipnCode: string | null }[];
+      billingItems: {
+        quantity: number;
+        claimUnitPrice: number;
+        aipnCode: string | null;
+        claimCategory: string;
+        billingGroup: string;
+        stdGroup: string | null;
+        description: string;
+      }[];
       physicianLicenseNo: string | null;
       clinicCode: string | null;
       serviceStartTime: Date | null;
@@ -641,6 +686,17 @@ export class SsopExportService {
             );
           }
         }
+      }
+    }
+
+    // ClaimCat validation (T10/R20 spec)
+    for (const item of visit.billingItems) {
+      if (item.claimCategory && !VALID_CLAIM_CATEGORIES.has(item.claimCategory)) {
+        issues.push(
+          `ClaimCat "${item.claimCategory}" ไม่ถูกต้อง` +
+          ` (${item.description || 'ไม่มีคำอธิบาย'})` +
+          ` — ค่าที่อนุญาต: OP1, RRT, P01-P03, REF, EM1-EM2, OPF, OPR`,
+        );
       }
     }
 

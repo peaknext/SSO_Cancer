@@ -33,6 +33,7 @@ const breadcrumbMap: Record<string, string> = {
   '/settings/ai': 'ตั้งค่า AI',
   '/settings/audit-logs': 'บันทึกกิจกรรม',
   '/user-manual': 'คู่มือใช้งาน',
+  '/profile': 'โปรไฟล์',
 };
 
 interface TopbarProps {
@@ -165,7 +166,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               <button
                 onClick={() => {
                   setUserMenuOpen(false);
-                  router.push('/settings/users');
+                  router.push('/profile');
                 }}
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-sidebar-foreground hover:bg-white/15 dark:hover:bg-white/8 transition-colors"
               >

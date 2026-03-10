@@ -122,7 +122,7 @@ apps/web/       Next.js 15 frontend (dev port 47001, Docker port 3000)
 prisma/         Schema, config, migrations, generated client
 database/seeds/ Numbered SQL files (001–017) executed by prisma/seed.ts
 deploy/         4 deploy scripts + nginx config
-docs/           SPECIFICATION.md (full app spec), DEPLOYMENT.md, HIS_API_REQUEST.md, SSOP_EXPORT_FIX_PLAN.md
+docs/           SPECIFICATION.md, DEPLOYMENT.md, DEPLOYMENT-WINDOWS-NATIVE.md, HIS_API_REQUEST.md, HIS_API_RESPONSE_ANALYSIS.md, HIS_ENDPOINT2_UPGRADE.md, OLLAMA_API.md, PRODUCTION_UPGRADE_PROMPT.md, SSOP_093_REFERENCE.md, SSOP_EXPORT_FIX_PLAN.md, SECURITY_AUDIT_REPORT.md, SECURITY_REMEDIATION.md
 scripts/        Seed generation utilities (export-seeds.ts, generate-aipn-seed.ts, etc.)
 ```
 
@@ -136,7 +136,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - **PrismaService** at `apps/api/src/prisma/prisma.service.ts` wraps PrismaClient in a `@Global()` NestJS module
 - **Barrel export** at `apps/api/src/prisma/index.ts` — services import `Prisma` namespace via `import { Prisma } from '../../prisma'`
 
-### Data Model (29 tables)
+### Data Model (28 tables)
 
 **Core medical entities (6):** Drug, DrugTradeName, CancerSite, CancerStage, ProtocolName, Regimen
 
@@ -167,7 +167,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `drugs`, `drug-trade-names` — CRUD with category/price filters
 - `dashboard` — aggregation stats with 5-min in-memory cache (12 cached endpoints; `getRecentActivity` and `getZ51ActionableVisits` uncached)
 - `audit-logs` — paginated query + CSV export (ADMIN+)
-- `app-settings` — grouped key-value config (SUPER_ADMIN to edit). Settings groups: `ai` (10 keys), `hospital` (4 keys: `hospital_id`, `his_api_base_url`, `his_api_key`, `his_api_timeout`), `ssop` (1 key: `ssop_care_account`). `his_api_key` is in `SENSITIVE_KEYS` (masked in GET responses).
+- `app-settings` — grouped key-value config (SUPER_ADMIN to edit). Settings groups: `ai` (13 keys), `hospital` (4 keys: `hospital_id`, `his_api_base_url`, `his_api_key`, `his_api_timeout`), `ssop` (1 key: `ssop_care_account`). `his_api_key` and `ai_ollama_api_key` are in `SENSITIVE_KEYS` (masked in GET responses).
 - `protocol-analysis` — CSV/Excel import of hospital visit data, drug resolution (4-tier: see Drug Resolution below), protocol matching with scoring, protocol confirmation (PATCH confirm/DELETE unconfirm per visit). Import service auto-links visits to existing Patient records by HN during import.
 - `ai` — multi-provider AI suggestion engine (see AI Module below)
 - `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking), Excel export with field picker (EDITOR+). Additional endpoints: `GET /case-hospitals` (distinct hospitals in active cases), `GET /export` (Excel download with configurable fields). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
@@ -202,7 +202,10 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `filters/` — HttpExceptionFilter with bilingual Thai/English error messages
 - `interceptors/` — see above
 
-**Other**: `ScheduleModule.forRoot()` is imported (cron jobs available but none defined yet).
+**Scheduled jobs** (`ScheduleModule.forRoot()`):
+
+1. HIS nightly scan (`his-nightly-scan.service.ts`) — `@Cron('0 1 * * *')` Asia/Bangkok, auto-imports new visits for tracked patients. Controlled by `his_nightly_scan_enabled` AppSetting.
+2. Audit logs cleanup (`audit-logs.service.ts`) — `@Cron(EVERY_DAY_AT_3AM)`, purges old audit log entries.
 
 ### Next.js Frontend Architecture
 
@@ -222,11 +225,13 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
   - `/cancer-patients/[id]` — Patient detail: case management (create/close/edit protocol), visit timeline (expand/collapse with persisted state), billing claims per visit (add/edit rounds with dates)
   - `/ssop-export` — SSOP 0.93 billing export: two-tab page (create export with 3-step select→preview→generate flow using ThaiDatePicker + multi-select checkboxes; export history with re-download). Uses raw `fetch()` for binary ZIP download with `X-Batch-Id` response header.
   - `/revenue` — Placeholder (Coming Soon)
+  - `/user-manual` — User manual/help page
   - `/settings/users`, `/settings/users/[id]` — User management (ADMIN+)
   - `/settings/app` — App settings with inline editing (SUPER_ADMIN to edit)
   - `/settings/ai` — AI provider configuration (SUPER_ADMIN to edit)
   - `/settings/audit-logs` — Audit log viewer with expandable diff (ADMIN+)
   - `/settings/backup` — Database backup download + restore upload with preview/confirm state machine (SUPER_ADMIN)
+  - `/settings/aipn-catalog` — SSO AIPN drug/equipment catalog viewer
 - Error boundaries at root and dashboard level, custom 404
 
 **State management** (Zustand with `persist` middleware):
@@ -308,6 +313,7 @@ Multi-provider AI suggestion engine in `apps/api/src/modules/ai/`:
 - `gemini.provider.ts` — Google Gemini REST API, uses `responseMimeType: 'application/json'` for structured output
 - `claude.provider.ts` — Anthropic Claude API, uses **`tool_use` with forced tool choice** for guaranteed structured JSON output (schema-validated via `recommend_protocol` tool definition). 60s timeout for large RAG contexts. Validates keys with Haiku.
 - `openai.provider.ts` — OpenAI API, uses `response_format: { type: 'json_object' }`
+- `ollama.provider.ts` — Ollama (self-hosted LLMs), configurable base URL (default `https://ollama.peaknext.cloud`), model default `llama3.2`. See `docs/OLLAMA_API.md`.
 - `provider.factory.ts` — Maps provider name → instance, injectable factory
 
 **Prompt builder** (`prompts/protocol-suggestion.prompt.ts`):
@@ -331,7 +337,7 @@ Multi-provider AI suggestion engine in `apps/api/src/modules/ai/`:
 - `GET /ai/suggestions/:vn/history` (ADMIN+) — full history
 - `POST /ai/settings/validate-key` (SUPER_ADMIN) — validate API key
 
-**AI settings** stored in `app_settings` table (group `ai`, 10 keys): `ai_enabled`, `ai_provider`, API keys + models for gemini/claude/openai, `ai_max_tokens`, `ai_temperature`.
+**AI settings** stored in `app_settings` table (group `ai`, 13 keys): `ai_enabled`, `ai_provider`, API keys + models for gemini/claude/openai/ollama (`ai_ollama_api_key`, `ai_ollama_base_url`, `ai_ollama_model`), `ai_max_tokens`, `ai_temperature`.
 
 ### HIS Integration Architecture
 

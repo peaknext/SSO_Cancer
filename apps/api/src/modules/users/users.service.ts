@@ -115,6 +115,16 @@ export class UsersService {
       throw new ForbiddenException('Cannot modify SUPER_ADMIN');
     }
 
+    // Role assignment rules
+    if (dto.role) {
+      if (dto.role === 'SUPER_ADMIN') {
+        throw new ForbiddenException('Cannot assign SUPER_ADMIN role');
+      }
+      if (dto.role === 'ADMIN' && currentUserRole !== 'SUPER_ADMIN') {
+        throw new ForbiddenException('Only SUPER_ADMIN can assign ADMIN role');
+      }
+    }
+
     return this.prisma.user.update({
       where: { id },
       data: dto,
