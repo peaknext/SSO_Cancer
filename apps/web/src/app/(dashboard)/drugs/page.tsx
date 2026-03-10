@@ -18,9 +18,8 @@ import { Button } from '@/components/ui/button';
 
 interface Drug {
   id: number;
-  drugCode: string;
   genericName: string;
-  drugCategory: string;
+  drugCategory: string | null;
   isActive: boolean;
   _count?: { tradeNames: number; regimenDrugs: number };
 }
@@ -81,11 +80,10 @@ export default function DrugsPage() {
 
   const columns: Column<Drug>[] = [
     {
-      key: 'drugCode',
-      header: 'รหัส',
-      sortable: true,
-      className: 'w-28',
-      render: (row) => <CodeBadge code={row.drugCode} />,
+      key: 'id',
+      header: '#',
+      className: 'w-16',
+      render: (row) => <CodeBadge code={String(row.id)} />,
     },
     {
       key: 'genericName',
@@ -99,11 +97,14 @@ export default function DrugsPage() {
       key: 'drugCategory',
       header: 'หมวดหมู่',
       sortable: true,
-      render: (row) => (
-        <Badge variant={categoryVariant[row.drugCategory] || 'secondary'} className="text-[11px]">
-          {row.drugCategory.replace(/_/g, ' ')}
-        </Badge>
-      ),
+      render: (row) =>
+        row.drugCategory ? (
+          <Badge variant={categoryVariant[row.drugCategory] || 'secondary'} className="text-[11px]">
+            {row.drugCategory.replace(/_/g, ' ')}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        ),
     },
     {
       key: 'tradeNames',

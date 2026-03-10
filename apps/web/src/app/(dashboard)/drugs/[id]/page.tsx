@@ -43,9 +43,8 @@ interface RegimenDrug {
 
 interface DrugDetail {
   id: number;
-  drugCode: string;
   genericName: string;
-  drugCategory: string;
+  drugCategory: string | null;
   description: string | null;
   isActive: boolean;
   tradeNames: DrugTradeName[];
@@ -95,7 +94,7 @@ export default function DrugDetailPage({ params }: { params: Promise<{ id: strin
         </Button>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-wrap">
-            <CodeBadge code={drug.drugCode} className="text-sm px-3 py-1" />
+            <CodeBadge code={String(drug.id)} className="text-sm px-3 py-1" />
             <h1 className="font-heading text-xl font-bold text-foreground">
               {drug.genericName}
             </h1>
