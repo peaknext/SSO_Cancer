@@ -109,7 +109,9 @@ export default function DrugDetailPage({ params }: { params: Promise<{ id: strin
           </Button>
         </div>
         <div className="flex items-center gap-2 mt-2">
-          <Badge variant="secondary">{drug.drugCategory.replace(/_/g, ' ')}</Badge>
+          {drug.drugCategory && (
+            <Badge variant="secondary">{drug.drugCategory.replace(/_/g, ' ')}</Badge>
+          )}
           {drug.description && (
             <span className="text-sm text-muted-foreground">— {drug.description}</span>
           )}
