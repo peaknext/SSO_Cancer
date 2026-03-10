@@ -493,6 +493,13 @@ export class SsopExportService {
   /**
    * Resolve ClaimCat for a billing item at export time.
    * Smart default: cancer drug items on confirmed cancer visits → 'OPR'
+   *
+   * OPR conditions (ALL must be true):
+   * 1. Current category is 'OP1' (default) — don't override HIS-provided values
+   * 2. Item is a drug/supply (billingGroup ∈ {3, 03, 5, 05})
+   * 3. Item exists in sso_aipn_items AND is effective on visit date (aipnRate != null)
+   * 4. Visit has confirmed case + protocol
+   * 5. Primary diagnosis is cancer (C* or D0*)
    */
   private resolveClaimCategory(
     rawCategory: string | null,
@@ -501,11 +508,13 @@ export class SsopExportService {
       primaryDiagnosis: string;
       case?: { caseNumber?: string; protocol?: { protocolCode?: string } | null } | null;
     },
+    aipnRate: number | null,
   ): string {
     const category = rawCategory || 'OP1';
     if (
       category === 'OP1' &&
       isDrugItem(item) &&
+      aipnRate != null &&
       visit.case?.caseNumber &&
       visit.case?.protocol?.protocolCode &&
       isCancerDiagnosis(visit.primaryDiagnosis)
@@ -587,7 +596,7 @@ export class SsopExportService {
           quantity: Number(item.quantity),
           unitPrice: Number(item.unitPrice),
           claimUnitPrice: Number(item.claimUnitPrice ?? item.unitPrice),
-          claimCategory: this.resolveClaimCategory(item.claimCategory, item, v),
+          claimCategory: this.resolveClaimCategory(item.claimCategory, item, v, aipnRate),
           // Drug/dispensing fields
           dfsText: item.dfsText ?? null,
           packsize: item.packsize ?? null,
