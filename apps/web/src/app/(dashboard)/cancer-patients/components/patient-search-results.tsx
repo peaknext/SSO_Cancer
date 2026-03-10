@@ -142,7 +142,7 @@ export function PatientSearchResults({
               </div>
             </button>
             <div className="flex items-center gap-2 shrink-0">
-              {onImportAll && p.existsInSystem === false && (
+              {onImportAll && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -158,7 +158,7 @@ export function PatientSearchResults({
                   ) : (
                     <Download className="h-3 w-3" />
                   )}
-                  นำเข้าทั้งหมด
+                  {p.existsInSystem ? 'นำเข้า visit ใหม่' : 'นำเข้าทั้งหมด'}
                 </Button>
               )}
               <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90" />

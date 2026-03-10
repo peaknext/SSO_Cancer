@@ -274,6 +274,62 @@ export class SsoAipnCatalogService {
     return index;
   }
 
+  // ─── Service Description Index (for non-drug AIPN code resolution) ────────
+
+  private serviceDescIndex: Map<string, number> | null = null;
+  private serviceDescIndexExpiry = 0;
+
+  /**
+   * Get cached in-memory index: normalized description → AIPN code.
+   * Covers ALL AIPN items (both drug and non-drug) for description-based lookup.
+   * Cache TTL: 5 minutes.
+   */
+  async getServiceDescriptionIndex(): Promise<Map<string, number>> {
+    const now = Date.now();
+    if (this.serviceDescIndex && now < this.serviceDescIndexExpiry) {
+      return this.serviceDescIndex;
+    }
+
+    const items = await this.prisma.ssoAipnItem.findMany({
+      where: { isActive: true },
+      select: { code: true, description: true },
+    });
+
+    const index = new Map<string, number>();
+    for (const item of items) {
+      const normalized = this.normalizeDescription(item.description);
+      if (normalized) {
+        index.set(normalized, item.code);
+      }
+    }
+
+    this.serviceDescIndex = index;
+    this.serviceDescIndexExpiry = now + 5 * 60 * 1000;
+    return index;
+  }
+
+  /** Also expose a set of all valid AIPN codes for quick existence check */
+  async getAipnCodeSet(): Promise<Set<number>> {
+    const items = await this.prisma.ssoAipnItem.findMany({
+      where: { isActive: true },
+      select: { code: true },
+      distinct: ['code'],
+    });
+    return new Set(items.map((i) => i.code));
+  }
+
+  /**
+   * Normalize a description for fuzzy matching.
+   * Removes spaces, parens, and common Thai filler words.
+   */
+  normalizeDescription(desc: string): string {
+    if (!desc) return '';
+    return desc
+      .toLowerCase()
+      .replace(/[\s()（）\-_.,/]/g, '')
+      .replace(/และ|ของ|ที่|ใน|ให้|กับ|สำหรับ/g, '');
+  }
+
   // ─── Import: Parse & Diff ─────────────────────────────────────────────────
 
   async parseAndDiff(buffer: Buffer): Promise<AipnDiffResult> {

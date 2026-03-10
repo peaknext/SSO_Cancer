@@ -151,6 +151,8 @@ export default function PatientCreatePage() {
 
   // Bulk import state (advanced search)
   const [importingHn, setImportingHn] = useState<string | null>(null);
+  // Track which HNs have been imported from advanced search (HN → patientId)
+  const [advImportedPatients, setAdvImportedPatients] = useState<Map<string, number>>(new Map());
 
   // General error
   const [error, setError] = useState<string | null>(null);
@@ -169,12 +171,11 @@ export default function PatientCreatePage() {
   // Handlers
   // =====================================================
 
-  /** When a patient is selected from advanced search, switch to simple search flow */
+  /** When a patient is selected from advanced search, load preview */
   const handleAdvancedSelectPatient = useCallback(
     async (patient: HisPatient) => {
       const q = patient.hn;
       setSearchQuery(q);
-      setSearchTab('simple');
       setSearching(true);
       setSearchError(null);
       setError(null);
@@ -195,7 +196,7 @@ export default function PatientCreatePage() {
     [],
   );
 
-  /** Bulk import all cancer visits for a new patient from advanced search */
+  /** Bulk import all cancer visits for a patient from advanced search */
   const handleImportAll = useCallback(
     async (patient: HisPatient) => {
       setImportingHn(patient.hn);
@@ -206,8 +207,27 @@ export default function PatientCreatePage() {
           importedVisits: number;
           linkedVisitCount: number;
         }>(`/his-integration/import/${encodeURIComponent(patient.hn)}`);
-        toast.success(`นำเข้าผู้ป่วย ${patient.fullName} สำเร็จ — ${result.importedVisits} visits`);
-        router.push(`/cancer-patients/${result.patientId}`);
+
+        if (result.importedVisits === 0) {
+          toast.info(`${patient.fullName} — ไม่พบ visit ใหม่ที่ยังไม่เคยนำเข้า`);
+        } else {
+          toast.success(
+            `นำเข้าผู้ป่วย ${patient.fullName} สำเร็จ — ${result.importedVisits} visits`,
+            {
+              action: {
+                label: 'ดูข้อมูลผู้ป่วย',
+                onClick: () => router.push(`/cancer-patients/${result.patientId}`),
+              },
+            },
+          );
+        }
+
+        // Notify advanced search to update patient status
+        setAdvImportedPatients((prev) => {
+          const next = new Map(prev);
+          next.set(patient.hn, result.patientId);
+          return next;
+        });
       } catch (err: any) {
         const msg = err?.error?.message || err?.message || 'ไม่สามารถนำเข้าข้อมูลได้';
         toast.error(`นำเข้าผู้ป่วยล้มเหลว`, { description: msg });
@@ -296,26 +316,59 @@ export default function PatientCreatePage() {
   );
 
   /** Bulk import all new cancer visits from simple search results */
-  const handleImportAllSimple = useCallback(async () => {
-    if (!searchResult) return;
-    const hn = searchResult.patient.hn;
-    setImportingHn(hn);
-    setError(null);
-    try {
-      const result = await apiClient.post<{
-        patientId: number;
-        importedVisits: number;
-        linkedVisitCount: number;
-      }>(`/his-integration/import/${encodeURIComponent(hn)}`);
-      toast.success(`นำเข้า ${result.importedVisits} visits สำเร็จ`);
-      router.push(`/cancer-patients/${result.patientId}`);
-    } catch (err: any) {
-      const msg = err?.error?.message || err?.message || 'ไม่สามารถนำเข้าข้อมูลได้';
-      toast.error('นำเข้าล้มเหลว', { description: msg });
-    } finally {
-      setImportingHn(null);
-    }
-  }, [searchResult, router]);
+  const handleImportAllSimple = useCallback(
+    async (options?: { from?: string; to?: string }) => {
+      if (!searchResult) return;
+      const hn = searchResult.patient.hn;
+      setImportingHn(hn);
+      setError(null);
+      try {
+        const params = new URLSearchParams();
+        if (options?.from) params.set('from', options.from);
+        if (options?.to) params.set('to', options.to);
+        const qs = params.toString();
+        const url = `/his-integration/import/${encodeURIComponent(hn)}${qs ? `?${qs}` : ''}`;
+        const result = await apiClient.post<{
+          patientId: number;
+          importedVisits: number;
+          linkedVisitCount: number;
+        }>(url);
+
+        if (result.importedVisits === 0) {
+          toast.info('ไม่พบ visit ใหม่ที่ยังไม่เคยนำเข้า');
+        } else {
+          toast.success(`นำเข้า ${result.importedVisits} visits สำเร็จ`, {
+            action: {
+              label: 'ดูข้อมูลผู้ป่วย',
+              onClick: () => router.push(`/cancer-patients/${result.patientId}`),
+            },
+          });
+        }
+
+        // Mark cancer visits as imported in local state
+        setImportedVns((prev) => {
+          const next = new Set(prev);
+          for (const pv of searchResult.visits) {
+            if (pv.isCancerRelated && !pv.isAlreadyImported) {
+              next.add(pv.visit.vn);
+            }
+          }
+          return next;
+        });
+
+        // Update existingPatientId so the "already in system" banner shows
+        setSearchResult((prev) =>
+          prev ? { ...prev, existingPatientId: result.patientId } : prev,
+        );
+      } catch (err: any) {
+        const msg = err?.error?.message || err?.message || 'ไม่สามารถนำเข้าข้อมูลได้';
+        toast.error('นำเข้าล้มเหลว', { description: msg });
+      } finally {
+        setImportingHn(null);
+      }
+    },
+    [searchResult, router],
+  );
 
   const handleManualSubmit = async (values: PatientFormValues) => {
     try {
@@ -344,9 +397,6 @@ export default function PatientCreatePage() {
 
   const resetToSearch = () => {
     setStep('search');
-    setSearchResult(null);
-    setImportedVns(new Set());
-    setError(null);
   };
 
   // =====================================================
@@ -467,6 +517,7 @@ export default function PatientCreatePage() {
             onImportAll={handleImportAll}
             importingHn={importingHn}
             previewing={searching}
+            importedPatients={advImportedPatients}
           />
         )}
 
@@ -482,58 +533,60 @@ export default function PatientCreatePage() {
       </div>
 
       {/* ==================== STEP: RESULTS ==================== */}
-      {step === 'results' && searchResult && (
-        <div className="space-y-5">
-          {/* Back button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-ml-2 text-muted-foreground"
-            onClick={resetToSearch}
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            ค้นหาใหม่
-          </Button>
+      <div className={cn('space-y-5', step !== 'results' && 'hidden')}>
+        {searchResult && (
+          <>
+            {/* Back button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-2 text-muted-foreground"
+              onClick={resetToSearch}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ค้นหาใหม่
+            </Button>
 
-          {/* Banner: patient already in system — link to detail page */}
-          {searchResult.existingPatientId !== null && (
-            <div className="flex items-center gap-3 rounded-lg bg-primary/8 border border-primary/20 px-4 py-3">
-              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-              <div className="flex-1 text-sm">
-                <span className="font-medium">ผู้ป่วยนี้มีในระบบแล้ว</span>
-                <span className="text-muted-foreground ml-1">
-                  — สามารถนำเข้า visit ใหม่ได้จากหน้ารายละเอียด
-                </span>
+            {/* Banner: patient already in system — link to detail page */}
+            {searchResult.existingPatientId !== null && (
+              <div className="flex items-center gap-3 rounded-lg bg-primary/8 border border-primary/20 px-4 py-3">
+                <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                <div className="flex-1 text-sm">
+                  <span className="font-medium">ผู้ป่วยนี้มีในระบบแล้ว</span>
+                  <span className="text-muted-foreground ml-1">
+                    — สามารถนำเข้า visit ใหม่ได้จากด้านล่าง
+                  </span>
+                </div>
+                <Button asChild size="sm" variant="outline" className="shrink-0 h-8 text-xs gap-1.5">
+                  <Link href={`/cancer-patients/${searchResult.existingPatientId}`}>
+                    ไปที่หน้ารายละเอียด
+                  </Link>
+                </Button>
               </div>
-              <Button asChild size="sm" variant="outline" className="shrink-0 h-8 text-xs gap-1.5">
-                <Link href={`/cancer-patients/${searchResult.existingPatientId}`}>
-                  ไปที่หน้ารายละเอียด
-                </Link>
-              </Button>
-            </div>
-          )}
+            )}
 
-          {/* Patient card */}
-          <HisPatientCard
-            patient={searchResult.patient}
-            existingPatientId={searchResult.existingPatientId}
-          />
+            {/* Patient card */}
+            <HisPatientCard
+              patient={searchResult.patient}
+              existingPatientId={searchResult.existingPatientId}
+            />
 
-          {/* Visit timeline with summary + per-visit import + batch buttons */}
-          <HisVisitTimeline
-            visits={searchResult.visits}
-            summary={searchResult.summary}
-            importedVns={importedVns}
-            importingVn={importingVn}
-            onImportVisit={handleImportVisit}
-            syncingVn={syncingVn}
-            onSyncVisit={handleSyncVisit}
-            onImportAll={searchResult.summary.newImportable > 0 ? handleImportAllSimple : undefined}
-            importingAll={importingHn !== null}
-            onBatchSync={undefined}
-          />
-        </div>
-      )}
+            {/* Visit timeline with summary + per-visit import + batch buttons */}
+            <HisVisitTimeline
+              visits={searchResult.visits}
+              summary={searchResult.summary}
+              importedVns={importedVns}
+              importingVn={importingVn}
+              onImportVisit={handleImportVisit}
+              syncingVn={syncingVn}
+              onSyncVisit={handleSyncVisit}
+              onImportAll={handleImportAllSimple}
+              importingAll={importingHn !== null}
+              onBatchSync={undefined}
+            />
+          </>
+        )}
+      </div>
 
       {/* ==================== STEP: MANUAL ==================== */}
       {step === 'manual' && (

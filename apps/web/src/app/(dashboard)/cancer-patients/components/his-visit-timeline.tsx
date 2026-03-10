@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   ChevronDown,
   ChevronUp,
@@ -18,11 +18,13 @@ import {
   Syringe,
   Heart,
   FlaskConical,
+  Filter,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CodeBadge } from '@/components/shared/code-badge';
+import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { cn } from '@/lib/utils';
 import { HisCompletenessBadge, type VisitCompleteness } from './his-completeness-badge';
 
@@ -102,7 +104,7 @@ interface Props {
   syncingVn?: string | null;
   onSyncVisit?: (vn: string) => void;
   // Batch action props
-  onImportAll?: () => void;
+  onImportAll?: (options?: { from?: string; to?: string }) => void;
   importingAll?: boolean;
   onBatchSync?: () => void;
   batchSyncing?: boolean;
@@ -176,6 +178,56 @@ export function HisVisitTimeline({
 }: Props) {
   const [expandedVns, setExpandedVns] = useState<Set<string>>(new Set());
 
+  // Filter state
+  const [cancerOnly, setCancerOnly] = useState(true);
+  const [dateFilterEnabled, setDateFilterEnabled] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // Filtered visits
+  const filteredVisits = useMemo(() => {
+    let result = visits;
+    if (cancerOnly) {
+      result = result.filter((pv) => pv.isCancerRelated);
+    }
+    if (dateFilterEnabled && dateFrom && dateTo) {
+      const from = new Date(dateFrom);
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      result = result.filter((pv) => {
+        const vd = new Date(pv.visit.visitDate);
+        return vd >= from && vd <= to;
+      });
+    }
+    return result;
+  }, [visits, cancerOnly, dateFilterEnabled, dateFrom, dateTo]);
+
+  // Recalculate summary from filtered visits
+  const filteredSummary = useMemo<SummaryStats>(() => {
+    const stats: SummaryStats = {
+      totalVisits: filteredVisits.length,
+      cancerRelatedVisits: 0,
+      alreadyImported: 0,
+      newImportable: 0,
+      completeVisits: 0,
+      incompleteVisits: 0,
+    };
+    for (const pv of filteredVisits) {
+      if (pv.isCancerRelated) stats.cancerRelatedVisits++;
+      const isImported = pv.isAlreadyImported || importedVns.has(pv.visit.vn);
+      if (isImported) {
+        stats.alreadyImported++;
+      } else if (pv.isCancerRelated) {
+        stats.newImportable++;
+      }
+      if (pv.completeness.level === 'complete') stats.completeVisits++;
+      else stats.incompleteVisits++;
+    }
+    return stats;
+  }, [filteredVisits, importedVns]);
+
+  const isFiltered = cancerOnly || (dateFilterEnabled && dateFrom && dateTo);
+
   const toggleVn = useCallback((vn: string) => {
     setExpandedVns((prev) => {
       const next = new Set(prev);
@@ -186,12 +238,21 @@ export function HisVisitTimeline({
   }, []);
 
   const expandAll = useCallback(() => {
-    setExpandedVns(new Set(visits.map((v) => v.visit.vn)));
-  }, [visits]);
+    setExpandedVns(new Set(filteredVisits.map((v) => v.visit.vn)));
+  }, [filteredVisits]);
 
   const collapseAll = useCallback(() => {
     setExpandedVns(new Set());
   }, []);
+
+  const handleImportAll = useCallback(() => {
+    if (!onImportAll) return;
+    if (dateFilterEnabled && dateFrom && dateTo) {
+      onImportAll({ from: dateFrom, to: dateTo });
+    } else {
+      onImportAll();
+    }
+  }, [onImportAll, dateFilterEnabled, dateFrom, dateTo]);
 
   return (
     <div className="space-y-4">
@@ -201,30 +262,83 @@ export function HisVisitTimeline({
           <Calendar className="h-4.5 w-4.5 text-primary" />
           ข้อมูล Visit ({visits.length} visits)
         </h2>
-        {visits.length > 0 && (
+        {filteredVisits.length > 0 && (
           <Button
             size="sm"
             variant="ghost"
             className="h-7 text-xs gap-1 text-muted-foreground"
-            onClick={expandedVns.size === visits.length ? collapseAll : expandAll}
+            onClick={expandedVns.size === filteredVisits.length ? collapseAll : expandAll}
           >
             <ChevronsUpDown className="h-3.5 w-3.5" />
-            {expandedVns.size === visits.length ? 'ยุบทั้งหมด' : 'ขยายทั้งหมด'}
+            {expandedVns.size === filteredVisits.length ? 'ยุบทั้งหมด' : 'ขยายทั้งหมด'}
           </Button>
         )}
       </div>
 
       {/* Summary stats */}
-      <VisitSummaryStats summary={summary} />
+      <VisitSummaryStats summary={isFiltered ? filteredSummary : summary} />
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-dashed border-border/80 bg-muted/30 px-4 py-2.5">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+          <Filter className="h-3 w-3" />
+          ตัวกรอง
+        </div>
+
+        <label className="flex items-center gap-2 cursor-pointer shrink-0">
+          <input
+            type="checkbox"
+            checked={cancerOnly}
+            onChange={(e) => setCancerOnly(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-input text-primary focus:ring-1 focus:ring-primary"
+          />
+          <span className="text-xs">เฉพาะ visit มะเร็ง</span>
+        </label>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={dateFilterEnabled}
+              onChange={(e) => setDateFilterEnabled(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-input text-primary focus:ring-1 focus:ring-primary"
+            />
+            <span className="text-xs">เฉพาะช่วงเวลา</span>
+          </label>
+          {dateFilterEnabled && (
+            <div className="flex items-center gap-1.5">
+              <ThaiDatePicker
+                value={dateFrom}
+                onChange={setDateFrom}
+                placeholder="ตั้งแต่"
+                className="w-32 h-7 text-xs"
+              />
+              <span className="text-xs text-muted-foreground">—</span>
+              <ThaiDatePicker
+                value={dateTo}
+                onChange={setDateTo}
+                placeholder="ถึง"
+                className="w-32 h-7 text-xs"
+              />
+            </div>
+          )}
+        </div>
+
+        {isFiltered && filteredVisits.length !== visits.length && (
+          <span className="text-xs text-muted-foreground ml-auto">
+            แสดง {filteredVisits.length}/{visits.length}
+          </span>
+        )}
+      </div>
 
       {/* Batch action buttons */}
       {(onImportAll || onBatchSync) && (
         <div className="flex items-center gap-2">
-          {onImportAll && summary.newImportable > 0 && (
+          {onImportAll && filteredSummary.newImportable > 0 && (
             <Button
               size="sm"
               className="h-8 text-xs gap-1.5 bg-success hover:bg-success/90 text-white"
-              onClick={onImportAll}
+              onClick={handleImportAll}
               disabled={importingAll || importingVn !== null}
             >
               {importingAll ? (
@@ -232,10 +346,10 @@ export function HisVisitTimeline({
               ) : (
                 <Download className="h-3.5 w-3.5" />
               )}
-              นำเข้าทั้งหมด ({summary.newImportable})
+              นำเข้าทั้งหมด ({filteredSummary.newImportable})
             </Button>
           )}
-          {onBatchSync && summary.alreadyImported > 0 && (
+          {onBatchSync && filteredSummary.alreadyImported > 0 && (
             <Button
               size="sm"
               variant="outline"
@@ -244,17 +358,19 @@ export function HisVisitTimeline({
               disabled={batchSyncing || syncingVn !== null}
             >
               <RefreshCw className={cn('h-3.5 w-3.5', batchSyncing && 'animate-spin')} />
-              {batchSyncing ? 'กำลังซิงค์...' : `ซิงค์ทั้งหมด (${summary.alreadyImported})`}
+              {batchSyncing ? 'กำลังซิงค์...' : `ซิงค์ทั้งหมด (${filteredSummary.alreadyImported})`}
             </Button>
           )}
         </div>
       )}
 
       {/* Timeline */}
-      {visits.length === 0 ? (
+      {filteredVisits.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground text-sm">
-            ไม่พบข้อมูล visit
+            {isFiltered && visits.length > 0
+              ? 'ไม่พบ visit ที่ตรงกับตัวกรอง'
+              : 'ไม่พบข้อมูล visit'}
           </CardContent>
         </Card>
       ) : (
@@ -263,7 +379,7 @@ export function HisVisitTimeline({
           <div className="absolute left-[19px] top-3 bottom-3 w-px bg-border" />
 
           <div className="space-y-1">
-            {visits.map((pv) => {
+            {filteredVisits.map((pv) => {
               const isLocallyImported = importedVns.has(pv.visit.vn);
               const effectiveImported = pv.isAlreadyImported || isLocallyImported;
 

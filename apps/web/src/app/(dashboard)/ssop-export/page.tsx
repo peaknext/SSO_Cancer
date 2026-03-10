@@ -1837,6 +1837,9 @@ function DataTable({
     blue: 'bg-blue-600 dark:bg-blue-700',
   }[accentColor];
 
+  // Find the ClaimCat column index for OPR row highlighting
+  const claimCatColIdx = labels.findIndex(([key]) => key === 'claimCat');
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
@@ -1869,26 +1872,51 @@ function DataTable({
             <tbody>
               {records.map((rec, rowIdx) => {
                 const rowValues = Object.values(rec);
+                const isOpr =
+                  claimCatColIdx >= 0 &&
+                  String(rowValues[claimCatColIdx] ?? '').toUpperCase() === 'OPR';
                 return (
                   <tr
                     key={rowIdx}
                     className={cn(
-                      'border-b last:border-b-0 hover:bg-muted/30 transition-colors',
-                      rowIdx % 2 === 1 && stripeColor,
+                      'border-b last:border-b-0 transition-colors',
+                      isOpr
+                        ? 'bg-amber-50/70 dark:bg-amber-950/25 hover:bg-amber-100/70 dark:hover:bg-amber-950/40 border-l-2 border-l-amber-500 dark:border-l-amber-400'
+                        : cn('hover:bg-muted/30', rowIdx % 2 === 1 && stripeColor),
                     )}
                   >
-                    <td className="px-2 py-1.5 text-center text-muted-foreground/40 font-mono border-r border-border/30 tabular-nums">
+                    <td
+                      className={cn(
+                        'px-2 py-1.5 text-center font-mono border-r border-border/30 tabular-nums',
+                        isOpr
+                          ? 'text-amber-700 dark:text-amber-300 font-semibold'
+                          : 'text-muted-foreground/40',
+                      )}
+                    >
                       {rowIdx + 1}
                     </td>
-                    {labels.map(([, ], colIdx) => {
+                    {labels.map(([key], colIdx) => {
                       const val = String(rowValues[colIdx] ?? '');
+                      const isClaimCatCell = key === 'claimCat';
                       return (
                         <td
                           key={colIdx}
-                          className="px-3 py-1.5 font-mono whitespace-nowrap text-foreground"
+                          className={cn(
+                            'px-3 py-1.5 font-mono whitespace-nowrap',
+                            isOpr ? 'text-amber-900 dark:text-amber-100' : 'text-foreground',
+                          )}
                           title={val}
                         >
-                          {val || <span className="text-muted-foreground/30">—</span>}
+                          {isClaimCatCell && val === 'OPR' ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/20 dark:bg-amber-400/20 border border-amber-500/30 dark:border-amber-400/25 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-amber-700 dark:text-amber-300">
+                              <span className="w-1 h-1 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
+                              OPR
+                            </span>
+                          ) : val ? (
+                            val
+                          ) : (
+                            <span className="text-muted-foreground/30">—</span>
+                          )}
                         </td>
                       );
                     })}

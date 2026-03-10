@@ -16,6 +16,11 @@ export function isDrugItem(item: { stdGroup?: string | null; billingGroup: strin
   return DRUG_GROUPS.has(item.stdGroup || item.billingGroup);
 }
 
+const RADIATION_GROUPS = new Set(['8', '08']);
+export function isRadiationItem(item: { stdGroup?: string | null; billingGroup: string }): boolean {
+  return RADIATION_GROUPS.has(item.stdGroup || item.billingGroup);
+}
+
 /**
  * Resolve the SSO claim unit price for a billing item.
  *

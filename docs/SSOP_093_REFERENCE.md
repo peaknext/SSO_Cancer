@@ -543,7 +543,7 @@ field1|field2|...|field22\r\n
 | 19 | SvCharge | ค่าธรรมเนียมผู้ให้บริการ | Service charge/professional fee | CR1 | 19 | | y | **`"0.00"`** (charges in BillItems) | Sum of non-dispensing BillItem charges |
 | 20 | Completion | สถานะ Service | Service completion status | SE | 1 | | (o) y | **`"Y"`** | `"Y"` |
 | 21 | SvTxCode | รหัสอ้างอิงจากระบบตรวจ | Service transaction code (from approval systems) | ST | 5+ | | (o) y | | Empty string |
-| 22 | ClaimCat | ประเภทบัญชีการเบิก | Claim category | SE | 2 | | y | **`"OP1"`** at service level (always) | `"OP1"` or `"OPR"` if any item is OPR |
+| 22 | ClaimCat | ประเภทบัญชีการเบิก | Claim category | SE | 2 | | y | **`"OP1"`** at service level (always) | `"OP1"` (always — item-level handles OPR) |
 
 ### Class Values (Service Type)
 

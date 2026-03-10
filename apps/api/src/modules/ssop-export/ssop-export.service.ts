@@ -3,7 +3,7 @@ import * as archiver from 'archiver';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SsoAipnCatalogService } from '../sso-aipn-catalog/sso-aipn-catalog.service';
 import { generateBilltranXml, buildBilltranRecords } from './generators/billtran.generator';
-import { generateBilldispXml, buildBilldispRecords, resolveClaimUP, isDrugItem } from './generators/billdisp.generator';
+import { generateBilldispXml, buildBilldispRecords, resolveClaimUP, isDrugItem, isRadiationItem } from './generators/billdisp.generator';
 import { generateOpServicesXml, buildOpServiceRecords } from './generators/opservices.generator';
 import {
   encodeWindows874,
@@ -27,11 +27,33 @@ const VALID_CLAIM_CATEGORIES = new Set([
   'OP1', 'RRT', 'P01', 'P02', 'P03', 'REF', 'EM1', 'EM2', 'OPF', 'OPR',
 ]);
 
+/** Cancer treatment drug categories eligible for OPR (excludes 'supportive') */
+const OPR_DRUG_CATEGORIES = new Set([
+  'chemotherapy', 'targeted therapy', 'immunotherapy', 'hormonal',
+]);
+
 /** Check if a diagnosis code is a cancer ICD-10 (C* or D0*) for ClaimCat smart default */
 function isCancerDiagnosis(diagnosis: string): boolean {
   if (!diagnosis) return false;
   const code = diagnosis.replace(/\./g, '').toUpperCase();
   return code.startsWith('C') || code.startsWith('D0');
+}
+
+/**
+ * Extract generic drug name from dfsText/sksDfsText.
+ * Input format: "cisplatin 50 mg/50 mL injection" or "PACLITAXEL 300 MG"
+ * Returns generic name (lowercase) or null.
+ */
+function extractGenericName(dfsText: string): string | null {
+  if (!dfsText) return null;
+  const trimmed = dfsText.trim();
+  if (!trimmed) return null;
+
+  // Match: generic name (letters/hyphens/spaces) followed by digits
+  const match = trimmed.match(
+    /^([a-z][a-z\s\-]+?)\s+\d/i,
+  );
+  return match ? match[1].trim().toLowerCase() : null;
 }
 
 export interface ValidationIssue {
@@ -55,11 +77,17 @@ export class SsopExportService {
     invalid: ValidationIssue[];
     totalAmount: number;
   }> {
-    const [aipnRateMap, aipnDateMap] = await Promise.all([
-      this.aipnCatalogService.getAipnRateMap(),
-      this.aipnCatalogService.getAipnDateMap(),
-    ]);
-    const visits = await this.loadVisitData(visitIds, aipnRateMap);
+    const [aipnRateMap, aipnDateMap, genericNameIndex, serviceDescIndex, aipnCodeSet] =
+      await Promise.all([
+        this.aipnCatalogService.getAipnRateMap(),
+        this.aipnCatalogService.getAipnDateMap(),
+        this.aipnCatalogService.getGenericNameIndex(),
+        this.aipnCatalogService.getServiceDescriptionIndex(),
+        this.aipnCatalogService.getAipnCodeSet(),
+      ]);
+    const visits = await this.loadVisitData(
+      visitIds, aipnRateMap, genericNameIndex, serviceDescIndex, aipnCodeSet,
+    );
     const valid: { visitId: number; vn: string; amount: number }[] = [];
     const invalid: ValidationIssue[] = [];
 
@@ -86,11 +114,17 @@ export class SsopExportService {
     userId: number | null,
   ): Promise<{ buffer: Buffer; fileName: string; batchId: number }> {
     // Load and validate
-    const [aipnRateMap, aipnDateMap] = await Promise.all([
-      this.aipnCatalogService.getAipnRateMap(),
-      this.aipnCatalogService.getAipnDateMap(),
-    ]);
-    const visits = await this.loadVisitData(visitIds, aipnRateMap);
+    const [aipnRateMap, aipnDateMap, genericNameIndex, serviceDescIndex, aipnCodeSet] =
+      await Promise.all([
+        this.aipnCatalogService.getAipnRateMap(),
+        this.aipnCatalogService.getAipnDateMap(),
+        this.aipnCatalogService.getGenericNameIndex(),
+        this.aipnCatalogService.getServiceDescriptionIndex(),
+        this.aipnCatalogService.getAipnCodeSet(),
+      ]);
+    const visits = await this.loadVisitData(
+      visitIds, aipnRateMap, genericNameIndex, serviceDescIndex, aipnCodeSet,
+    );
     const validVisits = visits.filter((v) => this.validateVisit(v, aipnDateMap).length === 0);
 
     if (validVisits.length === 0) {
@@ -203,11 +237,15 @@ export class SsopExportService {
     dispensedItems: DispensedItemRecord[];
     validation: { valid: boolean; issues: string[] };
   }> {
-    const [aipnRateMap, aipnDateMap] = await Promise.all([
+    const [aipnRateMap, aipnDateMap, serviceDescIndex, aipnCodeSet] = await Promise.all([
       this.aipnCatalogService.getAipnRateMap(),
       this.aipnCatalogService.getAipnDateMap(),
+      this.aipnCatalogService.getServiceDescriptionIndex(),
+      this.aipnCatalogService.getAipnCodeSet(),
     ]);
-    const visits = await this.loadVisitData([visitId], aipnRateMap);
+    const visits = await this.loadVisitData(
+      [visitId], aipnRateMap, undefined, serviceDescIndex, aipnCodeSet,
+    );
     if (visits.length === 0) {
       throw new NotFoundException('ไม่พบข้อมูล visit');
     }
@@ -492,14 +530,14 @@ export class SsopExportService {
 
   /**
    * Resolve ClaimCat for a billing item at export time.
-   * Smart default: cancer drug items on confirmed cancer visits → 'OPR'
    *
-   * OPR conditions (ALL must be true):
-   * 1. Current category is 'OP1' (default) — don't override HIS-provided values
-   * 2. Item is a drug/supply (billingGroup ∈ {3, 03, 5, 05})
-   * 3. Item exists in sso_aipn_items AND is effective on visit date (aipnRate != null)
-   * 4. Visit has confirmed case + protocol
-   * 5. Primary diagnosis is cancer (C* or D0*)
+   * OPR upgrade rules (only from default OP1 — don't override HIS-provided values):
+   * - All paths require: confirmed case + protocol + cancer diagnosis (C* or D0*)
+   * - Drug/supply items (BillMuad 3/5): cancer treatment drug category
+   *   (chemotherapy, targeted therapy, immunotherapy, hormonal).
+   *   Supportive drugs (filgrastim, ondansetron, etc.) remain OP1.
+   * - Radiation items (BillMuad 8): no AIPN/category check (uses MoF standard codes)
+   * - Cancer service items (e.g. chemo mixing fee): resolved AIPN standard code
    */
   private resolveClaimCategory(
     rawCategory: string | null,
@@ -509,18 +547,28 @@ export class SsopExportService {
       case?: { caseNumber?: string; protocol?: { protocolCode?: string } | null } | null;
     },
     aipnRate: number | null,
+    drugCategory: string | null,
+    hasResolvedAipn: boolean = false,
   ): string {
     const category = rawCategory || 'OP1';
-    if (
-      category === 'OP1' &&
-      isDrugItem(item) &&
-      aipnRate != null &&
+    if (category !== 'OP1') return category;
+
+    const hasCancerCase =
       visit.case?.caseNumber &&
       visit.case?.protocol?.protocolCode &&
-      isCancerDiagnosis(visit.primaryDiagnosis)
-    ) {
+      isCancerDiagnosis(visit.primaryDiagnosis);
+
+    if (!hasCancerCase) return category;
+
+    // Drug/supply items: cancer treatment drug category is sufficient for OPR
+    if (isDrugItem(item) && OPR_DRUG_CATEGORIES.has(drugCategory || '')) {
       return 'OPR';
     }
+    // Radiation therapy items (BillMuad 8): no AIPN/category check needed
+    if (isRadiationItem(item)) return 'OPR';
+    // Cancer service items with resolved AIPN code (e.g. chemo mixing fee)
+    if (hasResolvedAipn && !isDrugItem(item)) return 'OPR';
+
     return category;
   }
 
@@ -528,6 +576,9 @@ export class SsopExportService {
   private async loadVisitData(
     visitIds: number[],
     aipnRateMap?: Map<number, Array<{ rate: number; dateEffective: Date; dateExpiry: Date }>>,
+    genericNameIndex?: Map<string, { code: number; dosage: string }[]>,
+    serviceDescIndex?: Map<string, number>,
+    aipnCodeSet?: Set<number>,
   ) {
     const visits = await this.prisma.patientVisit.findMany({
       where: { id: { in: visitIds } },
@@ -542,10 +593,26 @@ export class SsopExportService {
         visitBillingItems: {
           where: { isActive: true },
         },
+        medications: {
+          where: { resolvedDrugId: { not: null } },
+          select: {
+            hospitalCode: true,
+            resolvedDrug: { select: { drugCategory: true } },
+          },
+        },
       },
     });
 
-    return visits.map((v) => ({
+    return visits.map((v) => {
+      // Build hospitalCode → drugCategory map from resolved medications
+      const drugCategoryMap = new Map<string, string>();
+      for (const med of v.medications) {
+        if (med.hospitalCode && med.resolvedDrug?.drugCategory) {
+          drugCategoryMap.set(med.hospitalCode, med.resolvedDrug.drugCategory);
+        }
+      }
+
+      return ({
       visitId: v.id,
       vn: v.vn,
       visitDate: v.visitDate,
@@ -573,30 +640,82 @@ export class SsopExportService {
       dayCover: v.dayCover ?? undefined,
       billingItems: v.visitBillingItems.map((item) => {
         // Resolve AIPN max-reimbursement rate effective on visit date
+        // Tier 1: sksDrugCode (TMT TPU) → direct AIPN lookup
+        // Tier 2: dfsText generic name → genericNameIndex → AIPN code → rate lookup
         let aipnRate: number | null = null;
-        if (aipnRateMap && item.sksDrugCode) {
-          const code = parseInt(item.sksDrugCode, 10);
-          if (!isNaN(code)) {
-            const versions = aipnRateMap.get(code);
-            if (versions) {
-              const effective = versions.find(
-                (ver) => ver.dateEffective <= v.visitDate && ver.dateExpiry >= v.visitDate,
-              );
-              if (effective) aipnRate = effective.rate;
+        if (aipnRateMap) {
+          // Tier 1: exact code match via sksDrugCode
+          if (item.sksDrugCode) {
+            const code = parseInt(item.sksDrugCode, 10);
+            if (!isNaN(code)) {
+              const versions = aipnRateMap.get(code);
+              if (versions) {
+                const effective = versions.find(
+                  (ver) => ver.dateEffective <= v.visitDate && ver.dateExpiry >= v.visitDate,
+                );
+                if (effective) aipnRate = effective.rate;
+              }
+            }
+          }
+          // Tier 2: generic name text matching (fallback when sksDrugCode is null)
+          if (aipnRate == null && genericNameIndex) {
+            const textSource = item.sksDfsText || item.dfsText || item.description;
+            const genericName = textSource ? extractGenericName(textSource) : null;
+            if (genericName) {
+              const entries = genericNameIndex.get(genericName);
+              if (entries && entries.length > 0) {
+                // Try each matching AIPN code until we find one effective on visit date
+                for (const entry of entries) {
+                  const versions = aipnRateMap.get(entry.code);
+                  if (versions) {
+                    const effective = versions.find(
+                      (ver) => ver.dateEffective <= v.visitDate && ver.dateExpiry >= v.visitDate,
+                    );
+                    if (effective) {
+                      aipnRate = effective.rate;
+                      break;
+                    }
+                  }
+                }
+              }
             }
           }
         }
+        // Resolve stdCode for non-drug items via AIPN description matching
+        let resolvedStdCode = item.stdCode ?? null;
+        let hasResolvedAipn = false;
+        if (serviceDescIndex && aipnCodeSet) {
+          const existingCode = parseInt(resolvedStdCode || item.aipnCode || '', 10);
+          const isValidAipn = !isNaN(existingCode) && aipnCodeSet.has(existingCode);
+          if (!isValidAipn && item.description) {
+            const normalized = this.aipnCatalogService.normalizeDescription(item.description);
+            if (normalized) {
+              const resolvedCode = serviceDescIndex.get(normalized);
+              if (resolvedCode) {
+                resolvedStdCode = String(resolvedCode);
+                hasResolvedAipn = true;
+              }
+            }
+          } else if (isValidAipn) {
+            hasResolvedAipn = true;
+          }
+        }
+
         return {
           hospitalCode: item.hospitalCode,
           aipnCode: item.aipnCode,
           tmtCode: item.tmtCode ?? null,
-          stdCode: item.stdCode ?? null,
+          stdCode: resolvedStdCode,
           billingGroup: item.billingGroup,
           description: item.description,
           quantity: Number(item.quantity),
           unitPrice: Number(item.unitPrice),
           claimUnitPrice: Number(item.claimUnitPrice ?? item.unitPrice),
-          claimCategory: this.resolveClaimCategory(item.claimCategory, item, v, aipnRate),
+          claimCategory: this.resolveClaimCategory(
+            item.claimCategory, item, v, aipnRate,
+            drugCategoryMap.get(item.hospitalCode) || null,
+            hasResolvedAipn,
+          ),
           // Drug/dispensing fields
           dfsText: item.dfsText ?? null,
           packsize: item.packsize ?? null,
@@ -611,7 +730,8 @@ export class SsopExportService {
           aipnRate,
         };
       }),
-    }));
+    });
+    });
   }
 
   /** Validate a single visit has all required data for SSOP */

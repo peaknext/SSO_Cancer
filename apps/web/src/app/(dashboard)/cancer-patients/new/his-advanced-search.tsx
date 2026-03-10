@@ -11,6 +11,7 @@ import { DrugMultiSelect } from '@/components/shared/drug-multi-select';
 import { PatientSearchResults, HisPatient } from '../components/patient-search-results';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,8 @@ interface HisAdvancedSearchProps {
   onImportAll?: (patient: HisPatient) => void;
   importingHn?: string | null;
   previewing: boolean;
+  /** HN → patientId map of patients imported from this session */
+  importedPatients?: Map<string, number>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -39,22 +42,44 @@ function getDefaultDateRange(): { from: string; to: string } {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function HisAdvancedSearch({ onSelectPatient, onImportAll, importingHn, previewing }: HisAdvancedSearchProps) {
+export function HisAdvancedSearch({
+  onSelectPatient,
+  onImportAll,
+  importingHn,
+  previewing,
+  importedPatients,
+}: HisAdvancedSearchProps) {
   const defaults = getDefaultDateRange();
 
-  // Filter state
-  const [dateFrom, setDateFrom] = useState(defaults.from);
-  const [dateTo, setDateTo] = useState(defaults.to);
-  const [cancerSiteIds, setCancerSiteIds] = useState<string[]>([]);
-  const [z510, setZ510] = useState(false);
-  const [z511, setZ511] = useState(false);
-  const [selectedDrugs, setSelectedDrugs] = useState<string[]>([]);
+  // Filter state (persisted)
+  const [dateFrom, setDateFrom, dfH] = usePersistedState('his-adv:dateFrom', defaults.from);
+  const [dateTo, setDateTo, dtH] = usePersistedState('his-adv:dateTo', defaults.to);
+  const [cancerSiteIds, setCancerSiteIds, csH] = usePersistedState<string[]>('his-adv:sites', []);
+  const [z510, setZ510, z0H] = usePersistedState('his-adv:z510', false);
+  const [z511, setZ511, z1H] = usePersistedState('his-adv:z511', false);
+  const [selectedDrugs, setSelectedDrugs, sdH] = usePersistedState<string[]>(
+    'his-adv:drugs',
+    [],
+  );
+  const filtersHydrated = dfH && dtH && csH && z0H && z1H && sdH;
 
-  // Search state
+  // Search state (not persisted)
   const [results, setResults] = useState<HisPatient[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Apply imported patient updates to results
+  const effectiveResults = useMemo(() => {
+    if (!importedPatients || importedPatients.size === 0) return results;
+    return results.map((p) => {
+      const patientId = importedPatients.get(p.hn);
+      if (patientId != null) {
+        return { ...p, existsInSystem: true, existingPatientId: patientId };
+      }
+      return p;
+    });
+  }, [results, importedPatients]);
 
   // Validate date range
   const dateValidation = useMemo(() => {
@@ -133,7 +158,7 @@ export function HisAdvancedSearch({ onSelectPatient, onImportAll, importingHn, p
           ค้นหาขั้นสูงจากระบบ HIS
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className={cn('space-y-5', !filtersHydrated && 'opacity-0')}>
         {/* Date range */}
         <div className="space-y-2">
           <Label className="text-sm font-medium flex items-center gap-1.5">
@@ -253,7 +278,7 @@ export function HisAdvancedSearch({ onSelectPatient, onImportAll, importingHn, p
 
         {/* Results */}
         <PatientSearchResults
-          results={results}
+          results={effectiveResults}
           onSelect={onSelectPatient}
           onImportAll={onImportAll}
           importingHn={importingHn}

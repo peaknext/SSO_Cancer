@@ -107,24 +107,36 @@ export function HisImportPanel({ patientHn, patientId, existingVns, onDataChange
   }, [patientHn, onDataChanged]);
 
   /** Bulk import all new cancer visits */
-  const handleImportAll = useCallback(async () => {
-    setImportingAll(true);
-    try {
-      const result = await apiClient.post<{
-        patientId: number;
-        importedVisits: number;
-      }>(`/his-integration/import/${encodeURIComponent(patientHn)}`);
-      toast.success(`นำเข้า ${result.importedVisits} visits สำเร็จ`);
-      onDataChanged();
-      // Refresh HIS data to update summary
-      await fetchHisData();
-    } catch (err: any) {
-      const msg = err?.error?.message || err?.message || 'ไม่สามารถนำเข้าข้อมูลได้';
-      toast.error('นำเข้าล้มเหลว', { description: msg });
-    } finally {
-      setImportingAll(false);
-    }
-  }, [patientHn, onDataChanged, fetchHisData]);
+  const handleImportAll = useCallback(
+    async (options?: { from?: string; to?: string }) => {
+      setImportingAll(true);
+      try {
+        const params = new URLSearchParams();
+        if (options?.from) params.set('from', options.from);
+        if (options?.to) params.set('to', options.to);
+        const qs = params.toString();
+        const url = `/his-integration/import/${encodeURIComponent(patientHn)}${qs ? `?${qs}` : ''}`;
+        const result = await apiClient.post<{
+          patientId: number;
+          importedVisits: number;
+        }>(url);
+        if (result.importedVisits === 0) {
+          toast.info('ไม่พบ visit ใหม่ที่ยังไม่เคยนำเข้า');
+        } else {
+          toast.success(`นำเข้า ${result.importedVisits} visits สำเร็จ`);
+        }
+        onDataChanged();
+        // Refresh HIS data to update summary
+        await fetchHisData();
+      } catch (err: any) {
+        const msg = err?.error?.message || err?.message || 'ไม่สามารถนำเข้าข้อมูลได้';
+        toast.error('นำเข้าล้มเหลว', { description: msg });
+      } finally {
+        setImportingAll(false);
+      }
+    },
+    [patientHn, onDataChanged, fetchHisData],
+  );
 
   /** Batch sync all imported visits */
   const handleBatchSync = useCallback(async () => {
@@ -222,7 +234,7 @@ export function HisImportPanel({ patientHn, patientId, existingVns, onDataChange
               onImportVisit={handleImportVisit}
               syncingVn={syncingVn}
               onSyncVisit={handleSyncVisit}
-              onImportAll={hisData.summary.newImportable > 0 ? handleImportAll : undefined}
+              onImportAll={handleImportAll}
               importingAll={importingAll}
               onBatchSync={hisData.summary.alreadyImported > 0 ? handleBatchSync : undefined}
               batchSyncing={batchSyncing}
