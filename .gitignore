@@ -25,6 +25,7 @@ Thumbs.db
 # Build
 apps/*/dist/
 apps/web/.next/
+*.tsbuildinfo
 
 # Separate projects
 SSO_Mock_Project/
