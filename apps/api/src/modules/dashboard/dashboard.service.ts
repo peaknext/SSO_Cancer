@@ -623,12 +623,12 @@ export class DashboardService {
       const to = new Date(`${scanDate}T23:59:59+07:00`);
       recentImports = await this.prisma.patientImport.findMany({
         where: {
-          importedByUserId: null,
+          importedById: null,
           source: 'HIS_API',
-          importedVisits: { gt: 0 },
+          importedRows: { gt: 0 },
           createdAt: { gte: from, lte: to },
         },
-        include: { patient: { select: { id: true, hn: true, fullName: true } } },
+        include: { visits: { select: { id: true, hn: true, vn: true }, take: 1 } },
         orderBy: { createdAt: 'asc' },
       });
     }

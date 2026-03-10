@@ -6,7 +6,6 @@ import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
-import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
@@ -55,7 +54,6 @@ async function bootstrap() {
   );
 
   app.useGlobalInterceptors(
-    new TimeoutInterceptor(),
     new TransformInterceptor(),
   );
 

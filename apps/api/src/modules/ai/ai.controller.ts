@@ -4,7 +4,6 @@ import {
   Get,
   Param,
   Body,
-  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -13,7 +12,7 @@ import { ValidateKeyDto } from './dto/ai-suggestion.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums';
-import { TimeoutInterceptor } from '../../common/interceptors/timeout.interceptor';
+import { SetTimeout } from '../../common/interceptors/timeout.interceptor';
 
 @ApiTags('AI Suggestions')
 @ApiBearerAuth()
@@ -22,7 +21,7 @@ export class AiController {
   constructor(private readonly aiService: AiService) {}
 
   @Post('suggest/:vn')
-  @UseInterceptors(new TimeoutInterceptor(180000))
+  @SetTimeout(180000)
   @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EDITOR)
   @ApiOperation({ summary: 'Get AI protocol suggestion for a visit (calls AI provider)' })

@@ -8,7 +8,7 @@ export class OllamaProvider implements AiProvider {
 
   async complete(request: AiCompletionRequest): Promise<AiCompletionResponse> {
     const startTime = Date.now();
-    const baseUrl = request.config.baseUrl || 'https://ollama.peaknext.cloud';
+    const baseUrl = (request.config.baseUrl || 'https://ollama.peaknext.cloud').replace(/\/+$/, '');
 
     const body = {
       model: request.config.model || 'llama3.2',
@@ -16,12 +16,17 @@ export class OllamaProvider implements AiProvider {
         { role: 'system', content: request.systemPrompt },
         { role: 'user', content: request.userPrompt },
       ],
+      format: 'json',
       stream: false,
       options: {
         temperature: request.config.temperature,
         num_predict: request.config.maxTokens,
       },
     };
+
+    this.logger.log(
+      `Calling Ollama: ${baseUrl}/api/chat model=${body.model} bodySize=${JSON.stringify(body).length}`,
+    );
 
     const response = await fetch(`${baseUrl}/api/chat`, {
       method: 'POST',
@@ -30,7 +35,7 @@ export class OllamaProvider implements AiProvider {
         Authorization: `Bearer ${request.config.apiKey}`,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(120000),
+      signal: AbortSignal.timeout(180000),
     });
 
     if (!response.ok) {
@@ -53,7 +58,7 @@ export class OllamaProvider implements AiProvider {
 
   async validateApiKey(apiKey: string, baseUrl?: string): Promise<boolean> {
     try {
-      const url = `${baseUrl || 'https://ollama.peaknext.cloud'}/api/version`;
+      const url = `${(baseUrl || 'https://ollama.peaknext.cloud').replace(/\/+$/, '')}/api/version`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${apiKey}` },
         signal: AbortSignal.timeout(10000),
