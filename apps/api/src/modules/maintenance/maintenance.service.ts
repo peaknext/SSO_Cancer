@@ -43,23 +43,39 @@ export class MaintenanceService {
       dbConnected = false;
     }
 
-    // Read app version from package.json
+    // Read app version from root package.json (process.cwd = repo root for both dev & prod)
     let appVersion = 'unknown';
     try {
-      const pkgPath = path.resolve(__dirname, '../../../../package.json');
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-      appVersion = pkg.version || 'unknown';
+      const rootPkg = JSON.parse(
+        fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'),
+      );
+      appVersion = rootPkg.version || 'unknown';
     } catch {
-      // fallback
+      // fallback: try relative to __dirname (compiled dist)
+      try {
+        for (const rel of ['../../../../package.json', '../../../../../package.json']) {
+          const p = path.resolve(__dirname, rel);
+          if (fs.existsSync(p)) {
+            appVersion = JSON.parse(fs.readFileSync(p, 'utf8')).version || 'unknown';
+            break;
+          }
+        }
+      } catch {}
     }
 
-    // Read dependency versions
+    // Read dependency versions (monorepo: NestJS in apps/api, Prisma in root)
     const deps: Record<string, string> = {};
     try {
-      const apiPkgPath = path.resolve(__dirname, '../../../package.json');
-      const apiPkg = JSON.parse(fs.readFileSync(apiPkgPath, 'utf8'));
+      const cwd = process.cwd();
+      const apiPkg = JSON.parse(
+        fs.readFileSync(path.join(cwd, 'apps', 'api', 'package.json'), 'utf8'),
+      );
       deps.nestjs = apiPkg.dependencies?.['@nestjs/core'] || 'unknown';
-      deps.prisma = apiPkg.dependencies?.['@prisma/client'] || 'unknown';
+
+      const rootPkgDeps = JSON.parse(
+        fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'),
+      );
+      deps.prisma = rootPkgDeps.dependencies?.['@prisma/client'] || 'unknown';
     } catch {
       // fallback
     }

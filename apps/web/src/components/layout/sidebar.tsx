@@ -102,6 +102,7 @@ const navItems: NavItem[] = [
       { label: 'Audit Logs', labelThai: 'บันทึกกิจกรรม', href: '/settings/audit-logs' },
       { label: 'Scan Logs', labelThai: 'บันทึกสแกน HIS', href: '/settings/scan-logs' },
       { label: 'Backup & Restore', labelThai: 'สำรอง/กู้คืน', href: '/settings/backup' },
+      { label: 'Maintenance', labelThai: 'ดูแลระบบ', href: '/settings/maintenance' },
     ],
   },
 ];
