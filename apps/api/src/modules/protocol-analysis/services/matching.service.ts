@@ -394,16 +394,15 @@ export class MatchingService {
       }
     }
 
-    // A "strong" treatment signal = diagnosis-confirmed treatment encounter
-    // clinicCode/serviceClass alone are NOT strong (could be consultation/follow-up)
-    const hasStrongTreatmentSignal =
+    // Only radiation signals can bypass the "no drugs" early exit, because
+    // radiation protocols exist without drug regimens. Z511/Z5112 alone without
+    // drugs cannot drive protocol matching — there's nothing to match against.
+    const hasRadiationSignal =
       stageInference.hasDiagnosticRadiation ||
-      stageInference.hasNearbyRadiation ||
-      stageInference.treatmentModality.isChemotherapy ||
-      stageInference.treatmentModality.isImmunotherapy;
+      stageInference.hasNearbyRadiation;
 
-    // If no resolved drugs AND no strong treatment signal → no protocol can be matched
-    if (visitDrugIds.size === 0 && !hasStrongTreatmentSignal) {
+    // If no resolved drugs AND no radiation signal → no protocol can be matched
+    if (visitDrugIds.size === 0 && !hasRadiationSignal) {
       return {
         stageInference,
         results: [],
@@ -630,7 +629,7 @@ export class MatchingService {
           }
         }
 
-        if (bestRegimen) {
+        if (bestRegimen && bestRegimen.drugMatchRatio > 0) {
           results.push({
             protocolId: protocol.id,
             protocolCode: protocol.protocolCode,
@@ -685,7 +684,7 @@ export class MatchingService {
     const allChemoIsNonProtocol =
       resolvedChemoDrugsCount > 0 && nonProtocolChemoDrugs.length === resolvedChemoDrugsCount;
 
-    if (allChemoIsNonProtocol) {
+    if (allChemoIsNonProtocol && results.length > 0) {
       results.unshift({
         protocolId: 0,
         protocolCode: 'NON-PROTOCOL',
