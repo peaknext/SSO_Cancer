@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Users, Settings, ScrollText, Brain, Database, Pill, ScanSearch } from 'lucide-react';
+import { Users, Settings, ScrollText, Brain, Database, Pill, ScanSearch, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 import { HelpButton } from '@/components/shared/help-button';
@@ -16,6 +16,7 @@ const settingsTabs = [
   { label: 'บันทึกกิจกรรม', labelEn: 'Audit Logs', href: '/settings/audit-logs', icon: ScrollText },
   { label: 'บันทึกสแกน HIS', labelEn: 'Scan Logs', href: '/settings/scan-logs', icon: ScanSearch },
   { label: 'สำรอง/กู้คืน', labelEn: 'Backup', href: '/settings/backup', icon: Database, superAdminOnly: true },
+  { label: 'ดูแลระบบ', labelEn: 'Maintenance', href: '/settings/maintenance', icon: Wrench, superAdminOnly: true },
 ] as const;
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

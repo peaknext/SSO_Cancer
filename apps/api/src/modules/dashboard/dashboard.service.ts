@@ -655,6 +655,20 @@ export class DashboardService {
     return { enabled, lastScan, recentImports };
   }
 
+  // ─── Cache management (exposed for MaintenanceModule) ────
+
+  clearCache(): void {
+    this.cache.clear();
+  }
+
+  getCacheKeys(): { key: string; expiresAt: number }[] {
+    const keys: { key: string; expiresAt: number }[] = [];
+    this.cache.forEach((value, key) => {
+      keys.push({ key, expiresAt: value.expiresAt });
+    });
+    return keys;
+  }
+
   private async withCache<T>(key: string, fn: () => Promise<T>): Promise<T> {
     const cached = this.cache.get(key);
     if (cached && cached.expiresAt > Date.now()) {
