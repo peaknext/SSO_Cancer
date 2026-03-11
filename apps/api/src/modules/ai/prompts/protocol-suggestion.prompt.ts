@@ -50,6 +50,91 @@ JSON Response Schema:
   "clinicalNotes": "string — any additional clinical observations in Thai"
 }`;
 
+// ─── Ollama-specific simplified prompt for small models (3B) ─────────────
+// Per OLLAMA_API.md: keep system prompt 1-2 sentences, user prompt under 500 words,
+// one task per prompt, constrained output format, give 1-shot example.
+
+const OLLAMA_SYSTEM_PROMPT = `You are a medical protocol recommender. Pick the best matching protocol from the list. Return ONLY a JSON object with ALL these fields: recommendedProtocolCode, recommendedProtocolId, recommendedRegimenCode, recommendedRegimenId, confidenceScore, reasoning, alternativeProtocols, clinicalNotes.`;
+
+export function buildOllamaPrompt(ctx: PromptContext): {
+  systemPrompt: string;
+  userPrompt: string;
+} {
+  // Compact medication list (just names)
+  const meds = ctx.medications
+    .filter((m) => m.resolvedGenericName || m.medicationName)
+    .map((m) => m.resolvedGenericName || m.medicationName)
+    .join(', ');
+
+  // Compact algorithmic top 3 (just code + score)
+  const algoTop = ctx.algorithmicResults
+    .slice(0, 3)
+    .map((r) => `${r.protocolCode}(score:${r.score})`)
+    .join(', ');
+
+  // Compact protocol list — only code, ID, name, key drugs (limit to ~400 words)
+  const compactProtocols = buildCompactProtocolContext(ctx.protocolContext);
+
+  const userPrompt = `Cancer: ${ctx.cancerSite ? ctx.cancerSite.nameEnglish : 'Unknown'}
+ICD-10: ${ctx.primaryDiagnosis}
+Stage: ${ctx.stageInference.inferredStage || 'Unknown'}
+Medications: ${meds || 'None'}
+Algorithm top picks: ${algoTop || 'None'}
+
+Available protocols:
+${compactProtocols}
+
+REQUIRED JSON format (include ALL fields, use IDs from the protocol list above):
+{"recommendedProtocolCode":"CODE","recommendedProtocolId":ID_NUMBER,"recommendedRegimenCode":"REGIMEN_CODE","recommendedRegimenId":REGIMEN_ID_NUMBER,"confidenceScore":0-100,"reasoning":"Thai text explaining why","alternativeProtocols":[{"protocolCode":"CODE","protocolId":ID,"reason":"Thai text"}],"clinicalNotes":"Thai text"}
+
+Return ONLY valid JSON with ALL fields filled in.`;
+
+  return { systemPrompt: OLLAMA_SYSTEM_PROMPT, userPrompt };
+}
+
+/**
+ * Compress the full protocol context into a compact list for small models.
+ * Input: multi-line protocol descriptions from buildProtocolContext()
+ * Output: compact one-liner per protocol (max ~30 protocols)
+ */
+function buildCompactProtocolContext(fullContext: string): string {
+  if (!fullContext) return 'No protocols available';
+
+  // Parse each protocol block: "Protocol ID=X CODE "NAME" (Type: ..., Intent: ..., Stages: [...]):"
+  const protocolBlocks = fullContext.split(/\n\n/).filter(Boolean);
+
+  const compact = protocolBlocks.slice(0, 30).map((block) => {
+    const headerMatch = block.match(
+      /Protocol ID=(\d+)\s+(\S+)\s+"([^"]*)".*?Stages:\s*\[([^\]]*)\]/,
+    );
+    if (!headerMatch) return block.substring(0, 80);
+
+    const [, id, code, name, stages] = headerMatch;
+
+    // Extract drug names from regimen lines
+    const drugNames = new Set<string>();
+    const regimenMatches = block.matchAll(/Regimen ID=(\d+)\s+(\S+)/g);
+    const regimenIds: string[] = [];
+    for (const rm of regimenMatches) {
+      regimenIds.push(`${rm[2]}(ID=${rm[1]})`);
+    }
+
+    // Extract just generic drug names
+    const drugMatches = block.matchAll(/(\w[\w\s-]*?)\s*\(/g);
+    for (const dm of drugMatches) {
+      const name = dm[1].trim();
+      if (name.length > 2 && !name.startsWith('Regimen') && !name.startsWith('Protocol')) {
+        drugNames.add(name);
+      }
+    }
+
+    const drugsStr = [...drugNames].slice(0, 5).join(', ');
+    return `ID=${id} ${code} "${name}" Stages:[${stages}] Regimens:[${regimenIds.join(', ')}] Drugs:[${drugsStr}]`;
+  });
+
+  return compact.join('\n');
+}
+
 export function buildProtocolSuggestionPrompt(ctx: PromptContext): {
   systemPrompt: string;
   userPrompt: string;

@@ -4,7 +4,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AiProviderFactory } from './providers/provider.factory';
 import { AiCompletionResponse } from './providers/ai-provider.interface';
 import { MatchingService } from '../protocol-analysis/services/matching.service';
-import { buildProtocolSuggestionPrompt, PromptContext } from './prompts/protocol-suggestion.prompt';
+import {
+  buildProtocolSuggestionPrompt,
+  buildOllamaPrompt,
+  PromptContext,
+} from './prompts/protocol-suggestion.prompt';
 import { AuditAction } from '../../common/enums/audit-action.enum';
 import { decryptValue } from '../../common/utils/crypto.util';
 
@@ -115,17 +119,23 @@ export class AiService {
       dischargeType: visit.dischargeType,
     };
 
-    const { systemPrompt, userPrompt } = buildProtocolSuggestionPrompt(promptCtx);
+    // Build prompt — use simplified version for Ollama (small model)
+    const isOllama = providerName === 'ollama';
+    const { systemPrompt, userPrompt } = isOllama
+      ? buildOllamaPrompt(promptCtx)
+      : buildProtocolSuggestionPrompt(promptCtx);
     const promptHash = createHash('sha256').update(userPrompt).digest('hex');
 
     // Call AI provider
     const provider = this.providerFactory.getProvider(providerName);
+    const baseTemperature = parseFloat(settings['ai_temperature'] || '0.3');
     const config = {
       apiKey,
       model,
       maxTokens: parseInt(settings['ai_max_tokens'] || '2048'),
-      temperature: parseFloat(settings['ai_temperature'] || '0.3'),
-      ...(providerName === 'ollama' && { baseUrl: settings['ai_ollama_base_url'] }),
+      // Ollama small models need slightly higher temperature for structured output
+      temperature: isOllama ? Math.max(baseTemperature, 0.5) : baseTemperature,
+      ...(isOllama && { baseUrl: settings['ai_ollama_base_url'] }),
     };
 
     let aiResponse: AiCompletionResponse;
@@ -167,6 +177,15 @@ export class AiService {
 
     // Parse structured response
     const parsed = this.parseAiResponse(aiResponse.content);
+    const { _parseError, ...recommendation } = parsed;
+    const status = _parseError ? 'PARSE_ERROR' : 'SUCCESS';
+
+    if (_parseError) {
+      this.logger.error(
+        `AI response parse failed for VN=${vn} provider=${providerName}: ` +
+          `${aiResponse.content.substring(0, 300)}`,
+      );
+    }
 
     // Save to DB
     const suggestion = await this.prisma.aiSuggestion.create({
@@ -177,18 +196,21 @@ export class AiService {
         promptHash,
         requestPayload: userPrompt.substring(0, 10000),
         responseRaw: aiResponse.content.substring(0, 20000),
-        recommendation: JSON.stringify(parsed),
-        confidenceScore: parsed.confidenceScore ?? null,
-        protocolId: parsed.recommendedProtocolId || null,
-        regimenId: parsed.recommendedRegimenId || null,
+        recommendation: JSON.stringify(recommendation),
+        confidenceScore: recommendation.confidenceScore ?? null,
+        protocolId: recommendation.recommendedProtocolId || null,
+        regimenId: recommendation.recommendedRegimenId || null,
         tokensUsed: aiResponse.tokensUsed,
         latencyMs: aiResponse.latencyMs,
-        status: 'SUCCESS',
+        status,
+        errorMessage: _parseError
+          ? `ไม่สามารถแปลผลจาก AI ได้ — คำตอบไม่อยู่ในรูปแบบ JSON`
+          : null,
         requestedByUserId: userId,
       },
     });
 
-    // Audit log: AI suggestion success
+    // Audit log
     await this.prisma.auditLog.create({
       data: {
         action: AuditAction.AI_SUGGESTION,
@@ -199,9 +221,9 @@ export class AiService {
           vn,
           provider: providerName,
           model: aiResponse.model,
-          status: 'SUCCESS',
-          confidenceScore: parsed.confidenceScore,
-          recommendedProtocolId: parsed.recommendedProtocolId || null,
+          status,
+          confidenceScore: recommendation.confidenceScore,
+          recommendedProtocolId: recommendation.recommendedProtocolId || null,
           tokensUsed: aiResponse.tokensUsed,
           latencyMs: aiResponse.latencyMs,
         }),
@@ -301,16 +323,29 @@ export class AiService {
   }
 
   // ─── Parse AI response JSON ─────────────────────────────────
-  private parseAiResponse(content: string): ParsedRecommendation {
+  private parseAiResponse(content: string): ParsedRecommendation & { _parseError?: boolean } {
     try {
       // Try to extract JSON from response (handle markdown code blocks)
       let jsonStr = content.trim();
-      const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[1].trim();
+      const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1].trim();
       }
 
-      const parsed = JSON.parse(jsonStr);
+      // Try finding JSON object embedded in prose
+      let parsed: any;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        const firstBrace = jsonStr.indexOf('{');
+        const lastBrace = jsonStr.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+          parsed = JSON.parse(jsonStr.substring(firstBrace, lastBrace + 1));
+        } else {
+          throw new Error('No JSON object found in response');
+        }
+      }
+
       return {
         recommendedProtocolCode: parsed.recommendedProtocolCode || '',
         recommendedProtocolId: parsed.recommendedProtocolId || 0,
@@ -324,14 +359,15 @@ export class AiService {
         clinicalNotes: parsed.clinicalNotes || '',
       };
     } catch (error) {
-      this.logger.warn(`Failed to parse AI response: ${content.substring(0, 200)}`);
+      this.logger.error(`Failed to parse AI response: ${content.substring(0, 500)}`);
       return {
+        _parseError: true,
         recommendedProtocolCode: '',
         recommendedProtocolId: 0,
         recommendedRegimenCode: null,
         recommendedRegimenId: null,
         confidenceScore: 0,
-        reasoning: 'ไม่สามารถแปลผลจาก AI ได้ — กรุณาลองใหม่',
+        reasoning: 'ไม่สามารถแปลผลจาก AI ได้ — คำตอบไม่อยู่ในรูปแบบ JSON ที่ถูกต้อง กรุณาลองใหม่',
         alternativeProtocols: [],
         clinicalNotes: content.substring(0, 500),
       };
