@@ -15,6 +15,7 @@ import {
   Microscope,
   SearchCheck,
   FileArchive,
+  ScanSearch,
   Settings,
   LogIn,
   KeyRound,
@@ -42,9 +43,10 @@ import {
 import { cn } from '@/lib/utils';
 
 // ─── Manual Version ─────────────────────────────────────────
-const MANUAL_VERSION = '1.0.1';
-const MANUAL_DATE = '9 มีนาคม 2569';
+const MANUAL_VERSION = '1.0.2';
+const MANUAL_DATE = '11 มีนาคม 2569';
 const MANUAL_CHANGELOG = [
+  { version: '1.0.2', date: '11 มีนาคม 2569', description: 'เพิ่มเอกสาร: HIS Nightly Scan, บันทึกสแกน HIS, ตัวกรองนำเข้าอัจฉริยะ, SSOP Export smart filtering พร้อมสถานะเรียกเก็บ' },
   { version: '1.0.1', date: '9 มีนาคม 2569', description: 'แก้ไขข้อมูลแดชบอร์ด (กราฟ/ตาราง/ตัวกรอง) ให้ตรงกับระบบจริง, ระบุสถานะ SSOP Export' },
   { version: '1.0.0', date: '8 มีนาคม 2569', description: 'เวอร์ชันแรก — ครอบคลุมทุกฟีเจอร์ของระบบ' },
 ];
@@ -76,6 +78,7 @@ function RoleTable() {
     { name: 'ส่งออก SSOP / Excel', viewer: false, editor: true, admin: true },
     { name: 'จัดการผู้ใช้งาน', viewer: false, editor: false, admin: true },
     { name: 'ดูบันทึกกิจกรรม (Audit Log)', viewer: false, editor: false, admin: true },
+    { name: 'ดูบันทึกสแกน HIS (Scan Logs)', viewer: false, editor: false, admin: true },
     { name: 'ดาวน์โหลดสำรองข้อมูล', viewer: false, editor: false, admin: true },
   ];
 
@@ -411,7 +414,8 @@ const sections: Section[] = [
                 { icon: FlaskConical, name: 'สูตรยา', desc: 'ชุดยาที่ใช้ร่วมกัน' },
                 { icon: Microscope, name: 'ตำแหน่งมะเร็ง', desc: 'ข้อมูลอ้างอิง 23 ตำแหน่ง' },
                 { icon: SearchCheck, name: 'วิเคราะห์โปรโตคอล', desc: 'จับคู่การรักษากับมาตรฐาน' },
-                { icon: Settings, name: 'ตั้งค่า', desc: 'ADMIN+ — ผู้ใช้ AI บัญชียา บันทึก สำรอง' },
+                { icon: FileArchive, name: 'ส่งออก SSOP', desc: 'สร้างไฟล์เบิกจ่าย สปส.' },
+                { icon: Settings, name: 'ตั้งค่า', desc: 'ADMIN+ — ผู้ใช้ AI บัญชียา บันทึก สแกน สำรอง' },
               ].map((item) => (
                 <div key={item.name} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm">
                   <item.icon className="h-4 w-4 text-primary shrink-0" />
@@ -534,6 +538,7 @@ const sections: Section[] = [
               <div><strong className="text-foreground">สูตรยาที่ต้องตรวจสอบ</strong> — แสดงสูตรยาที่ยังไม่มียา (แสดงเมื่อมี) คลิก &quot;เพิ่มยา&quot; เพื่อไปหน้าแก้ไข</div>
               <div><strong className="text-foreground">ผู้ป่วยที่ต้องสร้างเคส</strong> — แสดงผู้ป่วยที่มี visit แต่ยังไม่มีเคสรักษา คลิกเพื่อไปหน้ารายละเอียด</div>
               <div><strong className="text-foreground">Visit Z51x ที่ต้องดำเนินการ</strong> — ตารางหลัก แสดง visit Z51x ที่ยังไม่ได้เรียกเก็บ/ถูกปฏิเสธ มีตัวกรอง 3 ประเภท: รหัส Z51 ย่อย (Z510/Z511), สถานะการเบิก, และ<strong className="text-foreground">ช่วงวันที่</strong> แสดงเวลาที่ผ่านไปพร้อมนับวันคงเหลือก่อนครบ 2 ปี</div>
+              <div><strong className="text-foreground">HIS Nightly Scan</strong> — แสดงผลการสแกนอัตโนมัติล่าสุด (สถานะ, จำนวนผู้ป่วย/visit ที่นำเข้า, เวลาสแกน) พร้อมลิงก์ไปดูรายละเอียดที่หน้า &quot;บันทึกสแกน HIS&quot; ในตั้งค่า</div>
             </div>
             <Tip>ตัวกรองช่วงวันที่มีเฉพาะในตาราง &quot;Visit Z51x ที่ต้องดำเนินการ&quot; เท่านั้น — กราฟไม่มีตัวกรองวันที่</Tip>
           </>
@@ -831,7 +836,15 @@ const sections: Section[] = [
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
               <strong className="text-foreground">ค้นหาขั้นสูง:</strong> ค้นด้วยช่วงวันที่ + รหัส ICD-10 + ตำแหน่งมะเร็ง + ยา (สูงสุด 31 วันต่อครั้ง)
             </p>
-            <Warning>ต้องตั้งค่า URL และ API key ของ HIS ที่หน้า "ตั้งค่าระบบ" ก่อนใช้งาน</Warning>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+              <strong className="text-foreground">สแกนอัตโนมัติ (Nightly Scan):</strong> ระบบจะสแกนดึงข้อมูล visit ใหม่จาก HIS อัตโนมัติทุกคืน (01:00 น.)
+              สำหรับผู้ป่วยที่มีเคสรักษาอยู่ในระบบ ผลการสแกนแสดงในแดชบอร์ดและดูรายละเอียดได้ที่ตั้งค่า &gt; บันทึกสแกน HIS
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+              <strong className="text-foreground">ตัวกรองนำเข้า:</strong> ตั้งค่าเลือกนำเข้าเฉพาะ visit ที่ต้องการ ได้แก่ วินิจฉัยมะเร็ง (cancer_diag), Z510 (เคมีบำบัด), Z511 (ภูมิคุ้มกันบำบัด)
+              — ตั้งค่าได้ที่หน้า ตั้งค่าระบบ &gt; App Settings (กลุ่ม hospital)
+            </p>
+            <Warning>ต้องตั้งค่า URL และ API key ของ HIS ที่หน้า &quot;ตั้งค่าระบบ&quot; ก่อนใช้งาน</Warning>
           </>
         ),
       },
@@ -986,13 +999,10 @@ const sections: Section[] = [
         title: 'ภาพรวม',
         content: (
           <>
-            <Warning>
-              ฟีเจอร์ส่งออก SSOP 0.93 ยังไม่แสดงในเมนูหลัก (Sidebar) เข้าถึงได้โดยพิมพ์ URL โดยตรง: <code className="font-mono text-xs bg-primary/5 px-1.5 py-0.5 rounded">/ssop-export</code> หรือเลือกจากเมนู End-to-End workflow ในคู่มือนี้
-            </Warning>
             <p className="text-sm text-muted-foreground leading-relaxed">
               SSOP 0.93 คือรูปแบบไฟล์อิเล็กทรอนิกส์มาตรฐานสำหรับเบิกจ่ายค่ารักษาพยาบาลกับ สปส.
               ประกอบด้วย 3 ส่วน: BILLTRAN (ข้อมูลการเงิน), BILLDISP (ข้อมูลการจ่ายยา), OPServices (บริการและวินิจฉัย)
-              ระบบสร้างไฟล์ ZIP ตามมาตรฐานพร้อมส่ง
+              ระบบสร้างไฟล์ ZIP ตามมาตรฐานพร้อมส่ง เข้าถึงได้จากเมนู &quot;ส่งออก SSOP&quot; ใน Sidebar
             </p>
           </>
         ),
@@ -1006,7 +1016,7 @@ const sections: Section[] = [
             <div className="my-3 space-y-4 text-sm text-muted-foreground">
               <div>
                 <p className="font-medium text-foreground mb-1">ขั้นที่ 1: เลือกข้อมูล (Select)</p>
-                <p>เลือกช่วงวันที่ด้วยปฏิทินพุทธศักราช ค้นหาและเลือก visit ที่มีข้อมูลเบิกจ่าย (checkbox)</p>
+                <p>เลือกช่วงวันที่ด้วยปฏิทินพุทธศักราช ค้นหาและเลือก visit ที่พร้อมส่งออก (checkbox)</p>
               </div>
               <div>
                 <p className="font-medium text-foreground mb-1">ขั้นที่ 2: ตรวจสอบ (Preview)</p>
@@ -1017,6 +1027,7 @@ const sections: Section[] = [
                 <p>กดสร้าง ดาวน์โหลดไฟล์ ZIP อัตโนมัติ (encoding Windows-874 ตามมาตรฐาน สปส.)</p>
               </div>
             </div>
+            <Tip>ระบบจะแสดงเฉพาะ visit ที่มีข้อมูลพร้อมส่งออก (มีผู้ป่วย, วินิจฉัย, เคสรักษา, ข้อมูลเบิกจ่าย) และยังไม่มีรอบเรียกเก็บที่รออนุมัติหรืออนุมัติแล้ว — visit ที่เคยส่งออกแต่ถูกปฏิเสธ (Rejected) จะแสดงพร้อม badge &quot;ส่งออกซ้ำ&quot; สีเหลือง</Tip>
           </>
         ),
       },
@@ -1028,6 +1039,11 @@ const sections: Section[] = [
             <p className="text-sm text-muted-foreground leading-relaxed">
               แท็บ &quot;ประวัติ&quot; แสดงรายการไฟล์ที่เคยสร้างทั้งหมด พร้อมวันที่ เลขลำดับ จำนวน visit
               สามารถดาวน์โหลดซ้ำได้ (ระบบเก็บไฟล์ไว้ในฐานข้อมูล) ใช้ตรวจสอบย้อนหลัง
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+              <strong className="text-foreground">สถานะเรียกเก็บ:</strong> แต่ละ batch แสดงสรุปสถานะเรียกเก็บของ visit ในชุด —
+              อนุมัติ (สีเขียว), รอพิจารณา (สีเหลือง), ปฏิเสธ (สีแดง), ยังไม่สร้าง (สีเทา)
+              ช่วยให้ติดตามผลการเบิกจ่ายรายชุดได้สะดวก
             </p>
           </>
         ),
@@ -1059,10 +1075,11 @@ const sections: Section[] = [
         content: (
           <>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              แสดงการตั้งค่าแบบจัดกลุ่ม: <strong className="text-foreground">hospital</strong> (รหัสโรงพยาบาล, HIS URL, API key),
+              แสดงการตั้งค่าแบบจัดกลุ่ม: <strong className="text-foreground">hospital</strong> (รหัสโรงพยาบาล, HIS URL, API key, ตัวกรองนำเข้า, เปิด/ปิดสแกนอัตโนมัติ),
               <strong className="text-foreground"> ssop</strong> (รหัสบัญชีดูแล)
               ADMIN ดูค่าได้แต่แก้ไขไม่ได้ (อ่านอย่างเดียว) ค่า sensitive เช่น API key จะแสดงเป็น ****
             </p>
+            <Tip>ตัวกรองนำเข้า HIS (his_import_filters) ควบคุมว่าระบบจะนำเข้า visit ประเภทใดบ้าง: cancer_diag (วินิจฉัยมะเร็ง), Z510 (เคมีบำบัด), Z511 (ภูมิคุ้มกันบำบัด)</Tip>
           </>
         ),
       },
@@ -1087,6 +1104,25 @@ const sections: Section[] = [
               รายการยา/เวชภัณฑ์ในบัญชียาหลัก สปส. (~1,200 รายการ) อ่านอย่างเดียว ค้นด้วยรหัสหรือชื่อ
               แสดงรหัส AIPN, TMT, ชื่อ, หมวด, อัตราเบิก ใช้ตรวจสอบรหัสยาสำหรับ SSOP Export
             </p>
+          </>
+        ),
+      },
+      {
+        id: 'set-scan-logs',
+        title: 'บันทึกสแกน HIS',
+        content: (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-2">สิทธิ์: ADMIN ขึ้นไป</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              แสดงประวัติการสแกนดึงข้อมูลจาก HIS อัตโนมัติ (Nightly Scan) ทุกคืนเวลา 01:00 น.
+              แต่ละรายการแสดง วันที่สแกน, สถานะ (สำเร็จ/ข้อผิดพลาด), จำนวนผู้ป่วยที่สแกน,
+              visit ใหม่ที่นำเข้า, visit ที่ข้าม, ข้อผิดพลาด, ระยะเวลาทำงาน
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+              คลิกขยายแต่ละรายการเพื่อดูรายละเอียดต่อผู้ป่วย: HN, ชื่อ, สถานะ (imported/skipped/error),
+              จำนวน visit ที่นำเข้า/ข้าม พร้อมลิงก์ไปหน้ารายละเอียดผู้ป่วย
+            </p>
+            <Tip>กรองตามสถานะ (สำเร็จ/ข้อผิดพลาด/กำลังทำงาน) ได้ด้วย dropdown ด้านบน</Tip>
           </>
         ),
       },
@@ -1162,10 +1198,11 @@ const sections: Section[] = [
           <>
             <StepList steps={[
               'ตรวจสอบว่า visit มีข้อมูลเบิกจ่าย (VisitBillingItem) ครบถ้วน',
-              'ไปที่ /ssop-export (พิมพ์ URL โดยตรง) > แท็บสร้างไฟล์ > เลือกช่วงวันที่',
-              'เลือก visit ที่ต้องการ (checkbox)',
+              'ไปที่เมนู "ส่งออก SSOP" > แท็บสร้างไฟล์ > เลือกช่วงวันที่',
+              'เลือก visit ที่พร้อมส่งออก (ระบบกรองเฉพาะที่ข้อมูลครบและยังไม่ถูกอนุมัติ)',
               'กด Preview — ตรวจสอบว่าผ่าน validate > แก้ไขข้อมูลที่มีปัญหา',
               'กด Generate — ดาวน์โหลด ZIP > ส่งให้ สปส. ผ่านช่องทางที่กำหนด',
+              'ติดตามผลเรียกเก็บ — ดูสถานะ (อนุมัติ/รอ/ปฏิเสธ) ที่แท็บ "ประวัติ"',
             ]} />
             <Tip>เลขลำดับ (session number) จะถูกจ่ายต่อเนื่องอัตโนมัติโดยระบบ</Tip>
           </>

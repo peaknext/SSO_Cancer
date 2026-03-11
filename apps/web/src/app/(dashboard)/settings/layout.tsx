@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Users, Settings, ScrollText, Brain, Database, Pill } from 'lucide-react';
+import { Users, Settings, ScrollText, Brain, Database, Pill, ScanSearch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 import { HelpButton } from '@/components/shared/help-button';
@@ -14,6 +14,7 @@ const settingsTabs = [
   { label: 'AI', labelEn: 'AI Settings', href: '/settings/ai', icon: Brain },
   { label: 'บัญชียา AIPN', labelEn: 'AIPN Catalog', href: '/settings/aipn-catalog', icon: Pill },
   { label: 'บันทึกกิจกรรม', labelEn: 'Audit Logs', href: '/settings/audit-logs', icon: ScrollText },
+  { label: 'บันทึกสแกน HIS', labelEn: 'Scan Logs', href: '/settings/scan-logs', icon: ScanSearch },
   { label: 'สำรอง/กู้คืน', labelEn: 'Backup', href: '/settings/backup', icon: Database, superAdminOnly: true },
 ] as const;
 

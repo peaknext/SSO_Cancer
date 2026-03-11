@@ -1,21 +1,27 @@
-import { Controller, Get, Post, Patch, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, NotFoundException } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { createPaginatedResponse } from '../../common/dto/paginated-response.dto';
 import { HisIntegrationService } from './his-integration.service';
+import { ScanLogService } from './scan-log.service';
 import { SearchPatientDto } from './dto/search-patient.dto';
 import { ImportPatientDto } from './dto/import-patient.dto';
 import { AdvancedSearchDto } from './dto/advanced-search.dto';
 import { ImportSingleVisitDto } from './dto/import-single-visit.dto';
 import { SyncVisitDto } from './dto/sync-visit.dto';
 import { BatchSyncDto } from './dto/batch-sync.dto';
+import { QueryScanLogsDto } from './dto/query-scan-logs.dto';
 
 @ApiTags('HIS Integration')
 @ApiBearerAuth()
 @Controller('his-integration')
 export class HisIntegrationController {
-  constructor(private readonly hisService: HisIntegrationService) {}
+  constructor(
+    private readonly hisService: HisIntegrationService,
+    private readonly scanLogService: ScanLogService,
+  ) {}
 
   @Get('search')
   @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
@@ -138,5 +144,25 @@ export class HisIntegrationController {
   @ApiOperation({ summary: 'ทดสอบการเชื่อมต่อ HIS API' })
   healthCheck() {
     return this.hisService.healthCheck();
+  }
+
+  // ─── Scan Logs ────────────────────────────────────────────────
+
+  @Get('scan-logs')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'ประวัติการสแกน HIS อัตโนมัติ (paginated)' })
+  getScanLogs(@Query() query: QueryScanLogsDto) {
+    return this.scanLogService.findAll(query).then((result) =>
+      createPaginatedResponse(result.data, result.total, result.page, result.limit),
+    );
+  }
+
+  @Get('scan-logs/:id')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'รายละเอียดการสแกนครั้งเดียว พร้อมรายชื่อผู้ป่วย' })
+  async getScanLogById(@Param('id') id: string) {
+    const scanLog = await this.scanLogService.findById(+id);
+    if (!scanLog) throw new NotFoundException('Scan log not found');
+    return scanLog;
   }
 }

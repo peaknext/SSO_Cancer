@@ -713,3 +713,45 @@ model BillingExportBatch {
 
   @@map("billing_export_batches")
 }
+
+// ─── Nightly Scan Logs ──────────────────────────────────────────
+
+model NightlyScanLog {
+  id           Int       @id @default(autoincrement())
+  scanDate     String    @map("scan_date") @db.VarChar(10)
+  startedAt    DateTime  @map("started_at") @db.Timestamptz(6)
+  finishedAt   DateTime? @map("finished_at") @db.Timestamptz(6)
+  status       String    @db.VarChar(20)
+  totalScanned Int       @default(0) @map("total_scanned")
+  newPatients  Int       @default(0) @map("new_patients")
+  newVisits    Int       @default(0) @map("new_visits")
+  skipped      Int       @default(0)
+  errors       Int       @default(0)
+  errorMessage String?   @map("error_message") @db.Text
+  durationMs   Int?      @map("duration_ms")
+  filterConfig String?   @map("filter_config") @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  details NightlyScanDetail[]
+
+  @@index([scanDate], map: "idx_nightly_scan_logs_scan_date")
+  @@index([status], map: "idx_nightly_scan_logs_status")
+  @@map("nightly_scan_logs")
+}
+
+model NightlyScanDetail {
+  id             Int       @id @default(autoincrement())
+  scanLogId      Int       @map("scan_log_id")
+  hn             String    @db.VarChar(20)
+  patientName    String?   @map("patient_name") @db.VarChar(200)
+  status         String    @db.VarChar(20)
+  importedVisits Int       @default(0) @map("imported_visits")
+  skippedVisits  Int       @default(0) @map("skipped_visits")
+  errorMessage   String?   @map("error_message") @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  scanLog NightlyScanLog @relation(fields: [scanLogId], references: [id], onDelete: Cascade)
+
+  @@index([scanLogId], map: "idx_nightly_scan_details_scan_log_id")
+  @@map("nightly_scan_details")
+}

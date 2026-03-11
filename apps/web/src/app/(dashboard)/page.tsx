@@ -236,13 +236,14 @@ interface NightlyScanLastResult {
   skipped: number;
   errors: number;
   error?: string;
+  durationMs?: number;
 }
 
 interface NightlyScanImport {
-  id: number;
   hn: string;
+  patientName: string | null;
+  patientId: number | null;
   importedVisits: number;
-  patient: { id: number; hn: string; fullName: string } | null;
 }
 
 interface NightlyScanSummary {
@@ -334,6 +335,16 @@ function NightlyScanWidget() {
               </div>
             </div>
 
+            {/* View history link */}
+            {isAdmin && lastScan && (
+              <Link
+                href="/settings/scan-logs"
+                className="text-xs text-primary hover:underline shrink-0"
+              >
+                ดูประวัติทั้งหมด →
+              </Link>
+            )}
+
             {/* Admin toggle */}
             {isAdmin && (
               <button
@@ -424,14 +435,14 @@ function NightlyScanWidget() {
                 <tbody>
                   {recentImports.map((imp) => (
                     <tr
-                      key={imp.id}
+                      key={imp.hn}
                       className="border-b border-glass-border-subtle last:border-0 transition-colors hover:bg-primary/[0.02] dark:hover:bg-primary/[0.04]"
                     >
                       <td className="px-4 py-3">
-                        <CodeBadge code={imp.patient?.hn ?? imp.hn} />
+                        <CodeBadge code={imp.hn} />
                       </td>
                       <td className="px-4 py-3 font-medium">
-                        {imp.patient?.fullName ?? '—'}
+                        {imp.patientName ?? '—'}
                       </td>
                       <td className="px-4 py-3">
                         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -440,9 +451,9 @@ function NightlyScanWidget() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {imp.patient ? (
+                        {imp.patientId ? (
                           <Link
-                            href={`/cancer-patients/${imp.patient.id}`}
+                            href={`/cancer-patients/${imp.patientId}`}
                             className="text-xs font-medium text-primary hover:underline transition-colors"
                           >
                             ดูข้อมูล →
@@ -460,15 +471,15 @@ function NightlyScanWidget() {
             {/* Mobile cards */}
             <div className="md:hidden divide-y divide-glass-border-subtle">
               {recentImports.map((imp) => (
-                <div key={imp.id} className="p-4 space-y-1">
+                <div key={imp.hn} className="p-4 space-y-1">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <CodeBadge code={imp.patient?.hn ?? imp.hn} />
-                      <span className="font-medium text-sm">{imp.patient?.fullName ?? '—'}</span>
+                      <CodeBadge code={imp.hn} />
+                      <span className="font-medium text-sm">{imp.patientName ?? '—'}</span>
                     </div>
-                    {imp.patient && (
+                    {imp.patientId && (
                       <Link
-                        href={`/cancer-patients/${imp.patient.id}`}
+                        href={`/cancer-patients/${imp.patientId}`}
                         className="text-xs font-medium text-primary hover:underline"
                       >
                         ดูข้อมูล →

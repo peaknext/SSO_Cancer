@@ -54,6 +54,10 @@ const ALLOWED_SORT_FIELDS = [
   'formulaCategory',
   'province',
   'hcode5',
+  'scanDate',
+  'startedAt',
+  'finishedAt',
+  'status',
 ];
 
 export class PaginationQueryDto {

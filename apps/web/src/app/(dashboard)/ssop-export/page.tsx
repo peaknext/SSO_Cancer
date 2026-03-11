@@ -60,6 +60,7 @@ interface ExportableVisit {
     protocol: { protocolCode: string; nameThai: string } | null;
     sourceHospital: { hcode5: string | null } | null;
   } | null;
+  billingClaims?: { id: number; status: string; roundNumber: number }[];
   _count: { visitBillingItems: number };
 }
 
@@ -74,6 +75,13 @@ interface PreviewResult {
   totalAmount: number;
 }
 
+interface ClaimSummary {
+  pending: number;
+  approved: number;
+  rejected: number;
+  noClaim: number;
+}
+
 interface ExportBatch {
   id: number;
   sessionNo: number;
@@ -86,6 +94,7 @@ interface ExportBatch {
   visitIds: number[];
   createdAt: string;
   createdByUser: { fullName: string } | null;
+  claimSummary?: ClaimSummary;
 }
 
 interface BatchesResponse {
@@ -915,8 +924,8 @@ function SelectVisitsStep({
       <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/15 px-4 py-3">
         <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-sm text-foreground/80">
-          แสดงเฉพาะ visits ที่มีข้อมูลค่ารักษาพยาบาล (Billing Items) จาก HIS — เลือก visits
-          ที่ต้องการส่งออก แล้วกด &quot;ตรวจสอบข้อมูล&quot;
+          แสดงเฉพาะ visits ที่มีข้อมูลพร้อมส่งออก และยังไม่มีรอบเรียกเก็บที่รออนุมัติหรืออนุมัติแล้ว
+          — เลือก visits แล้วกด &quot;ตรวจสอบข้อมูล&quot;
         </p>
       </div>
 
@@ -1041,7 +1050,15 @@ function SelectVisitsStep({
                       />
                     </td>
                     <td className="px-3 py-2.5">
-                      <CodeBadge code={v.vn} />
+                      <div className="flex items-center gap-1.5">
+                        <CodeBadge code={v.vn} />
+                        {v.billingClaims?.[0]?.status === 'REJECTED' && (
+                          <Badge variant="warning" className="text-[10px] px-1.5 py-0">
+                            <RotateCcw className="h-3 w-3 mr-0.5" />
+                            ส่งออกซ้ำ
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="font-medium text-foreground truncate max-w-48">
@@ -1315,7 +1332,7 @@ function BatchHistoryTab({
   const totalPages = Math.ceil(batchTotal / 20);
 
   if (batchesLoading) {
-    return <TableSkeleton rows={5} cols={6} />;
+    return <TableSkeleton rows={5} cols={8} />;
   }
 
   if (batches.length === 0) {
@@ -1340,6 +1357,7 @@ function BatchHistoryTab({
               <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">ไฟล์</th>
               <th className="px-4 py-2.5 text-center font-medium text-muted-foreground">Visits</th>
               <th className="px-4 py-2.5 text-right font-medium text-muted-foreground">ยอดรวม (฿)</th>
+              <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">สถานะเรียกเก็บ</th>
               <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">ผู้ส่งออก</th>
               <th className="px-4 py-2.5 w-24"></th>
             </tr>
@@ -1380,6 +1398,34 @@ function BatchHistoryTab({
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
+                </td>
+                <td className="px-4 py-3">
+                  {b.claimSummary ? (
+                    <div className="flex flex-wrap gap-1">
+                      {b.claimSummary.approved > 0 && (
+                        <Badge variant="success" className="text-[10px] px-1.5 py-0 tabular-nums">
+                          {b.claimSummary.approved} อนุมัติ
+                        </Badge>
+                      )}
+                      {b.claimSummary.pending > 0 && (
+                        <Badge variant="warning" className="text-[10px] px-1.5 py-0 tabular-nums">
+                          {b.claimSummary.pending} รอ
+                        </Badge>
+                      )}
+                      {b.claimSummary.rejected > 0 && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 tabular-nums">
+                          {b.claimSummary.rejected} ปฏิเสธ
+                        </Badge>
+                      )}
+                      {b.claimSummary.noClaim > 0 && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 tabular-nums">
+                          {b.claimSummary.noClaim} ยังไม่สร้าง
+                        </Badge>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-foreground">
                   {b.createdByUser?.fullName || '—'}

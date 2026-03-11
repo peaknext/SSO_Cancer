@@ -599,39 +599,58 @@ export class DashboardService {
   }
 
   async getNightlyScanSummary() {
-    const [enabledSetting, lastResultSetting] = await Promise.all([
+    const [enabledSetting, latestScanLog] = await Promise.all([
       this.prisma.appSetting.findUnique({ where: { settingKey: 'his_nightly_scan_enabled' } }),
-      this.prisma.appSetting.findUnique({ where: { settingKey: 'his_nightly_scan_last_result' } }),
+      this.prisma.nightlyScanLog.findFirst({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          details: {
+            where: { status: 'imported' },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      }),
     ]);
 
     const enabled = enabledSetting?.settingValue === 'true';
-    let lastScan: Record<string, unknown> | null = null;
-    let scanDate: string | null = null;
 
-    try {
-      if (lastResultSetting?.settingValue) {
-        lastScan = JSON.parse(lastResultSetting.settingValue) as Record<string, unknown>;
-        scanDate = typeof lastScan.date === 'string' ? lastScan.date : null;
-      }
-    } catch {
-      // ignore malformed JSON
+    if (!latestScanLog) {
+      return { enabled, lastScan: null, recentImports: [] };
     }
 
-    let recentImports: unknown[] = [];
-    if (scanDate) {
-      const from = new Date(`${scanDate}T00:00:00+07:00`);
-      const to = new Date(`${scanDate}T23:59:59+07:00`);
-      recentImports = await this.prisma.patientImport.findMany({
-        where: {
-          importedById: null,
-          source: 'HIS_API',
-          importedRows: { gt: 0 },
-          createdAt: { gte: from, lte: to },
-        },
-        include: { visits: { select: { id: true, hn: true, vn: true }, take: 1 } },
-        orderBy: { createdAt: 'asc' },
-      });
-    }
+    const lastScan = {
+      date: latestScanLog.scanDate,
+      startedAt: latestScanLog.startedAt.toISOString(),
+      finishedAt: latestScanLog.finishedAt?.toISOString() || null,
+      status: latestScanLog.status,
+      totalScanned: latestScanLog.totalScanned,
+      newPatients: latestScanLog.newPatients,
+      newVisits: latestScanLog.newVisits,
+      skipped: latestScanLog.skipped,
+      errors: latestScanLog.errors,
+      error: latestScanLog.errorMessage || undefined,
+      durationMs: latestScanLog.durationMs,
+    };
+
+    // Enrich details with patientId for linking
+    const hns = latestScanLog.details.map((d) => d.hn);
+    const patients = hns.length > 0
+      ? await this.prisma.patient.findMany({
+          where: { hn: { in: hns } },
+          select: { id: true, hn: true, fullName: true },
+        })
+      : [];
+    const hnMap = new Map(patients.map((p) => [p.hn, p]));
+
+    const recentImports = latestScanLog.details.map((d) => {
+      const patient = hnMap.get(d.hn);
+      return {
+        hn: d.hn,
+        patientName: d.patientName || patient?.fullName || null,
+        patientId: patient?.id || null,
+        importedVisits: d.importedVisits,
+      };
+    });
 
     return { enabled, lastScan, recentImports };
   }

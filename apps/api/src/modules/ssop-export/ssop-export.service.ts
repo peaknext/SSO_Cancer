@@ -405,10 +405,10 @@ export class SsopExportService {
     return { created: toCreate.length, skipped: details.length - toCreate.length, details };
   }
 
-  /** List export batches */
+  /** List export batches with claim status summary */
   async listBatches(page = 1, limit = 20) {
     const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
+    const [batches, total] = await Promise.all([
       this.prisma.billingExportBatch.findMany({
         where: { isActive: true },
         orderBy: { createdAt: 'desc' },
@@ -431,6 +431,43 @@ export class SsopExportService {
       }),
       this.prisma.billingExportBatch.count({ where: { isActive: true } }),
     ]);
+
+    // Enrich with claim status summary per batch
+    const allVisitIds = [...new Set(batches.flatMap((b) => b.visitIds as number[]))];
+    const claims =
+      allVisitIds.length > 0
+        ? await this.prisma.visitBillingClaim.findMany({
+            where: { visitId: { in: allVisitIds }, isActive: true },
+            select: { visitId: true, roundNumber: true, status: true },
+            orderBy: { roundNumber: 'desc' },
+          })
+        : [];
+
+    // Keep only the latest claim per visit (highest roundNumber)
+    const latestClaimByVisit = new Map<number, string>();
+    for (const c of claims) {
+      if (!latestClaimByVisit.has(c.visitId)) {
+        latestClaimByVisit.set(c.visitId, c.status);
+      }
+    }
+
+    const data = batches.map((batch) => {
+      const vids = batch.visitIds as number[];
+      let pending = 0,
+        approved = 0,
+        rejected = 0,
+        noClaim = 0;
+      for (const vid of vids) {
+        const st = latestClaimByVisit.get(vid);
+        if (!st) noClaim++;
+        else if (st === 'PENDING') pending++;
+        else if (st === 'APPROVED') approved++;
+        else if (st === 'REJECTED') rejected++;
+        else noClaim++;
+      }
+      return { ...batch, claimSummary: { pending, approved, rejected, noClaim } };
+    });
+
     return { data, total, page, limit };
   }
 
@@ -445,7 +482,8 @@ export class SsopExportService {
     return { buffer: Buffer.from(batch.fileData), fileName: batch.fileName };
   }
 
-  /** List visits that have billing items (exportable) with filters */
+  /** List visits that are export-ready: have billing items, basic data, linked case,
+   *  and NOT already claimed with PENDING or APPROVED status (rejected visits can re-export) */
   async listExportableVisits(query: {
     from?: string;
     to?: string;
@@ -456,10 +494,28 @@ export class SsopExportService {
     const { from, to, search, page = 1, limit = 50 } = query;
     const skip = (page - 1) * limit;
 
+    // Use AND array to avoid key collision with search OR / patient filter
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {
-      visitBillingItems: { some: { isActive: true } },
-    };
+    const andConditions: any[] = [
+      // 1. Must have billing items
+      { visitBillingItems: { some: { isActive: true } } },
+      // 2. Approximate "data completeness" checks
+      { patient: { isNot: null } },
+      { primaryDiagnosis: { not: null } },
+      { hn: { not: null } },
+      { vn: { not: null } },
+      { visitDate: { not: null } },
+      // 3. Must have a linked case (caseNumber, vcrCode, protocol needed for SSOP)
+      { case: { isNot: null } },
+      // 4. NOT exported with active PENDING or APPROVED claim
+      {
+        NOT: {
+          billingClaims: {
+            some: { isActive: true, status: { in: ['PENDING', 'APPROVED'] } },
+          },
+        },
+      },
+    ];
 
     if (from || to) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -470,17 +526,22 @@ export class SsopExportService {
         toDate.setHours(23, 59, 59, 999);
         visitDateFilter.lte = toDate;
       }
-      where.visitDate = visitDateFilter;
+      andConditions.push({ visitDate: visitDateFilter });
     }
 
     if (search) {
-      where.OR = [
-        { vn: { contains: search } },
-        { hn: { contains: search } },
-        { patient: { fullName: { contains: search, mode: 'insensitive' } } },
-        { patient: { citizenId: { contains: search } } },
-      ];
+      andConditions.push({
+        OR: [
+          { vn: { contains: search } },
+          { hn: { contains: search } },
+          { patient: { fullName: { contains: search, mode: 'insensitive' } } },
+          { patient: { citizenId: { contains: search } } },
+        ],
+      });
     }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = { AND: andConditions };
 
     const [data, total] = await Promise.all([
       this.prisma.patientVisit.findMany({
@@ -512,6 +573,12 @@ export class SsopExportService {
               protocol: { select: { protocolCode: true, nameThai: true } },
               sourceHospital: { select: { hcode5: true } },
             },
+          },
+          billingClaims: {
+            where: { isActive: true },
+            orderBy: { roundNumber: 'desc' },
+            take: 1,
+            select: { id: true, status: true, roundNumber: true },
           },
           _count: {
             select: { visitBillingItems: { where: { isActive: true } } },
