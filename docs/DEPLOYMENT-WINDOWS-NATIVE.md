@@ -254,6 +254,12 @@ openssl rand -hex 32    # → BACKUP_ENCRYPTION_KEY
 
 ### 4.4 Generate Prisma Client
 
+> **สำคัญ**: ถ้าเคย deploy มาก่อน โฟลเดอร์ `prisma/generated/prisma/client/` จะมี compiled CJS files ค้างอยู่ (`.js`, `package.json` ฯลฯ) ซึ่งทำให้ `prisma generate` ปฏิเสธเพราะมองว่าไม่ใช่ generated client ที่ถูกต้อง — **ต้องลบทิ้งก่อน**:
+>
+> ```powershell
+> Remove-Item -Recurse -Force prisma\generated\prisma\client -ErrorAction SilentlyContinue
+> ```
+
 ```powershell
 npx prisma generate --config prisma/prisma.config.ts
 ```
@@ -847,6 +853,8 @@ git pull origin main
 npm install
 
 # ──── 4. Generate Prisma client ────
+# ⚠ ต้องลบ generated client เก่าก่อน (มี compiled CJS ค้างจาก deploy ก่อนหน้า)
+Remove-Item -Recurse -Force prisma\generated\prisma\client -ErrorAction SilentlyContinue
 npx prisma generate --config prisma/prisma.config.ts
 
 # ──── 5. Build API ────
@@ -1094,6 +1102,23 @@ Invoke-WebRequest -Uri http://localhost:3000 -UseBasicParsing
 pm2 restart all
 C:\nginx\nginx.exe -s reload
 ```
+
+### Prisma generate ปฏิเสธ: "exists and is not empty but doesn't look like a generated Prisma Client"
+
+```
+Error: prisma/generated/prisma/client exists and is not empty but doesn't look like a generated Prisma Client.
+```
+
+**สาเหตุ**: จากขั้นตอน compile Prisma → CJS (5.3) ของ deploy ครั้งก่อน — ไฟล์ `.js`, `package.json` ฯลฯ ที่เหลือค้างทำให้ `prisma generate` ไม่รู้จัก
+
+**วิธีแก้**: ลบ generated client ทิ้งก่อน generate ใหม่:
+
+```powershell
+Remove-Item -Recurse -Force prisma\generated\prisma\client -ErrorAction SilentlyContinue
+npx prisma generate --config prisma/prisma.config.ts
+```
+
+> **หมายเหตุ**: ปัญหานี้เกิดทุกครั้งที่ deploy ซ้ำ — ในส่วนอัปเดตเวอร์ชัน (section 11) ได้เพิ่มขั้นตอนนี้ไว้แล้ว
 
 ### Prisma client error ตอน runtime
 
