@@ -125,6 +125,7 @@ export class MatchingService {
       // Z510 — radiation therapy encounter
       else if (code === 'Z510') {
         result.treatmentModality.isRadiation = true;
+        result.hasDiagnosticRadiation = true;
         result.reasons.push('Z510 → รังสีรักษา');
       }
       // Z5111 or Z511 — chemotherapy encounter
@@ -140,6 +141,7 @@ export class MatchingService {
       // 9224 — radiation procedure code (ICD-9-CM 92.24)
       else if (code === '9224') {
         result.treatmentModality.isRadiation = true;
+        result.hasDiagnosticRadiation = true;
         result.reasons.push('9224 → หัตถการฉายรังสี (teleradiotherapy)');
       }
     }
@@ -299,7 +301,6 @@ export class MatchingService {
             { secondaryDiagnoses: { contains: 'Z510' } },
             { secondaryDiagnoses: { contains: 'Z51.0' } },
             { secondaryDiagnoses: { contains: '9224' } },
-            { clinicCode: '10' },
           ],
         },
         select: { vn: true, visitDate: true },
@@ -394,7 +395,24 @@ export class MatchingService {
       }
     }
 
-    // Step 3.5: Get previously confirmed protocol IDs for this patient
+    // A "strong" treatment signal = diagnosis-confirmed treatment encounter
+    // clinicCode/serviceClass alone are NOT strong (could be consultation/follow-up)
+    const hasStrongTreatmentSignal =
+      stageInference.hasDiagnosticRadiation ||
+      stageInference.hasNearbyRadiation ||
+      stageInference.treatmentModality.isChemotherapy ||
+      stageInference.treatmentModality.isImmunotherapy;
+
+    // If no resolved drugs AND no strong treatment signal → no protocol can be matched
+    if (visitDrugIds.size === 0 && !hasStrongTreatmentSignal) {
+      return {
+        stageInference,
+        results: [],
+        nonProtocolChemoDrugs: [],
+      };
+    }
+
+    // Step 3.5: Get previously confirmed protocol IDs for this patient (after early exit)
     const confirmedProtocolIds = new Set<number>();
     if (visit.hn) {
       const confirmedVisits = await this.prisma.patientVisit.findMany({
@@ -411,28 +429,18 @@ export class MatchingService {
       }
     }
 
-    const hasRadiationSignal = stageInference.treatmentModality.isRadiation;
-
-    // If no resolved drugs AND no radiation signal → no protocol can be matched
-    if (visitDrugIds.size === 0 && !hasRadiationSignal) {
-      return {
-        stageInference,
-        results: [],
-        nonProtocolChemoDrugs: [],
-      };
-    }
-
     // Step 4.5: Detect non-protocol chemotherapy drugs
     const chemoDrugs = visit.medications.filter(
       (m) => m.resolvedDrug?.drugCategory?.toLowerCase() === 'chemotherapy',
     );
 
-    const protocolDrugIds = await this.getProtocolDrugIds(siteId);
-
     const nonProtocolChemoDrugs: string[] = [];
-    for (const med of chemoDrugs) {
-      if (med.resolvedDrugId && !protocolDrugIds.has(med.resolvedDrugId)) {
-        nonProtocolChemoDrugs.push(med.resolvedDrug?.genericName || `Drug#${med.resolvedDrugId}`);
+    if (chemoDrugs.length > 0) {
+      const protocolDrugIds = await this.getProtocolDrugIds(siteId);
+      for (const med of chemoDrugs) {
+        if (med.resolvedDrugId && !protocolDrugIds.has(med.resolvedDrugId)) {
+          nonProtocolChemoDrugs.push(med.resolvedDrug?.genericName || `Drug#${med.resolvedDrugId}`);
+        }
       }
     }
 
@@ -498,7 +506,57 @@ export class MatchingService {
       // ICD-10 subsite affinity scoring
       const subsiteResult = this.subsiteAffinityScore(visit.primaryDiagnosis, protocol.protocolCode);
 
+      // Formulary compliance — computed once per protocol (visit-level, same for all regimens)
+      let formularyScore = 0;
+      let formularyCompliance: FormularyCompliance | null = null;
+      const hasAnyFormularyData = visitResolvedDrugNames.size > 0 || visitAipnCodes.size > 0;
+      if (hasAnyFormularyData) {
+        const formularyNames = formularyNameMap.get(protocol.protocolCode);
+        const formularyAipns = formularyAipnMap.get(protocol.protocolCode);
+
+        let compliantCount = 0;
+        let totalChecked = 0;
+        const checkedNames = new Set<string>();
+
+        // Path 1: Code-based matching (deterministic, highest priority)
+        if (formularyAipns && formularyAipns.size > 0) {
+          for (const aipnCode of visitAipnCodes) {
+            totalChecked++;
+            if (formularyAipns.has(aipnCode)) compliantCount++;
+          }
+          // Track which drug names were already checked via code path
+          // to avoid double-counting in name-based path
+          for (const med of visit.medications) {
+            if (med.resolvedAipnCode && med.resolvedDrug?.genericName) {
+              checkedNames.add(med.resolvedDrug.genericName.toLowerCase());
+            }
+          }
+        }
+
+        // Path 2: Name-based matching (fallback for meds without AIPN codes)
+        if (formularyNames && formularyNames.size > 0) {
+          for (const name of visitResolvedDrugNames) {
+            if (checkedNames.has(name)) continue; // already checked via code path
+            totalChecked++;
+            if (formularyNames.has(name)) compliantCount++;
+          }
+        }
+
+        if (totalChecked > 0) {
+          const ratio = compliantCount / totalChecked;
+          formularyScore = Math.round(ratio * 20);
+          formularyCompliance = {
+            compliantCount,
+            totalChecked,
+            ratio: Math.round(ratio * 100),
+          };
+        }
+      }
+
       if (protocol.protocolRegimens.length > 0) {
+        // Skip drug-based protocols if visit has no medications
+        if (visitDrugIds.size === 0) continue;
+
         // Protocol with regimens — score per regimen, pick best
         let bestScore = -1;
         let bestRegimen: MatchResult['matchedRegimen'] | null = null;
@@ -521,57 +579,6 @@ export class MatchingService {
           const drugMatchScore = drugMatchRatio * 40;
           const drugCountBonus = Math.min(matchedDrugList.length * 2, 10);
           const preferenceScore = pr.isPreferred ? 5 : 0;
-
-          // Formulary compliance scoring (up to 20 points)
-          // Hybrid: code-based for meds with AIPN codes, name-based for others
-          let formularyScore = 0;
-          let formularyCompliance: FormularyCompliance | null = null;
-          const hasAnyFormularyData = visitResolvedDrugNames.size > 0 || visitAipnCodes.size > 0;
-          if (hasAnyFormularyData) {
-            const formularyNames = formularyNameMap.get(protocol.protocolCode);
-            const formularyAipns = formularyAipnMap.get(protocol.protocolCode);
-
-            let compliantCount = 0;
-            let totalChecked = 0;
-            const checkedNames = new Set<string>();
-
-            // Path 1: Code-based matching (deterministic, highest priority)
-            if (formularyAipns && formularyAipns.size > 0) {
-              for (const aipnCode of visitAipnCodes) {
-                totalChecked++;
-                if (formularyAipns.has(aipnCode)) compliantCount++;
-              }
-              // Track which drug names were already checked via code path
-              // to avoid double-counting in name-based path
-              for (const med of visit.medications) {
-                if (med.resolvedAipnCode && med.resolvedDrug?.genericName) {
-                  checkedNames.add(med.resolvedDrug.genericName.toLowerCase());
-                }
-              }
-            }
-
-            // Path 2: Name-based matching (fallback for meds without AIPN codes)
-            if (formularyNames && formularyNames.size > 0) {
-              for (const name of visitResolvedDrugNames) {
-                if (checkedNames.has(name)) continue; // already checked via code path
-                totalChecked++;
-                if (formularyNames.has(name)) compliantCount++;
-              }
-            } else if (totalChecked === 0) {
-              // No formulary data at all — skip scoring
-              totalChecked = 0;
-            }
-
-            if (totalChecked > 0) {
-              const ratio = compliantCount / totalChecked;
-              formularyScore = Math.round(ratio * 20);
-              formularyCompliance = {
-                compliantCount,
-                totalChecked,
-                ratio: Math.round(ratio * 100),
-              };
-            }
-          }
 
           // History confirmation bonus (15 points)
           const historyBonus = confirmedProtocolIds.has(protocol.id) ? 15 : 0;
@@ -625,44 +632,6 @@ export class MatchingService {
         }
 
         if (bestRegimen) {
-          // Compute formulary compliance for the best regimen (same hybrid logic)
-          let bestFormulary: FormularyCompliance | null = null;
-          if (visitResolvedDrugNames.size > 0 || visitAipnCodes.size > 0) {
-            const formularyNames = formularyNameMap.get(protocol.protocolCode);
-            const formularyAipns = formularyAipnMap.get(protocol.protocolCode);
-            let compliantCount = 0;
-            let totalChecked = 0;
-            const checkedNames = new Set<string>();
-
-            if (formularyAipns && formularyAipns.size > 0) {
-              for (const aipnCode of visitAipnCodes) {
-                totalChecked++;
-                if (formularyAipns.has(aipnCode)) compliantCount++;
-              }
-              for (const med of visit.medications) {
-                if (med.resolvedAipnCode && med.resolvedDrug?.genericName) {
-                  checkedNames.add(med.resolvedDrug.genericName.toLowerCase());
-                }
-              }
-            }
-
-            if (formularyNames && formularyNames.size > 0) {
-              for (const name of visitResolvedDrugNames) {
-                if (checkedNames.has(name)) continue;
-                totalChecked++;
-                if (formularyNames.has(name)) compliantCount++;
-              }
-            }
-
-            if (totalChecked > 0) {
-              bestFormulary = {
-                compliantCount,
-                totalChecked,
-                ratio: Math.round((compliantCount / totalChecked) * 100),
-              };
-            }
-          }
-
           results.push({
             protocolId: protocol.id,
             protocolCode: protocol.protocolCode,
@@ -676,7 +645,7 @@ export class MatchingService {
             stageMatch,
             inferredStage: stageInference.inferredStage,
             treatmentModality: stageInference.treatmentModality,
-            formularyCompliance: bestFormulary,
+            formularyCompliance,
           });
         }
       } else {

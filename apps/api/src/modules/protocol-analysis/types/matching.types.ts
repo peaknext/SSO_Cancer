@@ -20,6 +20,7 @@ export interface StageInference {
   hasDistantMets: boolean;
   hasNodeInvolvement: boolean;
   hasNearbyRadiation?: boolean;
+  hasDiagnosticRadiation?: boolean;
   treatmentModality: TreatmentModality;
   reasons: string[];
 }
