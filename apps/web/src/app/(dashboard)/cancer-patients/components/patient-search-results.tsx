@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -58,10 +58,22 @@ export function PatientSearchResults({
 }: PatientSearchResultsProps) {
   const [filter, setFilter] = useState('');
   const [page, setPage] = useState(1);
+  const prevResultsLenRef = useRef(results.length);
 
-  // Reset page when results or filter changes
-  const filtered = useMemo(() => {
+  // Reset page only when filter changes or result count changes (new search),
+  // NOT when results array reference changes (e.g. import status update)
+  useEffect(() => {
+    if (results.length !== prevResultsLenRef.current) {
+      setPage(1);
+      prevResultsLenRef.current = results.length;
+    }
+  }, [results.length]);
+
+  useEffect(() => {
     setPage(1);
+  }, [filter]);
+
+  const filtered = useMemo(() => {
     if (!filter.trim()) return results;
     const q = filter.toLowerCase().trim();
     return results.filter(
