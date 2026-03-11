@@ -64,7 +64,7 @@
 | OS | Windows Server 2022 (64-bit) |
 | RAM | 4 GB ขึ้นไป (แนะนำ 8 GB) |
 | พื้นที่ว่าง | 5 GB ขึ้นไป |
-| Node.js | 20.x LTS |
+| Node.js | 20.x LTS ขึ้นไป (ทดสอบถึง v24) |
 | PostgreSQL | 16 ขึ้นไป |
 | nginx | 1.24+ (Windows build) |
 | Git | 2.39+ |
@@ -276,7 +276,12 @@ cd ..\..
 
 ### 5.2 Build Web (Next.js)
 
+> **คำเตือน (Path Casing)**: ต้อง `cd C:\SSO_Cancer` (ตัวพิมพ์ใหญ่ตรงกับชื่อโฟลเดอร์จริงบน disk) ก่อน build — ถ้า cwd เป็น `C:\sso_cancer` (ตัวเล็ก) Webpack จะ load React 2 ครั้งผ่าน 2 paths ทำให้ build ล้มเหลว (`workUnitAsyncStorage` error). ดูรายละเอียดใน [Troubleshooting section 13](#next-js-build-ล้มเหลว-workunitasyncstorage-error)
+
 ```powershell
+# ลบ .next cache เก่า (ป้องกัน webpack module errors จาก stale cache)
+Remove-Item -Recurse -Force apps\web\.next -ErrorAction SilentlyContinue
+
 # ตั้ง environment variables สำหรับ build
 $env:NEXT_PUBLIC_API_URL = ""
 $env:API_INTERNAL_URL = "http://localhost:4000"
@@ -749,8 +754,8 @@ pm2 status
 ┌─────────────────┬────┬─────────┬──────┬──────┬────────┐
 │ App name         │ id │ mode    │ pid  │ status │ restart │
 ├─────────────────┼────┼─────────┼──────┼──────┼────────┤
-│ sso-cancer-api   │ 0  │ fork    │ 1234 │ online │ 0      │
-│ sso-cancer-web   │ 1  │ fork    │ 5678 │ online │ 0      │
+│ sso-cancer-api   │ 0  │ cluster │ 1234 │ online │ 0      │
+│ sso-cancer-web   │ 1  │ cluster │ 5678 │ online │ 0      │
 └─────────────────┴────┴─────────┴──────┴──────┴────────┘
 ```
 
@@ -832,44 +837,111 @@ Invoke-WebRequest -Uri https://localhost/api/v1/health -SkipCertificateCheck -Us
 ```powershell
 cd C:\SSO_Cancer
 
-# 1. หยุด services
+# ──── 1. หยุด services ────
 pm2 stop all
 
-# 2. ดึง code ใหม่
+# ──── 2. ดึง code ใหม่ ────
 git pull origin main
 
-# 3. ติดตั้ง dependencies (กรณีมีเพิ่ม)
+# ──── 3. ติดตั้ง dependencies ────
 npm install
 
-# 4. Generate Prisma client (ทำซ้ำขั้นตอน 4.4 ถ้า schema เปลี่ยน)
+# ──── 4. Generate Prisma client ────
 npx prisma generate --config prisma/prisma.config.ts
-# ... (ทำตามขั้นตอน 5.3 ทั้งหมด)
 
-# 5. Build
-cd apps\api && npm run build && cd ..\..
+# ──── 5. Build API ────
+cd apps\api
+npm run build
+cd ..\..
+
+# ──── 6. Build Web ────
+# ⚠ ตรวจสอบว่า cwd ตรงกับ disk casing: ต้องเป็น C:\SSO_Cancer (ตัวพิมพ์ใหญ่)
+#   ถ้าผิด จะเกิด workUnitAsyncStorage error เพราะ Webpack load React 2 ครั้ง
+Remove-Item -Recurse -Force apps\web\.next -ErrorAction SilentlyContinue
 $env:NEXT_PUBLIC_API_URL = ""
 $env:API_INTERNAL_URL = "http://localhost:4000"
-cd apps\web && npm run build && cd ..\..
+$env:NEXT_TELEMETRY_DISABLED = "1"
+npm run build --workspace=apps/web
 
-# 5.5 คัดลอก static files เข้า standalone
-Copy-Item -Path "apps\web\.next\static" -Destination "apps\web\.next\standalone\apps\web\.next\static" -Recurse -Force
-Copy-Item -Path "apps\web\public" -Destination "apps\web\.next\standalone\apps\web\public" -Recurse -Force
+# ──── 7. คัดลอก static files เข้า standalone ────
+Copy-Item -Path "apps\web\.next\static" `
+  -Destination "apps\web\.next\standalone\apps\web\.next\static" -Recurse -Force
+Copy-Item -Path "apps\web\public" `
+  -Destination "apps\web\.next\standalone\apps\web\public" -Recurse -Force
 
-# 6. คัดลอก Prisma generated ไป dist (ทำซ้ำขั้นตอน 5.5)
-Copy-Item -Path "prisma\generated" -Destination "apps\api\dist\prisma\generated" -Recurse -Force
+# ──── 8. Compile Prisma Client เป็น CJS ────
+# 8a. สร้าง tsconfig ชั่วคราว
+@"
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "commonjs", "lib": ["ES2022"],
+    "moduleResolution": "node", "esModuleInterop": true,
+    "strict": false, "skipLibCheck": true, "declaration": false,
+    "outDir": "./compiled", "rootDir": "."
+  },
+  "include": ["./**/*.ts"], "exclude": ["node_modules", "compiled"]
+}
+"@ | Set-Content -Path "prisma\generated\prisma\client\tsconfig.json" -Encoding UTF8
 
-# 7. รัน migration
+# 8b. Compile
+Push-Location prisma\generated\prisma\client
+npx tsc --project tsconfig.json
+Pop-Location
+
+# 8c. คัดลอก compiled files กลับ + ลบ temp
+Copy-Item -Path "prisma\generated\prisma\client\compiled\*" `
+  -Destination "prisma\generated\prisma\client\" -Recurse -Force
+Remove-Item -Path "prisma\generated\prisma\client\compiled" -Recurse -Force
+Remove-Item -Path "prisma\generated\prisma\client\tsconfig.json" -Force
+
+# 8d. เพิ่ม package.json สำหรับ CommonJS
+'{"type":"commonjs"}' | Set-Content -Path "prisma\generated\prisma\client\package.json" -Encoding UTF8
+
+# 8e. แก้ ESM/CJS compatibility
+Get-ChildItem -Path "prisma\generated\prisma\client" -Filter "*.js" -Recurse | ForEach-Object {
+    $content = Get-Content $_.FullName -Raw
+    if ($content) {
+        $content = $content -replace 'import\.meta\.url', '"file://" + __filename'
+        $content = $content -replace "globalThis\['__dirname'\] = .*fileURLToPath.*", "globalThis['__dirname'] = __dirname;"
+        $content = $content -replace '\.ts"', '.js"'
+        $content = $content -replace "\.ts'", ".js'"
+        Set-Content -Path $_.FullName -Value $content -NoNewline -Encoding UTF8
+    }
+}
+
+# 8f. ลบ TypeScript source files (เก็บเฉพาะ JS)
+Get-ChildItem -Path "prisma\generated\prisma\client" -Filter "*.ts" -Recurse | Remove-Item -Force
+
+# ──── 9. Compile seed.ts ────
+npx tsc prisma/seed.ts `
+    --outDir prisma/ `
+    --target ES2020 `
+    --module commonjs `
+    --moduleResolution node `
+    --esModuleInterop `
+    --skipLibCheck `
+    --resolveJsonModule
+
+# ──── 10. คัดลอก Prisma artifacts ไป API dist ────
+Copy-Item -Path "prisma\generated" `
+  -Destination "apps\api\dist\prisma\generated" -Recurse -Force
+Copy-Item -Path "prisma\prisma.config.ts" -Destination "apps\api\dist\prisma\" -Force
+Copy-Item -Path "prisma\schema.prisma" -Destination "apps\api\dist\prisma\" -Force
+Copy-Item -Path "prisma\migrations" `
+  -Destination "apps\api\dist\prisma\migrations" -Recurse -Force
+
+# ──── 11. รัน migration ────
 npx prisma migrate deploy --config prisma/prisma.config.ts
 
-# 8. รัน seed (ปลอดภัย — ใช้ ON CONFLICT DO NOTHING)
+# ──── 12. รัน seed (ปลอดภัย — ON CONFLICT DO NOTHING) ────
 node prisma/seed.js
 
-# 9. เริ่ม services
+# ──── 13. เริ่ม services + ตรวจ health ────
 pm2 restart all
-
-# 10. ตรวจ health
+pm2 save
 Start-Sleep -Seconds 10
 Invoke-WebRequest -Uri http://localhost:4000/api/v1/health -UseBasicParsing
+Invoke-WebRequest -Uri http://localhost:3000 -UseBasicParsing -MaximumRedirection 0
 ```
 
 ### Rollback
