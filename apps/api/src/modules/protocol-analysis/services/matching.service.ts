@@ -251,6 +251,38 @@ export class MatchingService {
       visit.serviceClass,
     );
 
+    // Step 1.5: Check for nearby radiation visits (±7 days) for concurrent CRT detection
+    if (visit.hn && visit.visitDate && !stageInference.treatmentModality.isRadiation) {
+      const visitDate = new Date(visit.visitDate);
+      const weekBefore = new Date(visitDate);
+      weekBefore.setDate(weekBefore.getDate() - 7);
+      const weekAfter = new Date(visitDate);
+      weekAfter.setDate(weekAfter.getDate() + 7);
+
+      const nearbyRadiationVisit = await this.prisma.patientVisit.findFirst({
+        where: {
+          hn: visit.hn,
+          vn: { not: vn },
+          visitDate: { gte: weekBefore, lte: weekAfter },
+          OR: [
+            { secondaryDiagnoses: { contains: 'Z510' } },
+            { secondaryDiagnoses: { contains: 'Z51.0' } },
+            { secondaryDiagnoses: { contains: '9224' } },
+            { clinicCode: '10' },
+          ],
+        },
+        select: { vn: true, visitDate: true },
+      });
+
+      if (nearbyRadiationVisit) {
+        stageInference.hasNearbyRadiation = true;
+        stageInference.treatmentModality.isRadiation = true;
+        stageInference.reasons.push(
+          `พบ visit ฉายรังสี (${nearbyRadiationVisit.vn}) ภายใน ±7 วัน → สัญญาณ concurrent chemoradiation`,
+        );
+      }
+    }
+
     // Step 2: Resolve cancer site from ICD-10
     let siteId = visit.resolvedSiteId;
     let siteName = visit.resolvedSite?.nameThai || visit.resolvedSite?.nameEnglish || '';

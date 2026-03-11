@@ -19,6 +19,7 @@ export interface StageInference {
   inferredStage: 'EARLY' | 'LOCALLY_ADVANCED' | 'METASTATIC' | null;
   hasDistantMets: boolean;
   hasNodeInvolvement: boolean;
+  hasNearbyRadiation?: boolean;
   treatmentModality: TreatmentModality;
   reasons: string[];
 }
