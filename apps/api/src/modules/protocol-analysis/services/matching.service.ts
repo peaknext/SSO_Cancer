@@ -146,14 +146,13 @@ export class MatchingService {
       }
     }
 
-    // Clinic/service-based radiation detection (from HIS Endpoint 2)
+    // Clinic/service-based radiation context (weak signals — for reasons only, not modality flag)
+    // These don't set isRadiation because clinicCode/serviceClass alone could be consultation/follow-up
     if (clinicCode === '10' && !result.treatmentModality.isRadiation) {
-      result.treatmentModality.isRadiation = true;
-      result.reasons.push('clinicCode=10 → แผนกรังสีรักษา');
+      result.reasons.push('clinicCode=10 → แผนกรังสีรักษา (ไม่มีรหัสวินิจฉัยรังสี)');
     }
     if (serviceClass === 'XR' && !result.treatmentModality.isRadiation) {
-      result.treatmentModality.isRadiation = true;
-      result.reasons.push('serviceClass=XR → บริการรังสีวินิจฉัย/รังสีรักษา');
+      result.reasons.push('serviceClass=XR → บริการรังสี (ไม่มีรหัสวินิจฉัยรังสี)');
     }
 
     // Determine inferred stage
