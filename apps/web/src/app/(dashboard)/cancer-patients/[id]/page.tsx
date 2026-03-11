@@ -185,7 +185,7 @@ function AssignCaseConfirmDialog({
 
 export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: patient, isLoading, refetch } = useApi<PatientDetail>(`/cancer-patients/${id}`);
+  const { data: patient, isLoading, isRefetching, refetch } = useApi<PatientDetail>(`/cancer-patients/${id}`);
 
   // Case creation modal
   const [showCreateCase, setShowCreateCase] = useState(false);
@@ -510,6 +510,9 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               {patient.fullName}
             </h1>
             <StatusBadge active={patient.isActive} />
+            {isRefetching && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
           </div>
           <Button size="sm" onClick={() => setShowEditPatient(true)}>
             <Pencil className="h-4 w-4 mr-1" />
