@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Wrench,
   Server,
@@ -23,7 +23,10 @@ import {
   Clock,
   CalendarDays,
   Ban,
+  Search,
+  Filter,
 } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/use-api';
 import { apiClient } from '@/lib/api-client';
@@ -32,6 +35,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { cn } from '@/lib/utils';
 
 // ─── Types ──────────────────────────────────────────────────
@@ -152,6 +156,19 @@ interface IntegrityResult {
   checkedAt: string;
   totalIssues: number;
   summary: string;
+}
+
+interface BulkDeletePreview {
+  matchCount: number;
+  samples: { vn: string; hn: string; visitDate: string; primaryDiagnosis: string }[];
+}
+
+interface BulkDeleteResult {
+  deletedCount: number;
+  deletedMedications: number;
+  deletedAiSuggestions: number;
+  deletedBillingClaims: number;
+  deletedBillingItems: number;
 }
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -392,6 +409,18 @@ export default function MaintenancePage() {
   const [integrityResult, setIntegrityResult] = useState<IntegrityResult | null>(null);
   const [integrityLoading, setIntegrityLoading] = useState(false);
 
+  // Bulk delete visits
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const [bulkDateFrom, setBulkDateFrom] = useState('');
+  const [bulkDateTo, setBulkDateTo] = useState('');
+  const [bulkNonCancerOnly, setBulkNonCancerOnly] = useState(false);
+  const [bulkNoMedsOrBilling, setBulkNoMedsOrBilling] = useState(false);
+  const [bulkPreview, setBulkPreview] = useState<BulkDeletePreview | null>(null);
+  const [bulkPreviewLoading, setBulkPreviewLoading] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
   // Confirm dialogs
   const [confirmPurgeExpired, setConfirmPurgeExpired] = useState(false);
   const [confirmRevokeAll, setConfirmRevokeAll] = useState(false);
@@ -552,6 +581,56 @@ export default function MaintenancePage() {
       loadDataStats();
     } catch {
       toast.error('การลบข้อมูลล้มเหลว');
+    }
+  };
+
+  const bulkDeleteHasFilter = bulkDateFrom || bulkDateTo || bulkNonCancerOnly || bulkNoMedsOrBilling;
+
+  const buildBulkDeleteBody = () => ({
+    ...(bulkDateFrom ? { dateFrom: bulkDateFrom } : {}),
+    ...(bulkDateTo ? { dateTo: bulkDateTo } : {}),
+    ...(bulkNonCancerOnly ? { nonCancerOnly: true } : {}),
+    ...(bulkNoMedsOrBilling ? { noMedsOrBilling: true } : {}),
+  });
+
+  const runBulkDeletePreview = async () => {
+    setBulkPreviewLoading(true);
+    setBulkPreview(null);
+    try {
+      const data = await apiClient.post<BulkDeletePreview>(
+        '/protocol-analysis/visits/bulk-delete/preview',
+        buildBulkDeleteBody(),
+      );
+      setBulkPreview(data);
+    } catch {
+      toast.error('ไม่สามารถดูตัวอย่างได้');
+    } finally {
+      setBulkPreviewLoading(false);
+    }
+  };
+
+  const executeBulkDelete = async () => {
+    setBulkDeleteLoading(true);
+    try {
+      const result = await apiClient.post<BulkDeleteResult>(
+        '/protocol-analysis/visits/bulk-delete/execute',
+        buildBulkDeleteBody(),
+      );
+      toast.success(
+        `ลบสำเร็จ: ${result.deletedCount} visits, ${result.deletedMedications} medications, ` +
+        `${result.deletedAiSuggestions} AI suggestions, ${result.deletedBillingClaims} billing claims, ` +
+        `${result.deletedBillingItems} billing items`,
+      );
+      setBulkPreview(null);
+      setBulkDateFrom('');
+      setBulkDateTo('');
+      setBulkNonCancerOnly(false);
+      setBulkNoMedsOrBilling(false);
+    } catch {
+      toast.error('การลบ visits ล้มเหลว');
+    } finally {
+      setBulkDeleteLoading(false);
+      setConfirmBulkDelete(false);
     }
   };
 
@@ -980,6 +1059,159 @@ export default function MaintenancePage() {
           )}
         </div>
       </Section>
+
+      {/* ─── Section E2: Bulk Delete Visits ─── */}
+      {isAdmin && (
+        <Section id="bulk-delete-visits" icon={Filter} title="ลบ Visit (Bulk Delete)" titleEn="Bulk Delete Visits">
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              ลบ visits จำนวนมากตามเงื่อนไข — ต้องเลือกอย่างน้อย 1 เงื่อนไข
+            </p>
+
+            {/* Date range filters */}
+            <div className="rounded-lg border border-border/50 p-4 space-y-3">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">ช่วงวันที่</h4>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">ตั้งแต่</span>
+                  <ThaiDatePicker
+                    value={bulkDateFrom}
+                    onChange={(v) => { setBulkDateFrom(v); setBulkPreview(null); }}
+                    placeholder="เลือกวันที่"
+                    className="w-44 h-8 text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">ถึง</span>
+                  <ThaiDatePicker
+                    value={bulkDateTo}
+                    onChange={(v) => { setBulkDateTo(v); setBulkPreview(null); }}
+                    placeholder="เลือกวันที่"
+                    className="w-44 h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Checkboxes */}
+              <div className="flex flex-col gap-2 pt-1">
+                <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={bulkNonCancerOnly}
+                    onChange={(e) => { setBulkNonCancerOnly(e.target.checked); setBulkPreview(null); }}
+                    className="rounded border-border"
+                  />
+                  เฉพาะ visit ที่ไม่ใช่มะเร็ง (nonCancerOnly)
+                </label>
+                <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={bulkNoMedsOrBilling}
+                    onChange={(e) => { setBulkNoMedsOrBilling(e.target.checked); setBulkPreview(null); }}
+                    className="rounded border-border"
+                  />
+                  เฉพาะ visit ที่ไม่มีรายการยาหรือค่าใช้จ่าย (noMedsOrBilling)
+                </label>
+              </div>
+            </div>
+
+            {/* Preview button */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8"
+                disabled={!bulkDeleteHasFilter || bulkPreviewLoading}
+                onClick={runBulkDeletePreview}
+              >
+                {bulkPreviewLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Search className="h-3 w-3 mr-1" />
+                )}
+                ดูตัวอย่าง
+              </Button>
+              {!bulkDeleteHasFilter && (
+                <span className="text-xs text-muted-foreground">กรุณาเลือกอย่างน้อย 1 เงื่อนไข</span>
+              )}
+            </div>
+
+            {/* Preview results */}
+            {bulkPreview && (
+              <div className="rounded-lg border border-border/50 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-foreground">ผลการค้นหา</h4>
+                  <Badge variant="secondary" className="font-mono text-xs">
+                    {bulkPreview.matchCount.toLocaleString()} visits
+                  </Badge>
+                </div>
+
+                {bulkPreview.matchCount === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2 text-center">ไม่พบ visit ที่ตรงเงื่อนไข</p>
+                ) : (
+                  <>
+                    {/* Sample table */}
+                    {bulkPreview.samples.length > 0 && (
+                      <div className="rounded-lg border border-border/50 overflow-hidden">
+                        <div className="overflow-x-auto max-h-[200px] overflow-y-auto">
+                          <table className="w-full text-xs">
+                            <thead className="sticky top-0 bg-card z-10">
+                              <tr className="border-b border-border/50">
+                                <th className="text-left py-2 px-3 font-medium text-muted-foreground">VN</th>
+                                <th className="text-left py-2 px-3 font-medium text-muted-foreground">HN</th>
+                                <th className="text-left py-2 px-3 font-medium text-muted-foreground">วันที่</th>
+                                <th className="text-left py-2 px-3 font-medium text-muted-foreground">วินิจฉัยหลัก</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {bulkPreview.samples.map((s) => (
+                                <tr key={s.vn} className="border-b border-border/30 hover:bg-primary/[0.02]">
+                                  <td className="py-1.5 px-3 font-mono text-foreground">{s.vn}</td>
+                                  <td className="py-1.5 px-3 font-mono text-muted-foreground">{s.hn}</td>
+                                  <td className="py-1.5 px-3 text-muted-foreground">{formatDate(s.visitDate)}</td>
+                                  <td className="py-1.5 px-3 text-muted-foreground">{s.primaryDiagnosis || '—'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Execute button */}
+                    <div className="flex justify-end pt-1">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="text-xs h-8"
+                        disabled={bulkDeleteLoading}
+                        onClick={() => setConfirmBulkDelete(true)}
+                      >
+                        {bulkDeleteLoading ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <Trash2 className="h-3 w-3 mr-1" />
+                        )}
+                        ลบ {bulkPreview.matchCount.toLocaleString()} visits
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            <ConfirmDialog
+              open={confirmBulkDelete}
+              onCancel={() => setConfirmBulkDelete(false)}
+              title="ยืนยันการลบ Visit"
+              description={`ลบ ${bulkPreview?.matchCount.toLocaleString() ?? 0} visits พร้อมข้อมูลที่เกี่ยวข้อง (medications, AI suggestions, billing claims, billing items) — การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+              confirmText="ยืนยันลบ"
+              variant="destructive"
+              onConfirm={executeBulkDelete}
+            />
+          </div>
+        </Section>
+      )}
 
       {/* ─── Section F: Integrity Check ─── */}
       <Section

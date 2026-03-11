@@ -10,6 +10,7 @@ import {
   Pill,
   Plus,
   SearchCheck,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ export function VisitTimelineEntry({
   loadingMatch,
   exportBatches,
   onConfirmProtocol,
+  onDeleteVisit,
 }: {
   visit: Visit;
   activeCases: PatientCase[];
@@ -81,6 +83,7 @@ export function VisitTimelineEntry({
     protocolCode: string;
     protocolName: string;
   }) => void;
+  onDeleteVisit?: (vn: string) => void;
 }) {
   const activeBillingClaims = visit.billingClaims.filter((bc) => bc.isActive);
   const caseOptions = activeCases.map((c) => ({
@@ -134,11 +137,30 @@ export function VisitTimelineEntry({
               {exportBatches.length > 1 && ` +${exportBatches.length - 1}`}
             </span>
           )}
-          {isExpanded ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground ml-auto" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-          )}
+          <span className="ml-auto flex items-center gap-1">
+            {onDeleteVisit && (
+              <span
+                role="button"
+                tabIndex={0}
+                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground/40 hover:text-destructive transition-colors"
+                title="ลบ visit"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteVisit(visit.vn);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.stopPropagation(); onDeleteVisit(visit.vn); }
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </span>
+            )}
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+          </span>
         </button>
 
         {/* Expanded detail */}

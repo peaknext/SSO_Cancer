@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/use-api';
 import { usePersistedState } from '@/hooks/use-persisted-state';
+import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CodeBadge } from '@/components/shared/code-badge';
@@ -464,6 +465,30 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  // ─── Delete visit ──────────────────────────────────────────────────────────
+  const currentUser = useAuthStore((s) => s.user);
+  const canDeleteVisit =
+    currentUser?.role === 'SUPER_ADMIN' ||
+    currentUser?.role === 'ADMIN' ||
+    currentUser?.role === 'EDITOR';
+  const [deleteVn, setDeleteVn] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleDeleteVisit = async () => {
+    if (!deleteVn) return;
+    setDeleteLoading(true);
+    try {
+      await apiClient.delete(`/protocol-analysis/visits/${deleteVn}`);
+      toast.success(`ลบ visit ${deleteVn} สำเร็จ`);
+      setDeleteVn(null);
+      refetch();
+    } catch {
+      toast.error('ไม่สามารถลบ visit ได้');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // ─── Loading / Not Found ─────────────────────────────────────────────────
 
   if (isLoading) {
@@ -711,6 +736,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                     loadingMatch={loadingMatches}
                     onConfirmProtocol={(match) => setPendingConfirm({ vn: visit.vn, ...match })}
                     exportBatches={visitExportMap[visit.id] || []}
+                    onDeleteVisit={canDeleteVisit ? (vn) => setDeleteVn(vn) : undefined}
                   />
                 );
               })}
@@ -772,6 +798,21 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
         loading={assignCaseLoading}
         onConfirm={handleConfirmAssignCase}
         onCancel={() => setPendingCaseAssign(null)}
+      />
+
+      <ConfirmDialog
+        open={deleteVn !== null}
+        onConfirm={handleDeleteVisit}
+        onCancel={() => setDeleteVn(null)}
+        title="ลบ Visit"
+        description={
+          deleteVn
+            ? `ลบ visit VN: ${deleteVn} จากฐานข้อมูล? ข้อมูลยา, AI suggestions, และ billing claims ที่เกี่ยวข้องจะถูกลบทั้งหมด`
+            : ''
+        }
+        confirmText="ลบ"
+        variant="destructive"
+        loading={deleteLoading}
       />
     </div>
   );

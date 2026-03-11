@@ -3,7 +3,7 @@
 import { use, useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Shield, Monitor, Trash2, RotateCcw, UserX, UserCheck, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Shield, Monitor, Trash2, RotateCcw, UserX, UserCheck, Copy, Check, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/use-api';
 import { apiClient } from '@/lib/api-client';
@@ -11,6 +11,9 @@ import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Skeleton } from '@/components/shared/loading-skeleton';
@@ -63,6 +66,16 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const [acting, setActing] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    fullName: '',
+    fullNameThai: '',
+    role: '',
+    department: '',
+    position: '',
+    phoneNumber: '',
+  });
+  const [editSaving, setEditSaving] = useState(false);
 
   // ADMIN cannot view SUPER_ADMIN user details
   useEffect(() => {
@@ -78,6 +91,56 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     toast.success('คัดลอกรหัสผ่านแล้ว');
     setTimeout(() => setCopied(false), 2000);
   }, [tempPassword]);
+
+  const openEditModal = useCallback(() => {
+    if (!user) return;
+    setEditForm({
+      fullName: user.fullName || '',
+      fullNameThai: user.fullNameThai || '',
+      role: user.role || '',
+      department: user.department || '',
+      position: user.position || '',
+      phoneNumber: user.phoneNumber || '',
+    });
+    setEditOpen(true);
+  }, [user]);
+
+  const handleEditSubmit = useCallback(async () => {
+    if (!editForm.fullName.trim()) {
+      toast.error('กรุณากรอกชื่อ (EN)');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      await apiClient.patch(`/users/${id}`, {
+        fullName: editForm.fullName.trim(),
+        fullNameThai: editForm.fullNameThai.trim() || null,
+        role: editForm.role,
+        department: editForm.department.trim() || null,
+        position: editForm.position.trim() || null,
+        phoneNumber: editForm.phoneNumber.trim() || null,
+      });
+      toast.success('บันทึกข้อมูลสำเร็จ');
+      setEditOpen(false);
+      refetch();
+    } catch (err: unknown) {
+      const apiErr = err as { error?: { message?: string } };
+      toast.error(apiErr?.error?.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setEditSaving(false);
+    }
+  }, [id, editForm, refetch]);
+
+  const roleOptions = currentUser?.role === 'SUPER_ADMIN'
+    ? [
+        { value: 'ADMIN', label: 'ผู้ดูแล (Admin)' },
+        { value: 'EDITOR', label: 'บรรณาธิการ (Editor)' },
+        { value: 'VIEWER', label: 'ผู้ดู (Viewer)' },
+      ]
+    : [
+        { value: 'EDITOR', label: 'บรรณาธิการ (Editor)' },
+        { value: 'VIEWER', label: 'ผู้ดู (Viewer)' },
+      ];
 
   if (isLoading) {
     return (
@@ -170,6 +233,14 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           {/* Actions */}
           {!isSelf && !isSuperAdmin && (
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openEditModal}
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                แก้ไข
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -306,6 +377,91 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           )}
         </CardContent>
       </Card>
+
+      {/* Edit user dialog */}
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm">
+        <div className="p-6">
+          <h3 className="font-heading font-semibold text-lg mb-4">แก้ไขข้อมูลผู้ใช้</h3>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-fullName">ชื่อ (EN) *</Label>
+              <Input
+                id="edit-fullName"
+                value={editForm.fullName}
+                onChange={(e) => setEditForm((f) => ({ ...f, fullName: e.target.value }))}
+                placeholder="Full Name"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-fullNameThai">ชื่อ (TH)</Label>
+              <Input
+                id="edit-fullNameThai"
+                value={editForm.fullNameThai}
+                onChange={(e) => setEditForm((f) => ({ ...f, fullNameThai: e.target.value }))}
+                placeholder="ชื่อภาษาไทย"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-role">บทบาท</Label>
+              <Select
+                value={editForm.role}
+                onChange={(v) => setEditForm((f) => ({ ...f, role: v }))}
+                options={roleOptions}
+                placeholder="เลือกบทบาท"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-department">แผนก</Label>
+              <Input
+                id="edit-department"
+                value={editForm.department}
+                onChange={(e) => setEditForm((f) => ({ ...f, department: e.target.value }))}
+                placeholder="แผนก"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-position">ตำแหน่ง</Label>
+              <Input
+                id="edit-position"
+                value={editForm.position}
+                onChange={(e) => setEditForm((f) => ({ ...f, position: e.target.value }))}
+                placeholder="ตำแหน่ง"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-phoneNumber">โทรศัพท์</Label>
+              <Input
+                id="edit-phoneNumber"
+                value={editForm.phoneNumber}
+                onChange={(e) => setEditForm((f) => ({ ...f, phoneNumber: e.target.value }))}
+                placeholder="เบอร์โทรศัพท์"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 mt-6">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setEditOpen(false)}
+              disabled={editSaving}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleEditSubmit}
+              disabled={editSaving}
+            >
+              {editSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Temp password dialog */}
       <Modal open={!!tempPassword} onClose={() => setTempPassword(null)} maxWidth="sm">

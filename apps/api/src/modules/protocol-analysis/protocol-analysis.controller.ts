@@ -24,6 +24,7 @@ import { QueryVisitsDto } from './dto/query-visits.dto';
 import { QueryImportsDto } from './dto/query-imports.dto';
 import { ConfirmProtocolDto } from './dto/confirm-protocol.dto';
 import { BatchTopMatchDto } from './dto/batch-top-match.dto';
+import { BulkDeleteVisitsDto } from './dto/bulk-delete-visits.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums';
@@ -638,6 +639,179 @@ export class ProtocolAnalysisController {
     });
 
     return { message: 'ยกเลิกการยืนยันสำเร็จ — Confirmation removed' };
+  }
+
+  // ─── Delete Visit ────────────────────────────────────────────
+
+  @Delete('visits/:vn')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EDITOR)
+  @ApiOperation({ summary: 'Delete a visit and all related data (cascade)' })
+  async deleteVisit(
+    @Param('vn') vn: string,
+    @CurrentUser('id') userId: number,
+  ) {
+    const visit = await this.prisma.patientVisit.findUnique({
+      where: { vn },
+      select: {
+        id: true,
+        hn: true,
+        vn: true,
+        visitDate: true,
+        _count: {
+          select: {
+            medications: true,
+            aiSuggestions: true,
+            billingClaims: true,
+            visitBillingItems: true,
+          },
+        },
+      },
+    });
+    if (!visit) throw new NotFoundException('VISIT_NOT_FOUND');
+
+    await this.prisma.patientVisit.delete({ where: { vn } });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'DELETE',
+        entityType: 'PatientVisit',
+        entityId: visit.id,
+        metadata: JSON.stringify({
+          operation: 'DELETE_VISIT',
+          hn: visit.hn,
+          vn: visit.vn,
+          visitDate: visit.visitDate,
+          deletedMedications: visit._count.medications,
+          deletedAiSuggestions: visit._count.aiSuggestions,
+          deletedBillingClaims: visit._count.billingClaims,
+          deletedBillingItems: visit._count.visitBillingItems,
+        }),
+      },
+    });
+
+    return {
+      message: 'ลบ visit สำเร็จ — Visit deleted',
+      deletedVn: visit.vn,
+      deletedRelations: {
+        medications: visit._count.medications,
+        aiSuggestions: visit._count.aiSuggestions,
+        billingClaims: visit._count.billingClaims,
+        billingItems: visit._count.visitBillingItems,
+      },
+    };
+  }
+
+  // ─── Bulk Delete Visits ─────────────────────────────────────
+
+  @Post('visits/bulk-delete/preview')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Preview visits that match bulk delete filters' })
+  async bulkDeletePreview(@Body() dto: BulkDeleteVisitsDto) {
+    const where = this.buildBulkDeleteWhere(dto);
+
+    const [matchCount, samples] = await Promise.all([
+      this.prisma.patientVisit.count({ where }),
+      this.prisma.patientVisit.findMany({
+        where,
+        select: { vn: true, hn: true, visitDate: true, primaryDiagnosis: true },
+        orderBy: { visitDate: 'asc' },
+        take: 10,
+      }),
+    ]);
+
+    return { matchCount, samples };
+  }
+
+  @Post('visits/bulk-delete/execute')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Execute bulk delete of visits matching filters' })
+  async bulkDeleteExecute(
+    @Body() dto: BulkDeleteVisitsDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    const where = this.buildBulkDeleteWhere(dto);
+
+    // Count what will be deleted
+    const matchCount = await this.prisma.patientVisit.count({ where });
+    if (matchCount === 0) {
+      throw new BadRequestException('ไม่มี visit ที่ตรงตามเงื่อนไข — No visits match the filters');
+    }
+
+    // Count children for audit
+    const visitIds = await this.prisma.patientVisit.findMany({
+      where,
+      select: { id: true },
+    });
+    const ids = visitIds.map((v) => v.id);
+
+    const [medCount, aiCount, claimCount, itemCount] = await Promise.all([
+      this.prisma.visitMedication.count({ where: { visitId: { in: ids } } }),
+      this.prisma.aiSuggestion.count({ where: { visitId: { in: ids } } }),
+      this.prisma.visitBillingClaim.count({ where: { visitId: { in: ids } } }),
+      this.prisma.visitBillingItem.count({ where: { visitId: { in: ids } } }),
+    ]);
+
+    // Delete (cascade handles children)
+    await this.prisma.patientVisit.deleteMany({ where });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'DELETE',
+        entityType: 'PatientVisit',
+        entityId: 0,
+        metadata: JSON.stringify({
+          operation: 'BULK_DELETE_VISITS',
+          filters: dto,
+          deletedVisits: matchCount,
+          deletedMedications: medCount,
+          deletedAiSuggestions: aiCount,
+          deletedBillingClaims: claimCount,
+          deletedBillingItems: itemCount,
+        }),
+      },
+    });
+
+    return {
+      deletedCount: matchCount,
+      deletedMedications: medCount,
+      deletedAiSuggestions: aiCount,
+      deletedBillingClaims: claimCount,
+      deletedBillingItems: itemCount,
+    };
+  }
+
+  private buildBulkDeleteWhere(dto: BulkDeleteVisitsDto): Prisma.PatientVisitWhereInput {
+    const { dateFrom, dateTo, nonCancerOnly, noMedsOrBilling } = dto;
+
+    if (!dateFrom && !dateTo && !nonCancerOnly && !noMedsOrBilling) {
+      throw new BadRequestException(
+        'ต้องระบุเงื่อนไขอย่างน้อย 1 ข้อ — At least one filter is required',
+      );
+    }
+
+    const where: Prisma.PatientVisitWhereInput = {};
+
+    if (dateFrom || dateTo) {
+      where.visitDate = {};
+      if (dateFrom) where.visitDate.gte = new Date(dateFrom);
+      if (dateTo) where.visitDate.lte = new Date(dateTo);
+    }
+
+    if (nonCancerOnly) {
+      where.AND = [
+        { NOT: { primaryDiagnosis: { startsWith: 'C' } } },
+        { NOT: { primaryDiagnosis: { startsWith: 'D0' } } },
+      ];
+    }
+
+    if (noMedsOrBilling) {
+      where.medications = { none: {} };
+      where.visitBillingItems = { none: {} };
+    }
+
+    return where;
   }
 
   // ─── Formulary Compliance ────────────────────────────────────
