@@ -137,6 +137,7 @@ export class HisIntegrationService {
     userId: number | null,
     from?: string,
     to?: string,
+    options?: { skipVisitsWithoutMedications?: boolean },
   ): Promise<ImportResult> {
     const hisData = await this.hisClient.fetchPatientWithVisits(hn, 'hn', from, to);
 
@@ -146,8 +147,20 @@ export class HisIntegrationService {
     );
     const skippedNonCancer = hisData.visits.length - cancerVisits.length;
 
+    // Filter visits with medications if configured
+    let visitsToProcess = cancerVisits;
+    if (options?.skipVisitsWithoutMedications) {
+      visitsToProcess = cancerVisits.filter((v) => {
+        const hasMeds = (v.medications?.length ?? 0) > 0;
+        const hasDrugBilling = (v.billingItems ?? []).some(
+          (b) => String(b.billingGroup) === '3' || String(b.billingGroup) === '03',
+        );
+        return hasMeds || hasDrugBilling;
+      });
+    }
+
     // 2. Find already-imported VNs (skip duplicates)
-    const allVns = cancerVisits.map((v) => v.vn);
+    const allVns = visitsToProcess.map((v) => v.vn);
     const existingVisits = allVns.length > 0
       ? await this.prisma.patientVisit.findMany({
           where: { vn: { in: allVns } },
@@ -155,8 +168,8 @@ export class HisIntegrationService {
         })
       : [];
     const existingVnSet = new Set(existingVisits.map((v) => v.vn));
-    const newVisits = cancerVisits.filter((v) => !existingVnSet.has(v.vn));
-    const skippedDuplicate = cancerVisits.length - newVisits.length;
+    const newVisits = visitsToProcess.filter((v) => !existingVnSet.has(v.vn));
+    const skippedDuplicate = visitsToProcess.length - newVisits.length;
 
     if (newVisits.length === 0) {
       throw new BadRequestException(

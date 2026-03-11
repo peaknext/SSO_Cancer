@@ -1,15 +1,23 @@
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import Link from 'next/link';
-import { ScanSearch, ChevronDown, ChevronRight, Users } from 'lucide-react';
+import { ScanSearch, ChevronDown, ChevronRight, Users, Settings, Save } from 'lucide-react';
 import { useApi, usePaginatedApi } from '@/hooks/use-api';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { TableSkeleton } from '@/components/shared/loading-skeleton';
 import { CodeBadge } from '@/components/shared/code-badge';
 import { Pagination } from '@/components/shared/pagination';
+import { CancerSiteMultiSelect } from '@/components/shared/cancer-site-multi-select';
+import { apiClient } from '@/lib/api-client';
+import { useAuthStore } from '@/stores/auth-store';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface ScanLog {
   id: number;
@@ -41,6 +49,15 @@ interface ScanDetail {
 
 interface ScanLogWithDetails extends ScanLog {
   details: ScanDetail[];
+}
+
+interface ScanConfig {
+  enabled: boolean;
+  cancerDiag: boolean;
+  z510: boolean;
+  z511: boolean;
+  cancerSiteIds: number[];
+  hasMedications: boolean;
 }
 
 interface ScanLogsResponse {
@@ -78,11 +95,21 @@ function formatDuration(ms: number | null): string {
 function FilterConfigDisplay({ config }: { config: string | null }) {
   if (!config) return <span className="text-muted-foreground">—</span>;
   try {
-    const parsed = JSON.parse(config) as { cancerDiag?: boolean; z510?: boolean; z511?: boolean };
+    const parsed = JSON.parse(config) as {
+      cancerDiag?: boolean;
+      z510?: boolean;
+      z511?: boolean;
+      cancerSiteIds?: number[];
+      hasMedications?: boolean;
+    };
     const labels: string[] = [];
     if (parsed.cancerDiag) labels.push('มะเร็ง (C, D0)');
     if (parsed.z510) labels.push('Z510 ฉายรังสี');
     if (parsed.z511) labels.push('Z511 เคมีบำบัด');
+    if (parsed.cancerSiteIds && parsed.cancerSiteIds.length > 0) {
+      labels.push(`ตำแหน่งมะเร็ง: ${parsed.cancerSiteIds.length} ตำแหน่ง`);
+    }
+    if (parsed.hasMedications) labels.push('เฉพาะมียา');
     if (labels.length === 0) labels.push('ค่าเริ่มต้น');
     return (
       <div className="flex flex-wrap gap-1">
@@ -96,6 +123,202 @@ function FilterConfigDisplay({ config }: { config: string | null }) {
   } catch {
     return <span className="text-muted-foreground">—</span>;
   }
+}
+
+// ─── Scan Config Panel ──────────────────────────────────────────────────────
+
+function ScanConfigPanel() {
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
+  const { data: config, isLoading, refetch } = useApi<ScanConfig>('/his-integration/scan-config');
+
+  const [isOpen, setIsOpen] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Form state
+  const [enabled, setEnabled] = useState(false);
+  const [cancerDiag, setCancerDiag] = useState(true);
+  const [z510, setZ510] = useState(true);
+  const [z511, setZ511] = useState(true);
+  const [cancerSiteIds, setCancerSiteIds] = useState<string[]>([]);
+  const [hasMedications, setHasMedications] = useState(false);
+
+  // Initialize form state from loaded config
+  useEffect(() => {
+    if (config) {
+      setEnabled(config.enabled);
+      setCancerDiag(config.cancerDiag);
+      setZ510(config.z510);
+      setZ511(config.z511);
+      setCancerSiteIds(config.cancerSiteIds.map(String));
+      setHasMedications(config.hasMedications);
+    }
+  }, [config]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await apiClient.patch('/his-integration/scan-config', {
+        enabled,
+        cancerDiag,
+        z510,
+        z511,
+        cancerSiteIds: cancerSiteIds.map(Number),
+        hasMedications,
+      });
+      toast.success('บันทึกการตั้งค่าสำเร็จ');
+      refetch();
+    } catch {
+      toast.error('บันทึกการตั้งค่าไม่สำเร็จ');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="p-4">
+          <div className="h-5 w-48 animate-pulse rounded bg-muted/30" />
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <div className="space-y-3">
+            <div className="h-4 w-64 animate-pulse rounded bg-muted/30" />
+            <div className="h-4 w-40 animate-pulse rounded bg-muted/30" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-l-4 border-l-primary/60">
+      <CardHeader
+        className="p-4 cursor-pointer select-none hover:bg-white/5 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Settings className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-semibold font-heading">
+              ตั้งค่าการสแกนอัตโนมัติ
+            </CardTitle>
+          </div>
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform" />
+          )}
+        </div>
+      </CardHeader>
+
+      {isOpen && (
+        <CardContent className="p-4 pt-0 space-y-4">
+          {/* Enable/disable toggle */}
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+                disabled={!isSuperAdmin}
+                className={cn(
+                  'h-4 w-4 rounded border-input text-primary',
+                  'focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                )}
+              />
+              <span className="text-sm font-medium">เปิดสแกนอัตโนมัติ</span>
+            </label>
+            {enabled && (
+              <p className="ml-6 mt-1 text-xs text-muted-foreground">
+                สแกนทุกวัน เวลา 01:00 น.
+              </p>
+            )}
+          </div>
+
+          {/* Filter section — shown when enabled */}
+          {enabled && (
+            <>
+              <div className="border-t border-glass-border-subtle" />
+
+              <div className={cn('space-y-4', !isSuperAdmin && 'opacity-60 pointer-events-none')}>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  ตัวกรองการนำเข้า
+                </Label>
+
+                {/* Cancer site multi-select */}
+                <div className="space-y-1.5">
+                  <CancerSiteMultiSelect
+                    value={cancerSiteIds}
+                    onChange={setCancerSiteIds}
+                    disabled={!isSuperAdmin}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {cancerSiteIds.length > 0
+                      ? 'นำเข้าเฉพาะตำแหน่งที่เลือก'
+                      : 'นำเข้ามะเร็งทุกตำแหน่ง (C, D0)'}
+                  </p>
+                </div>
+
+                {/* Diagnosis checkboxes */}
+                <div className="flex flex-wrap gap-x-6 gap-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={z510}
+                      onChange={(e) => setZ510(e.target.checked)}
+                      className={cn(
+                        'h-4 w-4 rounded border-input text-primary',
+                        'focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                      )}
+                    />
+                    <span className="text-sm">Z510 — รังสีรักษา</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={z511}
+                      onChange={(e) => setZ511(e.target.checked)}
+                      className={cn(
+                        'h-4 w-4 rounded border-input text-primary',
+                        'focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                      )}
+                    />
+                    <span className="text-sm">Z511 — เคมีบำบัด</span>
+                  </label>
+                </div>
+
+                {/* Has medications checkbox */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasMedications}
+                    onChange={(e) => setHasMedications(e.target.checked)}
+                    className={cn(
+                      'h-4 w-4 rounded border-input text-primary',
+                      'focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                    )}
+                  />
+                  <span className="text-sm">เฉพาะ visit ที่มีรายการยา</span>
+                </label>
+              </div>
+            </>
+          )}
+
+          {/* Save button — SUPER_ADMIN only */}
+          {isSuperAdmin && (
+            <div className="flex justify-end pt-1">
+              <Button size="sm" onClick={handleSave} disabled={saving}>
+                <Save className="h-3.5 w-3.5" />
+                {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
 }
 
 function ScanDetailTable({ scanLogId }: { scanLogId: number }) {
@@ -240,6 +463,9 @@ export default function ScanLogsPage() {
           </div>
         </div>
       </div>
+
+      {/* Scan Config Panel */}
+      <ScanConfigPanel />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">

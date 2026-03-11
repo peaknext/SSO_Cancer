@@ -12,7 +12,9 @@ INSERT INTO app_settings (setting_key, setting_value, description, setting_group
   ('his_nightly_scan_last_result', '', 'ผลการสแกนล่าสุด (system-managed JSON — ห้ามแก้ด้วยมือ)', 'hospital'),
   ('his_scan_filter_cancer_diag', 'true', 'สแกนอัตโนมัติ: นำเข้าเฉพาะ visit ที่วินิจฉัยมะเร็ง (ICD-10: C, D0)', 'hospital'),
   ('his_scan_filter_z510', 'false', 'สแกนอัตโนมัติ: นำเข้าเฉพาะ visit ที่มี Z510 (ฉายรังสี)', 'hospital'),
-  ('his_scan_filter_z511', 'false', 'สแกนอัตโนมัติ: นำเข้าเฉพาะ visit ที่มี Z511 (เคมีบำบัด)', 'hospital')
+  ('his_scan_filter_z511', 'false', 'สแกนอัตโนมัติ: นำเข้าเฉพาะ visit ที่มี Z511 (เคมีบำบัด)', 'hospital'),
+  ('his_scan_filter_cancer_site_ids', '[]', 'สแกนอัตโนมัติ: รายการ cancer site IDs (JSON array) — ถ้าว่าง = มะเร็งทุกตำแหน่ง', 'hospital'),
+  ('his_scan_filter_has_medications', 'false', 'สแกนอัตโนมัติ: นำเข้าเฉพาะ visit ที่มีรายการยา', 'hospital')
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- SSOP export settings

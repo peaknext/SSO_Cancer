@@ -13,6 +13,7 @@ import { ImportSingleVisitDto } from './dto/import-single-visit.dto';
 import { SyncVisitDto } from './dto/sync-visit.dto';
 import { BatchSyncDto } from './dto/batch-sync.dto';
 import { QueryScanLogsDto } from './dto/query-scan-logs.dto';
+import { UpdateScanConfigDto } from './dto/update-scan-config.dto';
 
 @ApiTags('HIS Integration')
 @ApiBearerAuth()
@@ -144,6 +145,22 @@ export class HisIntegrationController {
   @ApiOperation({ summary: 'ทดสอบการเชื่อมต่อ HIS API' })
   healthCheck() {
     return this.hisService.healthCheck();
+  }
+
+  // ─── Scan Config ─────────────────────────────────────────────
+
+  @Get('scan-config')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'ดึงค่าตั้งค่าการสแกน HIS อัตโนมัติ' })
+  getScanConfig() {
+    return this.scanLogService.getScanConfig();
+  }
+
+  @Patch('scan-config')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'อัปเดตค่าตั้งค่าการสแกน HIS อัตโนมัติ' })
+  updateScanConfig(@Body() dto: UpdateScanConfigDto) {
+    return this.scanLogService.updateScanConfig(dto);
   }
 
   // ─── Scan Logs ────────────────────────────────────────────────

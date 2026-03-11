@@ -9,6 +9,8 @@ interface ScanFilterConfig {
   cancerDiag: boolean;
   z510: boolean;
   z511: boolean;
+  cancerSiteIds: number[];
+  hasMedications: boolean;
 }
 
 @Injectable()
@@ -35,7 +37,7 @@ export class HisNightlyScanService {
     });
 
     const filterConfig = await this.loadFilterConfig();
-    const icdPrefixes = this.buildIcdPrefixes(filterConfig);
+    const icdPrefixes = await this.buildIcdPrefixes(filterConfig);
 
     this.logger.log(
       `[NightlyScan] Starting scan for ${yesterday} with ICD prefixes: [${icdPrefixes.join(', ')}]`,
@@ -75,6 +77,7 @@ export class HisNightlyScanService {
             null,
             yesterday,
             yesterday,
+            { skipVisitsWithoutMedications: filterConfig.hasMedications },
           );
           if (result.importedVisits > 0) {
             newVisits += result.importedVisits;
@@ -198,33 +201,52 @@ export class HisNightlyScanService {
       const settings = await this.prisma.appSetting.findMany({
         where: {
           settingKey: {
-            in: ['his_scan_filter_cancer_diag', 'his_scan_filter_z510', 'his_scan_filter_z511'],
+            in: [
+              'his_scan_filter_cancer_diag',
+              'his_scan_filter_z510',
+              'his_scan_filter_z511',
+              'his_scan_filter_cancer_site_ids',
+              'his_scan_filter_has_medications',
+            ],
           },
         },
       });
       const map = new Map(settings.map((s) => [s.settingKey, s.settingValue]));
+
+      let cancerSiteIds: number[] = [];
+      try {
+        cancerSiteIds = JSON.parse(map.get('his_scan_filter_cancer_site_ids') || '[]');
+      } catch { /* keep empty */ }
+
       return {
         cancerDiag: map.get('his_scan_filter_cancer_diag') === 'true',
         z510: map.get('his_scan_filter_z510') === 'true',
         z511: map.get('his_scan_filter_z511') === 'true',
+        cancerSiteIds,
+        hasMedications: map.get('his_scan_filter_has_medications') === 'true',
       };
     } catch {
-      return { cancerDiag: true, z510: false, z511: false };
+      return { cancerDiag: true, z510: false, z511: false, cancerSiteIds: [], hasMedications: false };
     }
   }
 
-  private buildIcdPrefixes(config: ScanFilterConfig): string[] {
+  private async buildIcdPrefixes(config: ScanFilterConfig): Promise<string[]> {
     const prefixes: string[] = [];
-    if (config.cancerDiag) {
+
+    if (config.cancerSiteIds.length > 0) {
+      // Specific cancer sites → resolve their ICD-10 prefixes
+      const mappings = await this.prisma.icd10CancerSiteMap.findMany({
+        where: { cancerSiteId: { in: config.cancerSiteIds }, isActive: true },
+        select: { icdPrefix: true },
+      });
+      prefixes.push(...new Set(mappings.map((m) => m.icdPrefix)));
+    } else if (config.cancerDiag) {
       prefixes.push('C', 'D0');
     }
-    if (config.z510) {
-      prefixes.push('Z510');
-    }
-    if (config.z511) {
-      prefixes.push('Z511');
-    }
-    // Fallback: if nothing is selected, use default cancer prefixes
+
+    if (config.z510) prefixes.push('Z510');
+    if (config.z511) prefixes.push('Z511');
+
     if (prefixes.length === 0) {
       return [...CANCER_ICD10_PREFIXES];
     }
