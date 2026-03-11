@@ -23,6 +23,19 @@ const STAGE_MAP: Record<string, string[]> = {
   ],
 };
 
+// ─── ICD-10 subsite → protocol affinity map ─────────────────────────────────
+// When multiple protocols share a cancer site (e.g. Head & Neck = site 5),
+// this map gives a bonus to protocols that target specific ICD-10 subgroups.
+// Key: ICD-10 prefix (dot-stripped, uppercase). Value: set of protocol codes.
+const SUBSITE_AFFINITY: { prefix: string; protocols: string[] }[] = [
+  // Nasopharyngeal carcinoma (C11x) → NPC-specific protocols
+  { prefix: 'C11', protocols: ['C0515', 'C0516', 'C0517', 'C0518'] },
+  // Salivary gland cancers (C07, C08x) → salivary gland protocol
+  { prefix: 'C07', protocols: ['C0519'] },
+  { prefix: 'C08', protocols: ['C0519'] },
+];
+const SUBSITE_BONUS = 30; // Points added when ICD-10 subsite matches protocol affinity
+
 // ICD-10 C78x descriptions (Thai)
 const C78_DESCRIPTIONS: Record<string, string> = {
   C780: 'แพร่กระจายไปปอด',
@@ -154,6 +167,24 @@ export class MatchingService {
     }
 
     return result;
+  }
+
+  /**
+   * Check if a protocol has ICD-10 subsite affinity for the given diagnosis.
+   * Returns bonus points if the visit's ICD-10 prefix matches a protocol-specific subgroup.
+   */
+  private subsiteAffinityScore(primaryDiagnosis: string, protocolCode: string): { score: number; reason: string | null } {
+    const code = primaryDiagnosis.replace(/\./g, '').toUpperCase();
+    for (const entry of SUBSITE_AFFINITY) {
+      if (code.startsWith(entry.prefix)) {
+        if (entry.protocols.includes(protocolCode)) {
+          return { score: SUBSITE_BONUS, reason: `ตรงกับกลุ่มย่อย ICD-10 ${entry.prefix}x → โปรโตคอลเฉพาะทาง (+${SUBSITE_BONUS})` };
+        }
+        // Penalize non-matching protocols when a subsite-specific protocol exists
+        return { score: -15, reason: null };
+      }
+    }
+    return { score: 0, reason: null };
   }
 
   /**
@@ -464,6 +495,9 @@ export class MatchingService {
         protocol.treatmentIntent,
       );
 
+      // ICD-10 subsite affinity scoring
+      const subsiteResult = this.subsiteAffinityScore(visit.primaryDiagnosis, protocol.protocolCode);
+
       if (protocol.protocolRegimens.length > 0) {
         // Protocol with regimens — score per regimen, pick best
         let bestScore = -1;
@@ -542,7 +576,7 @@ export class MatchingService {
           // History confirmation bonus (15 points)
           const historyBonus = confirmedProtocolIds.has(protocol.id) ? 15 : 0;
 
-          const score = 20 + drugMatchScore + drugCountBonus + stageMatchScore + modScore + preferenceScore + formularyScore + historyBonus;
+          const score = 20 + drugMatchScore + drugCountBonus + stageMatchScore + modScore + preferenceScore + formularyScore + historyBonus + subsiteResult.score;
 
           if (score > bestScore) {
             bestScore = score;
@@ -571,6 +605,7 @@ export class MatchingService {
               reasons.push('ไม่ตรงกับระยะโรคที่อนุมาน');
             }
             if (pr.isPreferred) reasons.push('สูตรยาแนะนำ (Preferred)');
+            if (subsiteResult.reason) reasons.push(subsiteResult.reason);
             if (historyBonus > 0) reasons.push('โปรโตคอลนี้เคยได้รับการยืนยันจาก visit อื่นของผู้ป่วยคนนี้');
             if (formularyCompliance) {
               if (formularyCompliance.ratio >= 80) {
@@ -647,12 +682,13 @@ export class MatchingService {
       } else {
         // Protocols with no regimens (radiation, follow-up, non-protocol)
         const historyBonus = confirmedProtocolIds.has(protocol.id) ? 15 : 0;
-        const score = 20 + stageMatchScore + modScore + historyBonus;
+        const score = 20 + stageMatchScore + modScore + historyBonus + subsiteResult.score;
         const reasons: string[] = [`ตรงกับตำแหน่งมะเร็ง: ${siteName}`, 'ไม่มีสูตรยาที่กำหนด'];
         if (stageMatch === true) reasons.push('ตรงระยะโรค');
         if (protocol.protocolType === 'radiation' && stageInference.treatmentModality.isRadiation) {
           reasons.push('ตรงกับการรักษาด้วยรังสี (Z510/9224)');
         }
+        if (subsiteResult.reason) reasons.push(subsiteResult.reason);
         if (historyBonus > 0) reasons.push('โปรโตคอลนี้เคยได้รับการยืนยันจาก visit อื่นของผู้ป่วยคนนี้');
 
         results.push({
