@@ -102,6 +102,7 @@ export default function RegimenEditPage({ params }: { params: Promise<{ id: stri
   // Deactivation
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
   const [removeDrugId, setRemoveDrugId] = useState<number | null>(null);
   const [removing, setRemoving] = useState(false);
 
@@ -288,6 +289,22 @@ export default function RegimenEditPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const handleReactivate = async () => {
+    setReactivating(true);
+    try {
+      await apiClient.patch(`/regimens/${id}`, { isActive: true });
+      toast.success('เปิดใช้งานสูตรยาสำเร็จ');
+      refetch();
+    } catch (err: unknown) {
+      const apiErr = err as { error?: { message?: string } };
+      toast.error('ไม่สามารถเปิดใช้งานได้', {
+        description: apiErr?.error?.message || 'Unknown error',
+      });
+    } finally {
+      setReactivating(false);
+    }
+  };
+
   // ─── Loading ──────────────────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -400,7 +417,7 @@ export default function RegimenEditPage({ params }: { params: Promise<{ id: stri
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              {regimen.isActive && (
+              {regimen.isActive ? (
                 <Button
                   type="button"
                   variant="destructive"
@@ -408,6 +425,17 @@ export default function RegimenEditPage({ params }: { params: Promise<{ id: stri
                   onClick={() => setDeactivateOpen(true)}
                 >
                   ปิดใช้งานสูตรยา
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-400 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                  onClick={handleReactivate}
+                  disabled={reactivating}
+                >
+                  {reactivating ? 'กำลังเปิดใช้งาน...' : 'เปิดใช้งานสูตรยา'}
                 </Button>
               )}
               <Button type="submit" disabled={metaSubmitting} className="ml-auto">
