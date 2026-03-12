@@ -197,8 +197,8 @@ GET /api/patients/{hn}/admissions?from={startDate}&to={endDate}
 | `dischargeTime`         | string | ❌       | เวลาจำหน่าย (HH:mm:ss)                           | IPADT #16 (DTDisch)      | `ipt.dchtime`                                       |                                                                                            |
 | `admissionType`         | string | ✅       | ประเภทการรับ admit                                | IPADT #13 (AdmType)      | `ipt.ipt_type` หรือ mapping                         | `A`=อุบัติเหตุ, `E`=ฉุกเฉิน, `C`=นัดหมาย, `L`=คลอด, `N`=ทารก, `U`=เร่งด่วน, `O`=อื่น     |
 | `admissionSource`       | string | ✅       | แหล่งที่มาของการ admit                            | IPADT #14 (AdmSource)    | mapping จาก refer/OPD                               | `O`=OPD, `E`=ER, `S`=service unit, `B`=born, `T`=transferred, `R`=referral                |
-| `dischargeStatus`       | string | ❌       | สถานะการจำหน่าย                                   | IPADT #18 (DischStat)    | `ipt.dchstts`                                       | `1`=หายดี, `2`=ดีขึ้น, `3`=ไม่ดีขึ้น, `4`=คลอดปกติ, `8`=ตายคลอด, `9`=เสียชีวิต           |
-| `dischargeType`         | string | ❌       | ประเภทการจำหน่าย                                  | IPADT #19 (DischType)    | `ipt.dchtype`                                       | `1`=อนุญาต, `2`=ขอกลับ, `3`=หนี, `4`=ส่งต่อ, `5`=อื่น, `8`=เสียชีวิต(ชัน), `9`=เสียชีวิต  |
+| `dischargeStatus`       | string | ⚠️ ✅*   | สถานะการจำหน่าย                                   | IPADT #18 (DischStat)    | `ipt.dchstts`                                       | `1`=หายดี, `2`=ดีขึ้น, `3`=ไม่ดีขึ้น, `4`=คลอดปกติ, `8`=ตายคลอด, `9`=เสียชีวิต           |
+| `dischargeType`         | string | ⚠️ ✅*   | ประเภทการจำหน่าย                                  | IPADT #19 (DischType)    | `ipt.dchtype`                                       | `1`=อนุญาต, `2`=ขอกลับ, `3`=หนี, `4`=ส่งต่อ, `5`=อื่น, `8`=เสียชีวิต(ชัน), `9`=เสียชีวิต  |
 | `ward`                  | string | ✅       | หอผู้ป่วย (รหัสหรือชื่อ)                          | IPADT #21 (DischWard)    | `ipt.ward` → `ward.name`                           | เช่น `"3N"`, `"ICU-1"`, `"Ward-5B"`                                                       |
 | `department`            | string | ✅       | รหัสแผนก (2 หลัก)                                 | IPADT #22 (Dept)         | `ipt.spclty`                                        | `01`=อายุรกรรม, `02`=ศัลยกรรม, `05`=กุมารเวช, `10`=รังสี, `12`=อื่น                       |
 | `attendingDoctorLicense`| string | ✅       | เลขใบอนุญาตแพทย์เจ้าของไข้                       | IPDx.DR / IPOp.DR        | `doctor.licenseno` (join `ipt.admdoctor`)           | เช่น `"ว54236"`                                                                            |
@@ -211,6 +211,8 @@ GET /api/patients/{hn}/admissions?from={startDate}&to={endDate}
 | `adjRw`                 | number | ❌       | Adjusted RW                                       | —                        | `an_stat.adjrw`                                     | เช่น `0.6518`                                                                              |
 | `authCode`              | string | ❌       | Authorization code                                | ClaimAuth.AuthCode       | ระบบ pre-auth ของ รพ.                               | เช่น `"CS-2026-001234"`                                                                     |
 | `authDate`              | string | ❌       | Authorization datetime (ISO 8601)                 | ClaimAuth.AuthDT         | ระบบ pre-auth ของ รพ.                               |                                                                                            |
+
+> **⚠️ ✅\***: `dischargeStatus` และ `dischargeType` เป็น **mandatory ใน CIPN** (IPADT #18, #19) — null ได้เฉพาะกรณียังไม่จำหน่าย (`dischargeDate` = null) ถ้าจำหน่ายแล้วต้องมีค่าเสมอ
 
 ---
 
@@ -295,7 +297,7 @@ GET /api/patients/{hn}/admissions?from={startDate}&to={endDate}
 | `D`      | DRG — รวมในก้อน DRG          | ค่าห้อง, ค่าอาหาร, ค่ายาทั่วไป, ค่าบริการปกติ                  |
 | `X`      | Exempt — ไม่เบิก             | รายการจากทุนวิจัย, บริจาค, ไม่ submit claim                     |
 
-> **หมายเหตุ**: ฝั่ง SSO Cancer Care จะ map claimCategory เอง — ทีม HIS ส่ง `"T"`, `"D"`, หรือ `"X"` ตามที่ mapping ในระบบ รพ. ถ้ายังไม่มี mapping ส่ง `"D"` เป็น default
+> **หมายเหตุ**: ทีม HIS ส่ง `"T"`, `"D"`, หรือ `"X"` — ตาม SQL ตัวอย่าง: ยาที่มี `sks_reimb_price` (เบิกนอก DRG) → `"T"`, ที่เหลือ → `"D"` ถ้า รพ. มี mapping ที่ละเอียดกว่านี้ ใช้ mapping ของ รพ. ได้เลย ฝั่ง SSO Cancer Care จะ re-map อีกครั้ง
 
 ---
 
@@ -305,11 +307,19 @@ GET /api/patients/{hn}/admissions?from={startDate}&to={endDate}
 
 | Field           | Type   | Required | คำอธิบาย                      | ใช้ใน CIPN          | Source HOSxP                  |
 | --------------- | ------ | -------- | ----------------------------- | ------------------- | ----------------------------- |
-| `idType`        | string | ✅       | ประเภทบัตร                    | IPADT #3 (IDTYPE)   | `patient.nationality` mapping |
-| `maritalStatus` | string | ❌       | สถานภาพสมรส                   | IPADT #9 (MARRIAGE) | `patient.maession`            |
-| `nationality`   | string | ❌       | สัญชาติ                       | IPADT #12 (NATION)  | `patient.nationality`         |
-| `province`      | string | ❌       | รหัสจังหวัด                   | IPADT #10 (CHANGWAT)| `patient.changwat`            |
-| `district`      | string | ❌       | รหัสอำเภอ                     | IPADT #11 (AMPHUR)  | `patient.amphession`          |
+| `idType`        | string | ✅       | ประเภทบัตร (ดู mapping ด้านล่าง) | IPADT #3 (IDTYPE)   | `patient.nationality` → mapping  |
+| `maritalStatus` | string | ❌       | สถานภาพสมรส                      | IPADT #9 (MARRIAGE) | `patient.maritalstatus` ⚠️       |
+| `nationality`   | string | ❌       | สัญชาติ                          | IPADT #12 (NATION)  | `patient.nationality`            |
+| `province`      | string | ❌       | รหัสจังหวัด                      | IPADT #10 (CHANGWAT)| `patient.changwat`               |
+| `district`      | string | ❌       | รหัสอำเภอ                        | IPADT #11 (AMPHUR)  | `patient.amphur` ⚠️              |
+
+> ⚠️ **Verify with HIS team**: ชื่อคอลัมน์ `maritalstatus` / `amphur` อาจแตกต่างตาม version ของ HOSxP — บาง version ใช้ `maession` / `amphession`
+
+**`idType` mapping:**
+| nationality ใน HOSxP           | idType | ความหมาย                    |
+| ------------------------------ | ------ | --------------------------- |
+| `''`, `'99'`, `'TH'`, `NULL`  | `0`    | บัตรประชาชนไทย              |
+| อื่น ๆ (ต่างชาติ)              | `1`    | หนังสือเดินทาง (Passport)    |
 
 > fields ที่มีอยู่แล้วใน Endpoint 1 (`hn`, `citizenId`, `titleName`, `fullName`, `gender`, `dateOfBirth`) ไม่ต้องส่งซ้ำ — ใช้ format เดิมทั้งหมด
 
@@ -351,20 +361,21 @@ SELECT
     i.an,
     LPAD(i.hn, 9, '0') AS hn,
     DATE_FORMAT(i.regdate, '%Y-%m-%d') AS admitDate,
-    i.regtime AS admitTime,
-    DATE_FORMAT(i.dchdate, '%Y-%m-%d') AS dischargeDate,
+    COALESCE(i.regtime, '00:00:00') AS admitTime,
+    CASE WHEN i.dchdate IS NOT NULL THEN DATE_FORMAT(i.dchdate, '%Y-%m-%d') ELSE NULL END AS dischargeDate,
     i.dchtime AS dischargeTime,
     COALESCE(i.ipt_type, 'C') AS admissionType,
     'O' AS admissionSource,
     i.dchstts AS dischargeStatus,
     i.dchtype AS dischargeType,
-    COALESCE(w.name, i.ward) AS ward,
+    COALESCE(w.name, CAST(i.ward AS CHAR)) AS ward,
     LPAD(COALESCE(i.spclty, '12'), 2, '0') AS department,
     d.licenseno AS attendingDoctorLicense,
     COALESCE(a.los, DATEDIFF(i.dchdate, i.regdate)) AS lengthOfStay,
     COALESCE(i.leave_day, 0) AS leaveDay,
     CASE WHEN TIMESTAMPDIFF(DAY, p.birthday, i.regdate) < 28 THEN i.bw ELSE NULL END AS birthWeight,
     a.drg,
+    a.drg_version AS drgVersion,
     a.rw,
     a.adjrw
 FROM ipt i
@@ -438,7 +449,10 @@ SELECT
          THEN CONCAT_WS(' ', di.name, di.strength, di.units)
          ELSE NULL END AS dfsText,
     di.sks_reimb_price AS sksReimbPrice,
-    'D' AS claimCategory,
+    CASE
+        WHEN di.icode IS NOT NULL AND di.sks_reimb_price IS NOT NULL THEN 'T'
+        ELSE 'D'
+    END AS claimCategory,
     opi.drugusage AS sigCode,
     CASE WHEN du.drugusage IS NOT NULL
          THEN CONCAT_WS(' ', du.name1, du.name2, du.name3)
@@ -466,10 +480,10 @@ SELECT
         WHEN p.nationality IN ('', '99', 'TH') THEN '0'
         ELSE '1'
     END AS idType,
-    COALESCE(p.maession, '9') AS maritalStatus,
+    COALESCE(p.maritalstatus, '9') AS maritalStatus,   -- ⚠️ verify: อาจเป็น p.marriage หรือ p.maession แล้วแต่ version HOSxP
     COALESCE(p.nationality, '99') AS nationality,
     p.changwat AS province,
-    p.amphession AS district
+    p.amphur AS district                               -- ⚠️ verify: อาจเป็น p.ampession แล้วแต่ version HOSxP
 FROM patient p
 WHERE p.hn = ?;
 ```
@@ -590,25 +604,53 @@ package handlers
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
+// nullStr scans a sql.NullString and returns *string (nil if NULL)
+func nullStr(ns sql.NullString) *string {
+	if ns.Valid {
+		return &ns.String
+	}
+	return nil
+}
+
+// nullF64 scans a sql.NullFloat64 and returns *float64 (nil if NULL)
+func nullF64(nf sql.NullFloat64) *float64 {
+	if nf.Valid {
+		return &nf.Float64
+	}
+	return nil
+}
+
+// nullInt scans a sql.NullInt64 and returns *int (nil if NULL)
+func nullInt(ni sql.NullInt64) *int {
+	if ni.Valid {
+		v := int(ni.Int64)
+		return &v
+	}
+	return nil
+}
+
 // GetIPDAdmissions handles GET /api/patients/:hn/admissions
 func GetIPDAdmissions(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		hn := c.Param("hn")
-		// Pad HN to 9 digits
-		hn = fmt.Sprintf("%09s", strings.TrimLeft(hn, "0"))
-		if hn == "000000000" {
+		// Validate and pad HN to 9 digits (numeric only)
+		hnNum, err := strconv.Atoi(strings.TrimLeft(hn, "0"))
+		if err != nil || hnNum <= 0 {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
 				"error":   gin.H{"code": "INVALID_PARAMETER", "message": "HN ไม่ถูกต้อง"},
 			})
 			return
 		}
+		hn = fmt.Sprintf("%09d", hnNum)
 
 		dateFrom := c.DefaultQuery("from", "2000-01-01")
 		dateTo := c.DefaultQuery("to", "2099-12-31")
@@ -648,9 +690,21 @@ func GetIPDAdmissions(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// 4. Batch-fetch diagnoses, procedures, billing items
-		diagMap, _ := fetchIPDDiagnoses(db, anList)
-		procMap, _ := fetchIPDProcedures(db, anList)
-		billMap, _ := fetchIPDBillingItems(db, anList)
+		diagMap, err := fetchIPDDiagnoses(db, anList)
+		if err != nil {
+			log.Printf("WARN: fetchIPDDiagnoses failed: %v", err)
+			diagMap = map[string][]IPDDiagnosis{}
+		}
+		procMap, err := fetchIPDProcedures(db, anList)
+		if err != nil {
+			log.Printf("WARN: fetchIPDProcedures failed: %v", err)
+			procMap = map[string][]IPDProcedure{}
+		}
+		billMap, err := fetchIPDBillingItems(db, anList)
+		if err != nil {
+			log.Printf("WARN: fetchIPDBillingItems failed: %v", err)
+			billMap = map[string][]IPDBillingItem{}
+		}
 
 		// 5. Attach to admissions
 		for i := range admissions {
@@ -677,6 +731,43 @@ func GetIPDAdmissions(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// fetchIPDPatient fetches patient demographics with IPD-specific fields
+func fetchIPDPatient(db *sql.DB, hn string) (*IPDPatient, error) {
+	query := `
+		SELECT
+			LPAD(p.hn, 9, '0') AS hn,
+			p.cid AS citizenId,
+			COALESCE(p.pname, '') AS titleName,
+			CONCAT_WS(' ', p.fname, p.lname) AS fullName,
+			CASE WHEN p.sex = '1' THEN 'M' ELSE 'F' END AS gender,
+			DATE_FORMAT(p.birthday, '%Y-%m-%d') AS dateOfBirth,
+			CASE WHEN p.nationality IN ('', '99', 'TH') OR p.nationality IS NULL THEN '0' ELSE '1' END AS idType,
+			p.maritalstatus AS maritalStatus,
+			COALESCE(p.nationality, '99') AS nationality,
+			p.changwat AS province,
+			p.amphur AS district,
+			COALESCE(p.hcode, '') AS mainHospitalCode
+		FROM patient p
+		WHERE p.hn = ?`
+
+	var pt IPDPatient
+	var maritalNS, nationalityNS, provinceNS, districtNS sql.NullString
+	err := db.QueryRow(query, hn).Scan(
+		&pt.HN, &pt.CitizenId, &pt.TitleName, &pt.FullName,
+		&pt.Gender, &pt.DateOfBirth, &pt.IDType,
+		&maritalNS, &nationalityNS, &provinceNS, &districtNS,
+		&pt.MainHospitalCode,
+	)
+	if err != nil {
+		return nil, err
+	}
+	pt.MaritalStatus = nullStr(maritalNS)
+	pt.Nationality = nullStr(nationalityNS)
+	pt.Province = nullStr(provinceNS)
+	pt.District = nullStr(districtNS)
+	return &pt, nil
+}
+
 // fetchAdmissions fetches admission records from ipt table
 func fetchAdmissions(db *sql.DB, hn, dateFrom, dateTo string) ([]IPDAdmission, error) {
 	query := `
@@ -696,11 +787,13 @@ func fetchAdmissions(db *sql.DB, hn, dateFrom, dateTo string) ([]IPDAdmission, e
 			d.licenseno AS attendingDoctorLicense,
 			COALESCE(a.los, DATEDIFF(i.dchdate, i.regdate)) AS lengthOfStay,
 			COALESCE(i.leave_day, 0) AS leaveDay,
-			i.bw AS birthWeight,
+			CASE WHEN TIMESTAMPDIFF(DAY, p.birthday, i.regdate) < 28 THEN i.bw ELSE NULL END AS birthWeight,
 			a.drg,
+			a.drg_version AS drgVersion,
 			a.rw,
 			a.adjrw
 		FROM ipt i
+		LEFT JOIN patient p ON p.hn = i.hn
 		LEFT JOIN doctor d ON d.code = i.admdoctor
 		LEFT JOIN ward w ON w.ward = i.ward
 		LEFT JOIN an_stat a ON a.an = i.an
@@ -717,18 +810,38 @@ func fetchAdmissions(db *sql.DB, hn, dateFrom, dateTo string) ([]IPDAdmission, e
 	var admissions []IPDAdmission
 	for rows.Next() {
 		var adm IPDAdmission
+		var dischDateNS, dischTimeNS, dischStatNS, dischTypeNS sql.NullString
+		var doctorLicNS, drgNS, drgVersionNS sql.NullString
+		var losNI sql.NullInt64
+		var birthWtNF, rwNF, adjRwNF sql.NullFloat64
+
 		err := rows.Scan(
 			&adm.AN, &adm.HN, &adm.AdmitDate, &adm.AdmitTime,
-			&adm.DischargeDate, &adm.DischargeTime,
+			&dischDateNS, &dischTimeNS,
 			&adm.AdmissionType, &adm.AdmissionSource,
-			&adm.DischargeStatus, &adm.DischargeType,
-			&adm.Ward, &adm.Department, &adm.AttendingDoctorLicense,
-			&adm.LengthOfStay, &adm.LeaveDay, &adm.BirthWeight,
-			&adm.DRG, &adm.RW, &adm.AdjRW,
+			&dischStatNS, &dischTypeNS,
+			&adm.Ward, &adm.Department, &doctorLicNS,
+			&losNI, &adm.LeaveDay, &birthWtNF,
+			&drgNS, &drgVersionNS, &rwNF, &adjRwNF,
 		)
 		if err != nil {
+			log.Printf("WARN: scan admission row: %v", err)
 			continue
 		}
+		adm.DischargeDate = nullStr(dischDateNS)
+		adm.DischargeTime = nullStr(dischTimeNS)
+		adm.DischargeStatus = nullStr(dischStatNS)
+		adm.DischargeType = nullStr(dischTypeNS)
+		adm.AttendingDoctorLicense = func() string {
+			if doctorLicNS.Valid { return doctorLicNS.String }
+			return ""
+		}()
+		adm.LengthOfStay = nullInt(losNI)
+		adm.BirthWeight = nullF64(birthWtNF)
+		adm.DRG = nullStr(drgNS)
+		adm.DRGVersion = nullStr(drgVersionNS)
+		adm.RW = nullF64(rwNF)
+		adm.AdjRW = nullF64(adjRwNF)
 		admissions = append(admissions, adm)
 	}
 	return admissions, nil
@@ -773,9 +886,13 @@ func fetchIPDDiagnoses(db *sql.DB, anList []string) (map[string][]IPDDiagnosis, 
 	for rows.Next() {
 		var an string
 		var d IPDDiagnosis
-		if err := rows.Scan(&an, &d.ICD10, &d.DiagType, &d.DiagTerm, &d.DoctorLicense, &d.DiagDate); err != nil {
+		var diagTermNS, doctorLicNS, diagDateNS sql.NullString
+		if err := rows.Scan(&an, &d.ICD10, &d.DiagType, &diagTermNS, &doctorLicNS, &diagDateNS); err != nil {
 			continue
 		}
+		d.DiagTerm = nullStr(diagTermNS)
+		d.DoctorLicense = nullStr(doctorLicNS)
+		d.DiagDate = nullStr(diagDateNS)
 		result[an] = append(result[an], d)
 	}
 	return result, nil
@@ -824,10 +941,20 @@ func fetchIPDProcedures(db *sql.DB, anList []string) (map[string][]IPDProcedure,
 	for rows.Next() {
 		var an string
 		var p IPDProcedure
-		if err := rows.Scan(&an, &p.ProcedureCode, &p.CodeSys, &p.ProcedureTerm,
-			&p.DoctorLicense, &p.StartDate, &p.StartTime, &p.EndDate, &p.EndTime, &p.Location); err != nil {
+		var procTermNS, doctorLicNS, startTimeNS, endDateNS, endTimeNS, locationNS sql.NullString
+		if err := rows.Scan(&an, &p.ProcedureCode, &p.CodeSys, &procTermNS,
+			&doctorLicNS, &p.StartDate, &startTimeNS, &endDateNS, &endTimeNS, &locationNS); err != nil {
 			continue
 		}
+		p.ProcedureTerm = nullStr(procTermNS)
+		p.DoctorLicense = func() string {
+			if doctorLicNS.Valid { return doctorLicNS.String }
+			return ""
+		}()
+		p.StartTime = nullStr(startTimeNS)
+		p.EndDate = nullStr(endDateNS)
+		p.EndTime = nullStr(endTimeNS)
+		p.Location = nullStr(locationNS)
 		result[an] = append(result[an], p)
 	}
 	return result, nil
@@ -852,7 +979,7 @@ func fetchIPDBillingItems(db *sql.DB, anList []string) (map[string][]IPDBillingI
 			COALESCE(inc.std_group, opi.income) AS stdGroup,
 			COALESCE(di.name, ndi.name) AS description,
 			opi.qty AS quantity,
-			opi.unitprice AS unitPrice,
+			COALESCE(opi.unitprice, 0) AS unitPrice,
 			COALESCE(opi.discount, 0) AS discount,
 			di.sks_drug_code AS sksDrugCode,
 			di.tmt_tp_code AS tmtCode,
@@ -861,7 +988,10 @@ func fetchIPDBillingItems(db *sql.DB, anList []string) (map[string][]IPDBillingI
 			     THEN CONCAT_WS(' ', di.name, di.strength, di.units)
 			     ELSE NULL END AS dfsText,
 			di.sks_reimb_price AS sksReimbPrice,
-			'D' AS claimCategory,
+			CASE
+			    WHEN di.icode IS NOT NULL AND di.sks_reimb_price IS NOT NULL THEN 'T'
+			    ELSE 'D'
+			END AS claimCategory,
 			opi.drugusage AS sigCode,
 			CASE WHEN du.drugusage IS NOT NULL
 			     THEN CONCAT_WS(' ', du.name1, du.name2, du.name3)
@@ -893,12 +1023,22 @@ func fetchIPDBillingItems(db *sql.DB, anList []string) (map[string][]IPDBillingI
 	for rows.Next() {
 		var an string
 		var b IPDBillingItem
+		var sksDrugNS, tmtNS, sksDfsNS, dfsNS, sigCodeNS, sigTextNS, packsizeNS sql.NullString
+		var sksReimbNF sql.NullFloat64
 		if err := rows.Scan(&an, &b.ServiceDate, &b.HospitalCode, &b.BillingGroup,
 			&b.StdGroup, &b.Description, &b.Quantity, &b.UnitPrice, &b.Discount,
-			&b.SksDrugCode, &b.TmtCode, &b.SksDfsText, &b.DfsText, &b.SksReimbPrice,
-			&b.ClaimCategory, &b.SigCode, &b.SigText, &b.Packsize); err != nil {
+			&sksDrugNS, &tmtNS, &sksDfsNS, &dfsNS, &sksReimbNF,
+			&b.ClaimCategory, &sigCodeNS, &sigTextNS, &packsizeNS); err != nil {
 			continue
 		}
+		b.SksDrugCode = nullStr(sksDrugNS)
+		b.TmtCode = nullStr(tmtNS)
+		b.SksDfsText = nullStr(sksDfsNS)
+		b.DfsText = nullStr(dfsNS)
+		b.SksReimbPrice = nullF64(sksReimbNF)
+		b.SigCode = nullStr(sigCodeNS)
+		b.SigText = nullStr(sigTextNS)
+		b.Packsize = nullStr(packsizeNS)
 		result[an] = append(result[an], b)
 	}
 	return result, nil
@@ -946,3 +1086,53 @@ func RegisterIPDRoutes(r *gin.RouterGroup, db *sql.DB) {
 | `UNAUTHORIZED`           | 401         | API Key ไม่ถูกต้อง                   |
 | `RATE_LIMITED`           | 429         | เรียก API บ่อยเกินไป                 |
 | `INTERNAL_ERROR`         | 500         | ข้อผิดพลาดภายใน HIS                  |
+
+---
+
+### 4.12 CIPN Fields — HIS vs Derived
+
+> CIPN 2.0 มีบาง field ที่ไม่ต้องมาจาก HIS — สร้างฝั่ง SSO Cancer Care ได้เลย
+> ตารางนี้แสดง field ที่จะถูก **derive ใน export code** ไม่ต้องส่งจาก HIS
+
+| CIPN Element      | Field          | วิธี Derive                                                         | หมายเหตุ                                      |
+| ----------------- | -------------- | ------------------------------------------------------------------- | --------------------------------------------- |
+| Header            | DocClass       | hardcode `"IPClaim"`                                                | คงที่                                          |
+| Header            | DocSysID       | hardcode `"CIPN"` version 2.0                                      | คงที่                                          |
+| Header            | serviceEvent   | hardcode `"ADT"`                                                   | คงที่                                          |
+| Header            | authorID       | จาก `hospital_id` ใน AppSetting                                    | hcode5 ของ รพ.                                 |
+| Header            | authorName     | จาก Hospital table                                                  |                                               |
+| ClaimAuth         | UPayPlan       | hardcode `"80"` (SSO)                                              | สิทธิ์ SSO = 80                                |
+| ClaimAuth         | ServiceType    | derive จาก `admissionType`: default `"IP"`                         |                                               |
+| IPADT             | IDTYPE (#3)    | จาก `patient.idType` (mapping nationality → 0/1)                   | อยู่ใน API response แล้ว                       |
+| IPADT             | PIDPAT (#4)    | จาก `patient.citizenId`                                            | อยู่ใน API response แล้ว                       |
+| IPDx              | sequence       | array index + 1                                                     |                                               |
+| IPDx              | CodeSys (#3)   | hardcode `"ICD10"` หรือ `"ICD10TM"`                                | ตามที่ กรมบัญชีกลาง กำหนด                      |
+| IPOp              | sequence       | array index + 1                                                     |                                               |
+| Invoices          | InvNumber      | generate จาก batch ID                                               |                                               |
+| Invoices          | InvDT          | export datetime                                                     |                                               |
+| Invoices          | InvAddDiscount | `SUM(discount)` จาก billing items                                   | คำนวณจากข้อมูลที่มี                            |
+| Invoices          | DRGCharge      | `SUM(qty*unitPrice - discount)` WHERE claimCat='D'                  | คำนวณจากข้อมูลที่มี                            |
+| Invoices          | XDRGClaim      | `SUM(MIN(claimAmt, chargeAmt))` WHERE claimCat='T'                  | คำนวณจากข้อมูลที่มี                            |
+| BillItems         | sequence       | array index + 1                                                     |                                               |
+| BillItems         | ChargeAmt (#8) | `quantity × unitPrice`                                              |                                               |
+| BillItems         | ClaimAmt (#20) | `quantity × sksReimbPrice` (เฉพาะ claimCat='T')                    |                                               |
+| BillItems         | ClaimSys (#12) | hardcode `"SS"` (SSO)                                               |                                               |
+| Coinsurance       | ทั้ง section    | ส่ง empty `<Coinsurance/>` (spec อนุญาต)                            | ข้อมูลสิทธิ์ร่วมยากดึงจาก HIS                  |
+
+> **สรุป**: API response ครอบคลุม ~83% ของ CIPN mandatory fields ส่วนที่เหลือ derive ได้ทั้งหมดใน export code โดยไม่ต้อง request เพิ่มจาก HIS
+
+---
+
+### 4.13 HOSxP Field Verification Checklist
+
+> ⚠️ ชื่อคอลัมน์ต่อไปนี้อาจแตกต่างตาม **version ของ HOSxP** — ทีม HIS ควรตรวจสอบก่อน implement
+
+| Field ใน spec      | คอลัมน์ที่ใช้ใน SQL  | ทางเลือกอื่นที่อาจพบ                        | ตรวจสอบ |
+| ------------------- | -------------------- | ------------------------------------------- | ------- |
+| Marital status      | `patient.maritalstatus` | `patient.maession`, `patient.marriage`    | ☐       |
+| District code       | `patient.amphur`     | `patient.amphession`, `patient.ampession`   | ☐       |
+| Operation room FK   | `ipt_operation.room_id` → `operation_room.id` | `ipt_operation.room` (direct string) | ☐ |
+| Drug pack quantity  | `drugitems.packqty`  | อาจไม่มีใน HOSxP บาง version               | ☐       |
+| DRG version         | `an_stat.drg_version` | `an_stat.rw_version`                       | ☐       |
+| ICD-10 lookup table | `icd101`             | `icd10`, `icd10tm`                          | ☐       |
+| Billing table for IPD | `opitemrece` (WHERE `an` IS NOT NULL) | ตรวจว่ามีทั้ง `vn` และ `an` column | ☐ |
