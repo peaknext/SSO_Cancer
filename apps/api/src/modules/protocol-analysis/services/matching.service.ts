@@ -283,8 +283,19 @@ export class MatchingService {
       visit.serviceClass,
     );
 
-    // Step 1.5: Check for nearby radiation visits (±7 days) for concurrent CRT detection
-    if (visit.hn && visit.visitDate && !stageInference.treatmentModality.isRadiation) {
+    // Step 1.5: Check for nearby radiation visits (±7 days) for concurrent CRT detection.
+    // IMPORTANT: Only check when the current visit already has a chemo/immunotherapy signal.
+    // Without this guard, a non-treatment visit (follow-up, staging, diagnostic) would
+    // inherit isRadiation=true from a nearby visit, causing radiation protocols to score
+    // +50 and penalizing all other protocols by -40 — a false recommendation.
+    const hasOwnTreatmentSignal =
+      stageInference.treatmentModality.isChemotherapy || stageInference.treatmentModality.isImmunotherapy;
+    if (
+      visit.hn &&
+      visit.visitDate &&
+      !stageInference.treatmentModality.isRadiation &&
+      hasOwnTreatmentSignal
+    ) {
       const visitDate = new Date(visit.visitDate);
       const weekBefore = new Date(visitDate);
       weekBefore.setDate(weekBefore.getDate() - 7);
@@ -394,12 +405,11 @@ export class MatchingService {
       }
     }
 
-    // Only radiation signals can bypass the "no drugs" early exit, because
-    // radiation protocols exist without drug regimens. Z511/Z5112 alone without
-    // drugs cannot drive protocol matching — there's nothing to match against.
-    const hasRadiationSignal =
-      stageInference.hasDiagnosticRadiation ||
-      stageInference.hasNearbyRadiation;
+    // Only DIAGNOSTIC radiation (Z510/9224 in this visit's own diagnoses) can bypass
+    // the "no drugs" early exit, because radiation protocols exist without drug regimens.
+    // Nearby radiation alone should NOT bypass — it's only meaningful for concurrent CRT
+    // scoring when the visit already has chemo drugs (and won't hit this early exit anyway).
+    const hasRadiationSignal = stageInference.hasDiagnosticRadiation;
 
     // If no resolved drugs AND no radiation signal → no protocol can be matched
     if (visitDrugIds.size === 0 && !hasRadiationSignal) {
