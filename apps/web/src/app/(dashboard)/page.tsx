@@ -154,6 +154,7 @@ interface PatientWithoutCase {
   fullName: string;
   firstTreatmentDate: string | null;
   visitVn: string | null;
+  lastVisitDate: string | null;
 }
 
 /* ═══════════════════════════════════════════
@@ -580,8 +581,12 @@ export default function DashboardPage() {
     useApi<EmptyRegimen[]>('/dashboard/empty-regimens');
   const { data: aiStats } =
     useApi<AiStats>('/dashboard/ai-stats');
+  const noCaseParams = new URLSearchParams();
+  if (periodFrom) noCaseParams.set('dateFrom', periodFrom);
+  if (periodTo) noCaseParams.set('dateTo', periodTo);
+  const noCasePath = `/dashboard/patients-without-cases${noCaseParams.size ? `?${noCaseParams}` : ''}`;
   const { data: patientsWithoutCases } =
-    useApi<PatientWithoutCase[]>('/dashboard/patients-without-cases');
+    useApi<PatientWithoutCase[]>(noCasePath, { enabled: filtersHydrated });
   const { data: z51Response, isLoading: loadingZ51 } =
     useApi<Z51ActionableResponse>(`/dashboard/z51-actionable-visits?${z51Params}`, {
       enabled: filtersHydrated,
@@ -910,87 +915,105 @@ export default function DashboardPage() {
       )}
 
       {/* ─── Patients Without Cases ─── */}
-      {patientsWithoutCases && patientsWithoutCases.length > 0 && (
+      {((patientsWithoutCases && patientsWithoutCases.length > 0) || hasPeriod) && (
         <div className="space-y-3">
           <SectionLabel dot="bg-orange-500">ผู้ป่วยที่ต้องสร้างเคส</SectionLabel>
           <div className="glass glass-noise relative overflow-hidden rounded-xl">
             <div className="p-4 border-b border-glass-border-subtle">
               <h2 className="font-heading text-sm font-semibold flex items-center gap-2">
                 <UserPlus className="h-4 w-4 text-warning" />
-                ผู้ป่วยที่ยังไม่มี Case Number ({patientsWithoutCases.length} ราย)
+                ผู้ป่วยที่ยังไม่มี Case Number ({patientsWithoutCases?.length ?? 0} ราย)
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 ผู้ป่วยที่มี visit แต่ยังไม่ได้สร้าง Case — คลิกชื่อเพื่อดำเนินการ
+                {hasPeriod && <span className="text-primary"> (กรองตามช่วงวันที่)</span>}
               </p>
             </div>
 
-            {/* Desktop table */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-glass-border-subtle">
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">
-                      HN
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      ชื่อ-สกุล
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-28">
-                      วันที่เริ่มรักษา
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-28">
-                      VN
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+            {!patientsWithoutCases || patientsWithoutCases.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                ไม่พบผู้ป่วยที่ยังไม่มี Case ในช่วงเวลาที่เลือก
+              </div>
+            ) : (
+              <>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-glass-border-subtle">
+                        <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">
+                          HN
+                        </th>
+                        <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          ชื่อ-สกุล
+                        </th>
+                        <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-28">
+                          วันที่เริ่มรักษา
+                        </th>
+                        <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-28">
+                          Visit ล่าสุด
+                        </th>
+                        <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-28">
+                          VN
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {patientsWithoutCases.map((p) => (
+                        <tr
+                          key={p.id}
+                          className="border-b border-glass-border-subtle last:border-0 transition-colors hover:bg-primary/[0.02] dark:hover:bg-primary/[0.04] cursor-pointer"
+                          onClick={() => router.push(`/cancer-patients/${p.id}`)}
+                        >
+                          <td className="px-4 py-3">
+                            <CodeBadge code={p.hn} />
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-medium text-primary hover:underline">
+                              {p.fullName}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                            {p.firstTreatmentDate ? formatShortDate(p.firstTreatmentDate) : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                            {p.lastVisitDate ? formatShortDate(p.lastVisitDate) : '—'}
+                          </td>
+                          <td className="px-4 py-3">
+                            {p.visitVn ? <CodeBadge code={p.visitVn} /> : <span className="text-muted-foreground">—</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y divide-glass-border-subtle">
                   {patientsWithoutCases.map((p) => (
-                    <tr
+                    <div
                       key={p.id}
-                      className="border-b border-glass-border-subtle last:border-0 transition-colors hover:bg-primary/[0.02] dark:hover:bg-primary/[0.04] cursor-pointer"
+                      className="p-4 space-y-1 cursor-pointer transition-colors active:bg-primary/[0.04]"
                       onClick={() => router.push(`/cancer-patients/${p.id}`)}
                     >
-                      <td className="px-4 py-3">
-                        <CodeBadge code={p.hn} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-primary hover:underline">
-                          {p.fullName}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {p.firstTreatmentDate ? formatShortDate(p.firstTreatmentDate) : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {p.visitVn ? <CodeBadge code={p.visitVn} /> : <span className="text-muted-foreground">—</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile cards */}
-            <div className="md:hidden divide-y divide-glass-border-subtle">
-              {patientsWithoutCases.map((p) => (
-                <div
-                  key={p.id}
-                  className="p-4 space-y-1 cursor-pointer transition-colors active:bg-primary/[0.04]"
-                  onClick={() => router.push(`/cancer-patients/${p.id}`)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CodeBadge code={p.hn} />
-                      <span className="font-medium text-sm text-primary">{p.fullName}</span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CodeBadge code={p.hn} />
+                          <span className="font-medium text-sm text-primary">{p.fullName}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        {p.firstTreatmentDate && <span>{formatShortDate(p.firstTreatmentDate)}</span>}
+                        {p.lastVisitDate && (
+                          <span className="text-muted-foreground/70">→ {formatShortDate(p.lastVisitDate)}</span>
+                        )}
+                        {p.visitVn && <CodeBadge code={p.visitVn} />}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    {p.firstTreatmentDate && <span>{formatShortDate(p.firstTreatmentDate)}</span>}
-                    {p.visitVn && <CodeBadge code={p.visitVn} />}
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         </div>
       )}

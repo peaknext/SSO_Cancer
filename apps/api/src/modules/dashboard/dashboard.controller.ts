@@ -132,8 +132,16 @@ export class DashboardController {
 
   @Get('patients-without-cases')
   @ApiOperation({ summary: 'Patients with visits but no active case number' })
-  async getPatientsWithoutCases() {
-    return this.dashboardService.getPatientsWithoutCases();
+  @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'Filter by last visit date (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'Filter by last visit date (YYYY-MM-DD)' })
+  async getPatientsWithoutCases(
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    const validatedDateFrom = dateFrom && DATE_RE.test(dateFrom) ? dateFrom : undefined;
+    const validatedDateTo = dateTo && DATE_RE.test(dateTo) ? dateTo : undefined;
+    return this.dashboardService.getPatientsWithoutCases(validatedDateFrom, validatedDateTo);
   }
 
   @Get('recent-activity')
