@@ -36,6 +36,14 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
   /** Cached set of optional ipt columns that exist in this HOSxP installation */
   private iptColumnsCache: Set<string> | null = null;
 
+  /**
+   * SQL condition to filter only SSO (ประกันสังคม) insurance types.
+   * Matches pttype.name containing 'ประกันสังคม', 'ปกส' (abbreviation), or 'ผู้ประกันตน'.
+   * Must be used with: INNER JOIN pttype pt ON pt.pttype = <table>.pttype
+   */
+  private static readonly SSO_PTTYPE_FILTER =
+    `(pt.name LIKE '%ประกันสังคม%' OR pt.name LIKE '%ปกส%' OR pt.name LIKE '%ผู้ประกันตน%')`;
+
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleDestroy(): Promise<void> {
@@ -266,8 +274,10 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         o.an,
         TRIM(o.pttype) AS pttype
       FROM ovst o
+      INNER JOIN pttype pt ON pt.pttype = o.pttype
       LEFT JOIN doctor d ON d.code = o.doctor
       WHERE o.hn = $1
+        AND ${HisDbClient.SSO_PTTYPE_FILTER}
         AND ($2::date IS NULL OR o.vstdate >= $2::date)
         AND ($3::date IS NULL OR o.vstdate <= $3::date)
       ORDER BY o.vstdate DESC
@@ -392,8 +402,10 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         i.adjrw::numeric AS "adjRw",
         ${optionalSelects}
       FROM ipt i
+      INNER JOIN pttype pt ON pt.pttype = i.pttype
       LEFT JOIN doctor d ON d.code = i.admdoctor
       WHERE i.hn = $1
+        AND ${HisDbClient.SSO_PTTYPE_FILTER}
         AND ($2::date IS NULL OR i.regdate >= $2::date)
         AND ($3::date IS NULL OR i.regdate <= $3::date)
       ORDER BY i.regdate DESC
@@ -525,21 +537,25 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
     // UNION OPD (ovst) + IPD (ipt) to find patients across both visit types
     const sql = `
       WITH matching_visits AS (
-        -- OPD visits
+        -- OPD visits (SSO insurance only)
         SELECT o.hn, o.vn AS visit_key
         FROM ovst o
+        INNER JOIN pttype pt ON pt.pttype = o.pttype
         INNER JOIN ovstdiag diag ON diag.vn = o.vn
         WHERE o.vstdate BETWEEN $1::date AND $2::date
+          AND ${HisDbClient.SSO_PTTYPE_FILTER}
           ${icdFilter}
           ${drugFilterOpd}
 
         UNION ALL
 
-        -- IPD admissions
+        -- IPD admissions (SSO insurance only)
         SELECT i.hn, i.an AS visit_key
         FROM ipt i
+        INNER JOIN pttype pt ON pt.pttype = i.pttype
         INNER JOIN iptdiag diag ON diag.an = i.an
         WHERE i.regdate BETWEEN $1::date AND $2::date
+          AND ${HisDbClient.SSO_PTTYPE_FILTER}
           ${icdFilter}
           ${drugFilterIpd}
       )
