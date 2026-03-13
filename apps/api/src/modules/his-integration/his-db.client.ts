@@ -33,6 +33,8 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
   private settingsCache: HisDbSettings | null = null;
   private settingsCacheTime = 0;
   private static readonly CACHE_TTL_MS = 60_000;
+  /** Cached set of optional ipt columns that exist in this HOSxP installation */
+  private iptColumnsCache: Set<string> | null = null;
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -135,6 +137,7 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
     }
     this.settingsCache = null;
     this.settingsCacheTime = 0;
+    this.iptColumnsCache = null;
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -147,6 +150,24 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
   /** Strip leading zeros from HOSxP HN */
   private stripHn(hn: string): string {
     return hn.replace(/^0+/, '') || '0';
+  }
+
+  /**
+   * Detect which optional columns exist in the ipt table.
+   * HOSxP installations vary — some lack admtype, admsource, etc.
+   */
+  private async getIptColumns(pool: Pool): Promise<Set<string>> {
+    if (this.iptColumnsCache) return this.iptColumnsCache;
+    try {
+      const { rows } = await pool.query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_name = 'ipt' AND column_name IN ('admtype', 'admsource')`,
+      );
+      this.iptColumnsCache = new Set(rows.map((r: any) => r.column_name));
+    } catch {
+      this.iptColumnsCache = new Set();
+    }
+    return this.iptColumnsCache;
   }
 
   // ─── IHisClient Implementation ─────────────────────────────────────────────
@@ -348,7 +369,13 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
       hn: this.stripHn(patientResult.rows[0].hn || ''),
     };
 
-    // 2. Admissions
+    // 2. Admissions — detect optional columns first
+    const iptCols = await this.getIptColumns(pool);
+    const optionalSelects = [
+      iptCols.has('admtype') ? `TRIM(i.admtype) AS "admissionType"` : `NULL AS "admissionType"`,
+      iptCols.has('admsource') ? `TRIM(i.admsource) AS "admissionSource"` : `NULL AS "admissionSource"`,
+    ].join(',\n        ');
+
     const admissionsSql = `
       SELECT i.an, i.hn, i.vn,
         TO_CHAR(i.regdate, 'YYYY-MM-DD') AS "admitDate",
@@ -363,8 +390,7 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         i.drg,
         i.rw::numeric AS rw,
         i.adjrw::numeric AS "adjRw",
-        TRIM(i.admtype) AS "admissionType",
-        TRIM(i.admsource) AS "admissionSource"
+        ${optionalSelects}
       FROM ipt i
       LEFT JOIN doctor d ON d.code = i.admdoctor
       WHERE i.hn = $1
