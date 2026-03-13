@@ -15,6 +15,8 @@ import {
   Clock,
   Ban,
   ChevronDown,
+  Users,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -24,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { CancerSiteMultiSelect } from '@/components/shared/cancer-site-multi-select';
 import { DrugMultiSelect } from '@/components/shared/drug-multi-select';
-import { PatientSearchResults, HisPatient } from '@/app/(dashboard)/cancer-patients/components/patient-search-results';
+import { type HisPatient } from '@/app/(dashboard)/cancer-patients/components/patient-search-results';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -32,7 +34,7 @@ import { useAuthStore } from '@/stores/auth-store';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ImportPhase = 'idle' | 'searching' | 'results' | 'importing' | 'completed';
+type ImportPhase = 'idle' | 'searching' | 'preview' | 'importing' | 'completed';
 
 interface BulkImportProgress {
   total: number;
@@ -83,6 +85,59 @@ function getDefaultDateRange(): { from: string; to: string } {
   return { from: formatDate(monthAgo), to: formatDate(today) };
 }
 
+/** Split a date range into ≤31-day chunks for backend compliance */
+function splitDateRange(from: string, to: string): { from: string; to: string }[] {
+  const chunks: { from: string; to: string }[] = [];
+  let cursor = new Date(from);
+  const end = new Date(to);
+  while (cursor <= end) {
+    const chunkEnd = new Date(cursor);
+    chunkEnd.setDate(chunkEnd.getDate() + 30); // 31-day window (inclusive)
+    const actualEnd = chunkEnd > end ? end : chunkEnd;
+    chunks.push({ from: formatDate(cursor), to: formatDate(actualEnd) });
+    cursor = new Date(actualEnd);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return chunks;
+}
+
+/** Merge multiple search results by HN — deduplicate, sum matchingVisitCount */
+function mergePatientResults(batches: HisPatient[][]): HisPatient[] {
+  const map = new Map<string, HisPatient>();
+  for (const batch of batches) {
+    for (const p of batch) {
+      const existing = map.get(p.hn);
+      if (existing) {
+        // Sum visit counts across chunks
+        existing.matchingVisitCount =
+          (existing.matchingVisitCount ?? 0) + (p.matchingVisitCount ?? 0);
+        existing.totalVisitCount =
+          (existing.totalVisitCount ?? 0) + (p.totalVisitCount ?? 0);
+        // Keep latest importedVisitCount / existsInSystem (same across chunks)
+        if (p.existsInSystem) existing.existsInSystem = true;
+        if ((p.importedVisitCount ?? 0) > (existing.importedVisitCount ?? 0)) {
+          existing.importedVisitCount = p.importedVisitCount;
+        }
+      } else {
+        map.set(p.hn, { ...p });
+      }
+    }
+  }
+  // Sort by matchingVisitCount descending
+  return [...map.values()].sort(
+    (a, b) => (b.matchingVisitCount ?? 0) - (a.matchingVisitCount ?? 0),
+  );
+}
+
+function formatThaiMonth(dateStr: string): string {
+  const d = new Date(dateStr);
+  const thaiMonths = [
+    'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+    'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+  ];
+  return `${thaiMonths[d.getMonth()]} ${d.getFullYear() + 543}`;
+}
+
 function formatEta(progress: BulkImportProgress): string {
   if (progress.completed === 0) return 'กำลังประมาณ...';
   const remaining = progress.total - progress.completed;
@@ -102,6 +157,13 @@ function formatDuration(ms: number): string {
   return `${min} นาที ${remSec} วินาที`;
 }
 
+function formatEstimatedTime(count: number): string {
+  const totalSec = Math.ceil(count * 2.4);
+  if (totalSec < 60) return `~${totalSec} วินาที`;
+  const min = Math.ceil(totalSec / 60);
+  return `~${min} นาที`;
+}
+
 const isAlreadyImportedError = (msg: string) =>
   msg.includes('นำเข้าแล้ว') || msg.includes('ไม่พบ visit') || msg.includes('ไม่พบ admission');
 
@@ -114,10 +176,16 @@ export default function BulkImportPage() {
   // Filter state (persisted)
   const [dateFrom, setDateFrom, dfH] = usePersistedState('bulk-import:dateFrom', defaults.from);
   const [dateTo, setDateTo, dtH] = usePersistedState('bulk-import:dateTo', defaults.to);
-  const [cancerSiteIds, setCancerSiteIds, csH] = usePersistedState<string[]>('bulk-import:sites', []);
+  const [cancerSiteIds, setCancerSiteIds, csH] = usePersistedState<string[]>(
+    'bulk-import:sites',
+    [],
+  );
   const [z510, setZ510, z0H] = usePersistedState('bulk-import:z510', false);
   const [z511, setZ511, z1H] = usePersistedState('bulk-import:z511', false);
-  const [selectedDrugs, setSelectedDrugs, sdH] = usePersistedState<string[]>('bulk-import:drugs', []);
+  const [selectedDrugs, setSelectedDrugs, sdH] = usePersistedState<string[]>(
+    'bulk-import:drugs',
+    [],
+  );
   const filtersHydrated = dfH && dtH && csH && z0H && z1H && sdH;
 
   // Phase + search state
@@ -125,8 +193,16 @@ export default function BulkImportPage() {
   const [results, setResults] = useState<HisPatient[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  // Selection
-  const [selectedHns, setSelectedHns] = useState<Set<string>>(new Set());
+  // Search progress (for multi-chunk)
+  const [searchProgress, setSearchProgress] = useState<{
+    current: number;
+    total: number;
+    chunkLabel: string;
+  } | null>(null);
+
+  // Preview state
+  const [showNewOnly, setShowNewOnly] = useState(true);
+  const [showPatientList, setShowPatientList] = useState(false);
 
   // Import tracking
   const cancelRef = useRef(false);
@@ -135,16 +211,34 @@ export default function BulkImportPage() {
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [showErrors, setShowErrors] = useState(false);
 
-  // Date validation
+  // Derived: patients to import
+  const importTargets = useMemo(() => {
+    if (!showNewOnly) return results;
+    return results.filter(
+      (p) => !p.existsInSystem || (p.matchingVisitCount ?? 0) > (p.importedVisitCount ?? 0),
+    );
+  }, [results, showNewOnly]);
+
+  const alreadyImportedCount = useMemo(() => {
+    return results.filter(
+      (p) => p.existsInSystem && (p.matchingVisitCount ?? 0) <= (p.importedVisitCount ?? 0),
+    ).length;
+  }, [results]);
+
+  // Date validation (no 31-day limit — auto-chunking handles long ranges)
   const dateValidation = useMemo(() => {
-    if (!dateFrom || !dateTo) return { valid: false, error: 'กรุณาเลือกวันที่' };
+    if (!dateFrom || !dateTo) return { valid: false, error: 'กรุณาเลือกวันที่', days: 0 };
     const from = new Date(dateFrom);
     const to = new Date(dateTo);
     const diff = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24);
-    if (diff < 0) return { valid: false, error: 'วันเริ่มต้นต้องก่อนวันสิ้นสุด' };
-    if (diff > 31) return { valid: false, error: 'ช่วงวันที่ต้องไม่เกิน 31 วัน' };
-    return { valid: true, error: null };
+    if (diff < 0) return { valid: false, error: 'วันเริ่มต้นต้องก่อนวันสิ้นสุด', days: 0 };
+    return { valid: true, error: null, days: Math.ceil(diff) };
   }, [dateFrom, dateTo]);
+
+  const dateChunks = useMemo(() => {
+    if (!dateValidation.valid || !dateFrom || !dateTo) return [];
+    return splitDateRange(dateFrom, dateTo);
+  }, [dateValidation.valid, dateFrom, dateTo]);
 
   const canSearch = dateValidation.valid && phase !== 'searching' && phase !== 'importing';
 
@@ -169,63 +263,79 @@ export default function BulkImportPage() {
     setDateFrom(formatDate(firstOfNext));
     setDateTo(formatDate(lastOfNext));
   };
+  const setCurrentYear = () => {
+    const today = new Date();
+    const firstOfYear = new Date(today.getFullYear(), 0, 1);
+    setDateFrom(formatDate(firstOfYear));
+    setDateTo(formatDate(today));
+  };
+  const setPreviousYear = () => {
+    const ref = dateFrom ? new Date(dateFrom) : new Date();
+    const y = ref.getFullYear() - 1;
+    setDateFrom(formatDate(new Date(y, 0, 1)));
+    setDateTo(formatDate(new Date(y, 11, 31)));
+  };
 
-  // ─── Selection handlers ──────────────────────────────────────────────
-
-  const toggleSelect = useCallback((hn: string) => {
-    setSelectedHns((prev) => {
-      const next = new Set(prev);
-      if (next.has(hn)) next.delete(hn);
-      else next.add(hn);
-      return next;
-    });
-  }, []);
-
-  const toggleSelectAll = useCallback((pageHns: string[]) => {
-    setSelectedHns((prev) => {
-      const allSelected = pageHns.every((hn) => prev.has(hn));
-      const next = new Set(prev);
-      if (allSelected) pageHns.forEach((hn) => next.delete(hn));
-      else pageHns.forEach((hn) => next.add(hn));
-      return next;
-    });
-  }, []);
-
-  // ─── Search handler ──────────────────────────────────────────────────
+  // ─── Search handler (auto-chunks long date ranges) ─────────────────
 
   const handleSearch = useCallback(async () => {
-    if (!canSearch) return;
+    if (!canSearch || dateChunks.length === 0) return;
     setPhase('searching');
     setSearchError(null);
-    setSelectedHns(new Set());
     setSummary(null);
     setPatientLogs([]);
+    setShowPatientList(false);
+    setSearchProgress(null);
 
     try {
       const secondaryDiagCodes: string[] = [];
       if (z510) secondaryDiagCodes.push('Z510');
       if (z511) secondaryDiagCodes.push('Z511');
 
-      const body: Record<string, unknown> = { from: dateFrom, to: dateTo };
-      if (cancerSiteIds.length > 0) body.cancerSiteIds = cancerSiteIds;
-      if (secondaryDiagCodes.length > 0) body.secondaryDiagCodes = secondaryDiagCodes;
-      if (selectedDrugs.length > 0) body.drugNames = selectedDrugs;
+      const allBatches: HisPatient[][] = [];
 
-      const data = await apiClient.post<HisPatient[]>('/his-integration/search/advanced', body);
-      setResults(data);
-      setPhase('results');
+      for (let i = 0; i < dateChunks.length; i++) {
+        const chunk = dateChunks[i];
+        setSearchProgress({
+          current: i + 1,
+          total: dateChunks.length,
+          chunkLabel: `${formatThaiMonth(chunk.from)}`,
+        });
+
+        const body: Record<string, unknown> = { from: chunk.from, to: chunk.to };
+        if (cancerSiteIds.length > 0) body.cancerSiteIds = cancerSiteIds;
+        if (secondaryDiagCodes.length > 0) body.secondaryDiagCodes = secondaryDiagCodes;
+        if (selectedDrugs.length > 0) body.drugNames = selectedDrugs;
+
+        const data = await apiClient.post<HisPatient[]>(
+          '/his-integration/search/advanced',
+          body,
+        );
+        allBatches.push(data);
+      }
+
+      setSearchProgress(null);
+
+      // Merge & deduplicate across all chunks
+      const merged = mergePatientResults(allBatches);
+      setResults(merged);
+      setPhase(merged.length > 0 ? 'preview' : 'idle');
+      if (merged.length === 0) {
+        toast.info('ไม่พบผู้ป่วยจากระบบ HIS ตามเงื่อนไขที่กำหนด');
+      }
     } catch (err: any) {
       const msg = err?.error?.message || err?.message || 'ไม่สามารถค้นหาจาก HIS ได้';
       setSearchError(msg);
+      setSearchProgress(null);
       setResults([]);
       setPhase('idle');
     }
-  }, [canSearch, dateFrom, dateTo, cancerSiteIds, z510, z511, selectedDrugs]);
+  }, [canSearch, dateChunks, cancerSiteIds, z510, z511, selectedDrugs]);
 
   // ─── Bulk import handler ─────────────────────────────────────────────
 
   const handleBulkImport = useCallback(async () => {
-    const patients = results.filter((p) => selectedHns.has(p.hn));
+    const patients = importTargets;
     if (patients.length === 0) return;
 
     setPhase('importing');
@@ -262,8 +372,12 @@ export default function BulkImportPage() {
 
       // OPD
       setProgress({
-        total: patients.length, completed: i, currentHn: p.hn,
-        currentName: p.fullName, step: 'OPD', startedAt,
+        total: patients.length,
+        completed: i,
+        currentHn: p.hn,
+        currentName: p.fullName,
+        step: 'OPD',
+        startedAt,
         avgTimePerPatient: i > 0 ? (Date.now() - startedAt) / i : 8000,
       });
 
@@ -281,7 +395,7 @@ export default function BulkImportPage() {
       }
 
       // IPD
-      setProgress((prev) => prev ? { ...prev, step: 'IPD' } : prev);
+      setProgress((prev) => (prev ? { ...prev, step: 'IPD' } : prev));
 
       try {
         const r = await apiClient.post<{ patientId: number; importedVisits: number }>(
@@ -305,24 +419,34 @@ export default function BulkImportPage() {
         errors.push({ hn: p.hn, fullName: p.fullName, opdError, ipdError });
       } else {
         partialCount++;
-        errors.push({ hn: p.hn, fullName: p.fullName, opdError: opdError || undefined, ipdError: ipdError || undefined });
+        errors.push({
+          hn: p.hn,
+          fullName: p.fullName,
+          opdError: opdError || undefined,
+          ipdError: ipdError || undefined,
+        });
       }
 
       // Log
       setPatientLogs((prev) => [
         ...prev,
         {
-          hn: p.hn, fullName: p.fullName,
+          hn: p.hn,
+          fullName: p.fullName,
           status: bothFail ? 'failed' : bothOk ? 'success' : 'partial',
-          opdVisits, ipdAdmissions,
-          opdError: opdError || undefined, ipdError: ipdError || undefined,
+          opdVisits,
+          ipdAdmissions,
+          opdError: opdError || undefined,
+          ipdError: ipdError || undefined,
           durationMs: Date.now() - patientStart,
         },
       ]);
 
       // Update running avg
       const totalElapsed = Date.now() - startedAt;
-      setProgress((prev) => prev ? { ...prev, completed: i + 1, avgTimePerPatient: totalElapsed / (i + 1) } : prev);
+      setProgress((prev) =>
+        prev ? { ...prev, completed: i + 1, avgTimePerPatient: totalElapsed / (i + 1) } : prev,
+      );
 
       // Rate-limit delay
       if (i < patients.length - 1 && !cancelRef.current) {
@@ -331,7 +455,7 @@ export default function BulkImportPage() {
     }
 
     const cancelled = cancelRef.current;
-    const processed = cancelled ? patientLogs.length + 1 : patients.length;
+    const processed = successCount + partialCount + failCount;
 
     setSummary({
       totalPatients: processed,
@@ -350,18 +474,19 @@ export default function BulkImportPage() {
     if (cancelled) {
       toast.info(`ยกเลิกการนำเข้า — ดำเนินการแล้ว ${processed} ราย`);
     }
-  }, [results, selectedHns, dateFrom, dateTo]);
+  }, [importTargets, dateFrom, dateTo]);
 
   // ─── Reset ──────────────────────────────────────────────────────────
 
   const handleReset = useCallback(() => {
     setPhase('idle');
     setResults([]);
-    setSelectedHns(new Set());
     setSummary(null);
     setPatientLogs([]);
     setProgress(null);
+    setSearchProgress(null);
     setSearchError(null);
+    setShowPatientList(false);
   }, []);
 
   // ─── Access control ─────────────────────────────────────────────────
@@ -381,7 +506,12 @@ export default function BulkImportPage() {
     <div className="space-y-5 max-w-4xl">
       {/* Header */}
       <div>
-        <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2 text-muted-foreground">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="mb-2 -ml-2 text-muted-foreground"
+        >
           <Link href="/settings/maintenance">
             <ArrowLeft className="h-4 w-4 mr-1" />
             ดูแลระบบ
@@ -392,11 +522,11 @@ export default function BulkImportPage() {
           นำเข้าข้อมูลจำนวนมาก (Bulk Import)
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          ค้นหาผู้ป่วยจากระบบ HIS แล้วนำเข้าข้อมูล OPD + IPD พร้อมกัน สำหรับตั้งค่าระบบใหม่
+          กำหนดเงื่อนไข &rarr; ดูสรุป &rarr; นำเข้าทั้งหมดในคลิกเดียว (OPD + IPD)
         </p>
       </div>
 
-      {/* Filter Card */}
+      {/* Filter Card — visible in idle, searching, preview */}
       {phase !== 'importing' && phase !== 'completed' && (
         <Card>
           <CardHeader>
@@ -413,15 +543,75 @@ export default function BulkImportPage() {
                 ช่วงวันที่รับบริการ <span className="text-destructive">*</span>
               </Label>
               <div className="flex items-center gap-2 flex-wrap">
-                <ThaiDatePicker value={dateFrom} onChange={setDateFrom} placeholder="วันเริ่มต้น" className="flex-1 min-w-[140px]" />
+                <ThaiDatePicker
+                  value={dateFrom}
+                  onChange={setDateFrom}
+                  placeholder="วันเริ่มต้น"
+                  className="flex-1 min-w-[140px]"
+                />
                 <span className="text-sm text-muted-foreground shrink-0">ถึง</span>
-                <ThaiDatePicker value={dateTo} onChange={setDateTo} placeholder="วันสิ้นสุด" className="flex-1 min-w-[140px]" />
-                <Button type="button" variant="outline" size="sm" onClick={setPreviousMonth} className="shrink-0 text-xs">เดือนก่อนหน้า</Button>
-                <Button type="button" variant="outline" size="sm" onClick={setCurrentMonth} className="shrink-0 text-xs">เดือนปัจจุบัน</Button>
-                <Button type="button" variant="outline" size="sm" onClick={setNextMonth} className="shrink-0 text-xs">เดือนถัดไป</Button>
+                <ThaiDatePicker
+                  value={dateTo}
+                  onChange={setDateTo}
+                  placeholder="วันสิ้นสุด"
+                  className="flex-1 min-w-[140px]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={setPreviousMonth}
+                  className="shrink-0 text-xs"
+                >
+                  เดือนก่อนหน้า
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={setCurrentMonth}
+                  className="shrink-0 text-xs"
+                >
+                  เดือนปัจจุบัน
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={setNextMonth}
+                  className="shrink-0 text-xs"
+                >
+                  เดือนถัดไป
+                </Button>
+                <span className="text-muted-foreground text-xs">|</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={setCurrentYear}
+                  className="shrink-0 text-xs"
+                >
+                  ปีปัจจุบัน
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={setPreviousYear}
+                  className="shrink-0 text-xs"
+                >
+                  ปีก่อนหน้า
+                </Button>
               </div>
-              {dateValidation.error && <p className="text-xs text-destructive">{dateValidation.error}</p>}
-              <p className="text-xs text-muted-foreground">ค้นหาครั้งละไม่เกิน 31 วัน</p>
+              {dateValidation.error && (
+                <p className="text-xs text-destructive">{dateValidation.error}</p>
+              )}
+              {dateChunks.length > 1 && (
+                <p className="text-xs text-muted-foreground">
+                  ช่วง {dateValidation.days} วัน — ระบบจะแบ่งค้นหาอัตโนมัติ {dateChunks.length}{' '}
+                  รอบ (รอบละไม่เกิน 31 วัน)
+                </p>
+              )}
             </div>
 
             {/* Cancer site */}
@@ -435,11 +625,21 @@ export default function BulkImportPage() {
               <Label className="text-sm font-medium">การวินิจฉัยรอง</Label>
               <div className="flex items-center gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={z510} onChange={(e) => setZ510(e.target.checked)} className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2" />
+                  <input
+                    type="checkbox"
+                    checked={z510}
+                    onChange={(e) => setZ510(e.target.checked)}
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  />
                   <span className="text-sm">Z510 — รังสีรักษา</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={z511} onChange={(e) => setZ511(e.target.checked)} className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2" />
+                  <input
+                    type="checkbox"
+                    checked={z511}
+                    onChange={(e) => setZ511(e.target.checked)}
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  />
                   <span className="text-sm">Z511 — เคมีบำบัด</span>
                 </label>
               </div>
@@ -451,16 +651,39 @@ export default function BulkImportPage() {
               <DrugMultiSelect value={selectedDrugs} onChange={setSelectedDrugs} />
             </div>
 
-            {/* Search button */}
-            <div className="flex justify-end">
-              <Button onClick={handleSearch} disabled={!canSearch}>
-                {phase === 'searching' ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-                <span className="ml-1.5">ค้นหาจาก HIS</span>
-              </Button>
+            {/* Search button + progress */}
+            <div className="space-y-2">
+              <div className="flex justify-end">
+                <Button onClick={handleSearch} disabled={!canSearch}>
+                  {phase === 'searching' ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                  <span className="ml-1.5">ค้นหาจาก HIS</span>
+                </Button>
+              </div>
+              {phase === 'searching' && searchProgress && searchProgress.total > 1 && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      กำลังค้นหา {searchProgress.current}/{searchProgress.total} รอบ
+                      <span className="ml-1.5">({searchProgress.chunkLabel})</span>
+                    </span>
+                    <span className="font-mono">
+                      {Math.round((searchProgress.current / searchProgress.total) * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-300"
+                      style={{
+                        width: `${(searchProgress.current / searchProgress.total) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {searchError && (
@@ -473,45 +696,127 @@ export default function BulkImportPage() {
         </Card>
       )}
 
-      {/* Results phase */}
-      {phase === 'results' && (
-        <>
-          {/* Action bar */}
-          {results.length > 0 && (
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-3 text-sm">
-                {selectedHns.size > 0 && (
-                  <span className="font-medium text-foreground">เลือกแล้ว {selectedHns.size} ราย</span>
-                )}
+      {/* Preview phase — summary card */}
+      {phase === 'preview' && results.length > 0 && (
+        <Card className="border-primary/30">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              สรุปผลการค้นหา
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Stats grid */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-2xl font-bold text-foreground">{results.length}</p>
+                <p className="text-xs text-muted-foreground">พบทั้งหมด</p>
+              </div>
+              <div className="rounded-lg border border-primary/20 bg-primary/[0.03] p-3 text-center">
+                <p className="text-2xl font-bold text-primary">{importTargets.length}</p>
+                <p className="text-xs text-muted-foreground">
+                  {showNewOnly ? 'รายใหม่/มีข้อมูลใหม่' : 'จะนำเข้า'}
+                </p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-2xl font-bold text-muted-foreground">
+                  {alreadyImportedCount}
+                </p>
+                <p className="text-xs text-muted-foreground">นำเข้าครบแล้ว</p>
+              </div>
+            </div>
+
+            {/* New only toggle */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showNewOnly}
+                onChange={(e) => setShowNewOnly(e.target.checked)}
+                className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              />
+              <span className="text-sm">เฉพาะรายใหม่/มีข้อมูลใหม่</span>
+              {showNewOnly && alreadyImportedCount > 0 && (
                 <span className="text-xs text-muted-foreground">
-                  ระบบจะนำเข้าทีละ 1 ราย (OPD+IPD) พร้อมหน่วงเวลาเพื่อไม่ให้เกินอัตราจำกัด
+                  (ข้าม {alreadyImportedCount} รายที่นำเข้าครบแล้ว)
+                </span>
+              )}
+            </label>
+
+            {/* Time estimate + info */}
+            <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-sm">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>
+                  ประมาณเวลา:{' '}
+                  <strong>{formatEstimatedTime(importTargets.length)}</strong>
+                  <span className="text-muted-foreground ml-1">
+                    ({importTargets.length} ราย)
+                  </span>
                 </span>
               </div>
-              {selectedHns.size > 0 && (
-                <Button size="sm" className="gap-1.5" onClick={handleBulkImport}>
-                  <Download className="h-3.5 w-3.5" />
-                  นำเข้า OPD+IPD ที่เลือกไว้ ({selectedHns.size})
-                </Button>
+              <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                <span>
+                  ระบบจะนำเข้าทีละ 1 ราย (OPD+IPD) พร้อมหน่วงเวลาเพื่อไม่ให้ HIS server
+                  ทำงานหนักเกินไป
+                </span>
+              </div>
+            </div>
+
+            {/* Collapsible patient list */}
+            <div>
+              <button
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowPatientList(!showPatientList)}
+              >
+                <ChevronDown
+                  className={cn(
+                    'h-3.5 w-3.5 transition-transform',
+                    showPatientList && 'rotate-180',
+                  )}
+                />
+                ดูรายชื่อ ({importTargets.length} ราย)
+              </button>
+              {showPatientList && (
+                <div className="mt-2 max-h-[400px] overflow-y-auto rounded-lg border divide-y text-xs">
+                  {importTargets.map((p) => (
+                    <div key={p.hn} className="flex items-center gap-3 px-3 py-2">
+                      <span className="font-mono text-muted-foreground w-16 shrink-0">
+                        {p.hn}
+                      </span>
+                      <span className="min-w-0 truncate flex-1">{p.fullName}</span>
+                      <span className="text-muted-foreground shrink-0">
+                        {p.matchingVisitCount ?? p.totalVisitCount ?? '?'} visits
+                      </span>
+                      {(p.importedVisitCount ?? 0) > 0 && (
+                        <Badge variant="outline" className="text-[10px] py-0">
+                          นำเข้าแล้ว {p.importedVisitCount}
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-          )}
 
-          <PatientSearchResults
-            results={results}
-            onSelect={() => {}}
-            showNewOnlyFilter
-            selectable
-            selectedHns={selectedHns}
-            onToggleSelect={toggleSelect}
-            onToggleSelectAll={toggleSelectAll}
-          />
-
-          {results.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              ไม่พบผู้ป่วยจากระบบ HIS ตามเงื่อนไขที่กำหนด
-            </p>
-          )}
-        </>
+            {/* Action buttons */}
+            <div className="flex items-center justify-between pt-1">
+              <Button variant="outline" size="sm" onClick={handleReset} className="gap-1.5">
+                <Search className="h-3.5 w-3.5" />
+                ค้นหาใหม่
+              </Button>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={handleBulkImport}
+                disabled={importTargets.length === 0}
+              >
+                <Download className="h-3.5 w-3.5" />
+                นำเข้าทั้งหมด ({importTargets.length} ราย)
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Importing phase */}
@@ -542,13 +847,18 @@ export default function BulkImportPage() {
                   )}
                 </span>
                 <span className="font-mono text-sm">
-                  {progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0}%
+                  {progress.total > 0
+                    ? Math.round((progress.completed / progress.total) * 100)
+                    : 0}
+                  %
                 </span>
               </div>
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full rounded-full bg-primary transition-all duration-300"
-                  style={{ width: `${progress.total > 0 ? (progress.completed / progress.total) * 100 : 0}%` }}
+                  style={{
+                    width: `${progress.total > 0 ? (progress.completed / progress.total) * 100 : 0}%`,
+                  }}
                 />
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -560,7 +870,9 @@ export default function BulkImportPage() {
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
-                  onClick={() => { cancelRef.current = true; }}
+                  onClick={() => {
+                    cancelRef.current = true;
+                  }}
                 >
                   <Ban className="h-3 w-3" />
                   ยกเลิก
@@ -572,15 +884,26 @@ export default function BulkImportPage() {
             {patientLogs.length > 0 && (
               <div className="max-h-[300px] overflow-y-auto rounded-lg border divide-y text-xs">
                 {patientLogs.map((log) => (
-                  <div key={log.hn} className={cn(
-                    'flex items-center gap-3 px-3 py-2',
-                    log.status === 'failed' && 'bg-destructive/5',
-                    log.status === 'partial' && 'bg-amber-50 dark:bg-amber-950/20',
-                  )}>
-                    {log.status === 'success' && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
-                    {log.status === 'partial' && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
-                    {log.status === 'failed' && <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
-                    <span className="font-mono text-muted-foreground w-16 shrink-0">{log.hn}</span>
+                  <div
+                    key={log.hn}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2',
+                      log.status === 'failed' && 'bg-destructive/5',
+                      log.status === 'partial' && 'bg-amber-50 dark:bg-amber-950/20',
+                    )}
+                  >
+                    {log.status === 'success' && (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    )}
+                    {log.status === 'partial' && (
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    )}
+                    {log.status === 'failed' && (
+                      <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                    )}
+                    <span className="font-mono text-muted-foreground w-16 shrink-0">
+                      {log.hn}
+                    </span>
                     <span className="min-w-0 truncate flex-1">{log.fullName}</span>
                     <span className="text-muted-foreground shrink-0">
                       OPD: {log.opdVisits} | IPD: {log.ipdAdmissions}
@@ -629,8 +952,14 @@ export default function BulkImportPage() {
 
             {/* Visit counts + time */}
             <div className="flex items-center gap-6 text-sm text-muted-foreground flex-wrap">
-              <span>OPD: <strong className="text-foreground">{summary.totalOpdVisits}</strong> visits</span>
-              <span>IPD: <strong className="text-foreground">{summary.totalIpdAdmissions}</strong> admissions</span>
+              <span>
+                OPD: <strong className="text-foreground">{summary.totalOpdVisits}</strong> visits
+              </span>
+              <span>
+                IPD:{' '}
+                <strong className="text-foreground">{summary.totalIpdAdmissions}</strong>{' '}
+                admissions
+              </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
                 {formatDuration(summary.elapsedMs)}
@@ -644,14 +973,21 @@ export default function BulkImportPage() {
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
                   onClick={() => setShowErrors(!showErrors)}
                 >
-                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showErrors && 'rotate-180')} />
+                  <ChevronDown
+                    className={cn(
+                      'h-3.5 w-3.5 transition-transform',
+                      showErrors && 'rotate-180',
+                    )}
+                  />
                   ดูรายละเอียดข้อผิดพลาด ({summary.errors.length})
                 </button>
                 {showErrors && (
                   <div className="max-h-[200px] overflow-y-auto rounded-lg border divide-y text-xs">
                     {summary.errors.map((e) => (
                       <div key={e.hn} className="px-3 py-2 space-y-0.5">
-                        <p className="font-medium">HN: {e.hn} — {e.fullName}</p>
+                        <p className="font-medium">
+                          HN: {e.hn} — {e.fullName}
+                        </p>
                         {e.opdError && <p className="text-destructive">OPD: {e.opdError}</p>}
                         {e.ipdError && <p className="text-destructive">IPD: {e.ipdError}</p>}
                       </div>
@@ -665,15 +1001,26 @@ export default function BulkImportPage() {
             {patientLogs.length > 0 && (
               <div className="max-h-[300px] overflow-y-auto rounded-lg border divide-y text-xs">
                 {patientLogs.map((log) => (
-                  <div key={log.hn} className={cn(
-                    'flex items-center gap-3 px-3 py-2',
-                    log.status === 'failed' && 'bg-destructive/5',
-                    log.status === 'partial' && 'bg-amber-50 dark:bg-amber-950/20',
-                  )}>
-                    {log.status === 'success' && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
-                    {log.status === 'partial' && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
-                    {log.status === 'failed' && <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
-                    <span className="font-mono text-muted-foreground w-16 shrink-0">{log.hn}</span>
+                  <div
+                    key={log.hn}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2',
+                      log.status === 'failed' && 'bg-destructive/5',
+                      log.status === 'partial' && 'bg-amber-50 dark:bg-amber-950/20',
+                    )}
+                  >
+                    {log.status === 'success' && (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    )}
+                    {log.status === 'partial' && (
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    )}
+                    {log.status === 'failed' && (
+                      <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                    )}
+                    <span className="font-mono text-muted-foreground w-16 shrink-0">
+                      {log.hn}
+                    </span>
                     <span className="min-w-0 truncate flex-1">{log.fullName}</span>
                     <span className="text-muted-foreground shrink-0">
                       OPD: {log.opdVisits} | IPD: {log.ipdAdmissions}
