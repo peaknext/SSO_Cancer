@@ -9,5 +9,6 @@ VALUES
   ('his_db_name', '', 'his_db', 'HOSxP database name', true),
   ('his_db_user', '', 'his_db', 'HOSxP database username (read-only)', true),
   ('his_db_password', '', 'his_db', 'HOSxP database password (encrypted)', true),
-  ('his_db_ssl', 'false', 'his_db', 'Use SSL for HOSxP database connection', true)
+  ('his_db_ssl', 'false', 'his_db', 'Use SSL for HOSxP database connection', true),
+  ('his_scan_ipd_enabled', 'true', 'hospital', 'Enable IPD (inpatient) scanning in nightly scan', true)
 ON CONFLICT (setting_key) DO NOTHING;

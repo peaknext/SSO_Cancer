@@ -24,6 +24,7 @@ import { HospitalsModule } from './modules/hospitals/hospitals.module';
 import { BackupRestoreModule } from './modules/backup-restore/backup-restore.module';
 import { HisIntegrationModule } from './modules/his-integration/his-integration.module';
 import { SsopExportModule } from './modules/ssop-export/ssop-export.module';
+import { CipnExportModule } from './modules/cipn-export/cipn-export.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -66,6 +67,7 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
     BackupRestoreModule,
     HisIntegrationModule,
     SsopExportModule,
+    CipnExportModule,
     MaintenanceModule,
   ],
   providers: [

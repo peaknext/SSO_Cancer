@@ -31,6 +31,7 @@ interface ExportModalProps {
     cancerSiteId?: string;
     sourceHospitalId?: string;
     drugName?: string;
+    visitType?: string;
   };
 }
 

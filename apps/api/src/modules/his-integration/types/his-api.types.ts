@@ -77,6 +77,7 @@ export interface HisVisit {
   secondaryDiagnoses?: string;
   hpi?: string;
   doctorNotes?: string;
+  pttype?: string; // Patient insurance type (10=SSO, 90=self-pay)
   // SSOP 0.93 fields
   billNo?: string;
   visitType?: string;
@@ -225,6 +226,7 @@ export function analyzeVisitCompleteness(visit: HisVisit): VisitCompleteness {
     { field: 'serviceClass', label: 'ประเภทบริการ (Class)', present: !!visit.serviceClass, priority: 'medium' },
     { field: 'serviceType', label: 'ชนิดบริการ (TypeServ)', present: !!visit.serviceType, priority: 'medium' },
     { field: 'physicianLicenseNo', label: 'เลข ว.แพทย์', present: !!visit.physicianLicenseNo, priority: 'medium' },
+    { field: 'pttype', label: 'สิทธิประกัน (pttype)', present: !!visit.pttype, priority: 'medium' },
     { field: 'billNo', label: 'เลขที่ใบเสร็จ', present: !!visit.billNo, priority: 'low' },
     { field: 'nextAppointmentDate', label: 'วันนัดครั้งถัดไป', present: !!visit.nextAppointmentDate, priority: 'low' },
     { field: 'dayCover', label: 'DayCover', present: !!visit.dayCover, priority: 'low' },

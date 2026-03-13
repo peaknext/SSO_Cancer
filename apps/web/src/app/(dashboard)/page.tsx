@@ -62,6 +62,8 @@ interface DashboardOverview {
   protocols: number;
   regimens: number;
   totalVisits: number;
+  opdVisits?: number;
+  ipdVisits?: number;
   topCancerSite: TopCancerSite | null;
   emptyRegimensCount: number;
   visitDateRange: VisitDateRange | null;
@@ -731,6 +733,7 @@ export default function DashboardPage() {
             value={stats?.totalVisits ?? 0}
             icon={<ClipboardList className="h-5 w-5" />}
             theme="teal"
+            subtitle={`OPD: ${stats?.opdVisits ?? 0}  ·  IPD: ${stats?.ipdVisits ?? 0}`}
           />
           <StatCard
             label="มะเร็งอันดับ 1 (โดย Visit)"

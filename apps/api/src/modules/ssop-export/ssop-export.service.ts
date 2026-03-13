@@ -348,7 +348,7 @@ export class SsopExportService {
 
     // Load visits with their billing claims (latest round first)
     const visits = await this.prisma.patientVisit.findMany({
-      where: { id: { in: visitIds } },
+      where: { id: { in: visitIds }, visitType: '1' },
       select: {
         id: true,
         vn: true,
@@ -410,7 +410,7 @@ export class SsopExportService {
     const skip = (page - 1) * limit;
     const [batches, total] = await Promise.all([
       this.prisma.billingExportBatch.findMany({
-        where: { isActive: true },
+        where: { isActive: true, exportType: 'SSOP' },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
@@ -429,7 +429,7 @@ export class SsopExportService {
           createdByUser: { select: { fullName: true } },
         },
       }),
-      this.prisma.billingExportBatch.count({ where: { isActive: true } }),
+      this.prisma.billingExportBatch.count({ where: { isActive: true, exportType: 'SSOP' } }),
     ]);
 
     // Enrich with claim status summary per batch
@@ -497,6 +497,8 @@ export class SsopExportService {
     // Use AND array to avoid key collision with search OR / patient filter
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const andConditions: any[] = [
+      // 0. OPD only — exclude IPD visits (visitType='2')
+      { visitType: '1' },
       // 1. Must have billing items
       { visitBillingItems: { some: { isActive: true } } },
       // 2. Approximate "data completeness" checks
@@ -648,7 +650,7 @@ export class SsopExportService {
     aipnCodeSet?: Set<number>,
   ) {
     const visits = await this.prisma.patientVisit.findMany({
-      where: { id: { in: visitIds } },
+      where: { id: { in: visitIds }, visitType: '1' },
       include: {
         patient: true,
         case: {
@@ -1018,6 +1020,7 @@ export class SsopExportService {
       where: {
         vn: { in: vns },
         id: { in: Array.from(allExportedIds) },
+        visitType: '1',
       },
       select: { vn: true },
     });

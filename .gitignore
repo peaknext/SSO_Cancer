@@ -29,6 +29,7 @@ apps/web/.next/
 
 # Separate projects
 SSO_Mock_Project/
+hosxp_data_dict/
 
 # Source data (large files)
 cancer_full.txt

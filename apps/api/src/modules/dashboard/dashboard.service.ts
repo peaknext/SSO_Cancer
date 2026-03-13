@@ -10,12 +10,14 @@ export class DashboardService {
 
   async getOverview() {
     return this.withCache('overview', async () => {
-      const [cancerSites, protocols, regimens, totalVisits, emptyRegimensCount] =
+      const [cancerSites, protocols, regimens, totalVisits, opdVisits, ipdVisits, emptyRegimensCount] =
         await Promise.all([
           this.prisma.cancerSite.count({ where: { isActive: true } }),
           this.prisma.protocolName.count({ where: { isActive: true } }),
           this.prisma.regimen.count({ where: { isActive: true } }),
           this.prisma.patientVisit.count(),
+          this.prisma.patientVisit.count({ where: { visitType: '1' } }),
+          this.prisma.patientVisit.count({ where: { visitType: '2' } }),
           this.prisma.regimen.count({
             where: { isActive: true, regimenDrugs: { none: {} } },
           }),
@@ -89,6 +91,8 @@ export class DashboardService {
         protocols,
         regimens,
         totalVisits,
+        opdVisits,
+        ipdVisits,
         topCancerSite,
         visitDateRange,
         emptyRegimensCount,

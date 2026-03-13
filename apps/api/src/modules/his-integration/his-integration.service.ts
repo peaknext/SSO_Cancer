@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Inject, OnModuleInit } from '@nestjs/common';
 import { PrismaService, Prisma } from '../../prisma';
 import { ImportService } from '../protocol-analysis/services/import.service';
 import { IHisClient, HIS_CLIENT_TOKEN } from './his-client.interface';
@@ -58,7 +58,7 @@ export interface ImportResult {
 }
 
 @Injectable()
-export class HisIntegrationService {
+export class HisIntegrationService implements OnModuleInit {
   private readonly logger = new Logger(HisIntegrationService.name);
 
   constructor(
@@ -66,6 +66,20 @@ export class HisIntegrationService {
     @Inject(HIS_CLIENT_TOKEN) private readonly hisClient: IHisClient,
     private readonly importService: ImportService,
   ) {}
+
+  /** Auto-fix OPD visits mislabeled as IPD on startup (one-time migration) */
+  async onModuleInit(): Promise<void> {
+    const result = await this.prisma.patientVisit.updateMany({
+      where: {
+        visitType: '2',
+        vn: { not: { startsWith: 'IPD-' } },
+      },
+      data: { visitType: '1' },
+    });
+    if (result.count > 0) {
+      this.logger.warn(`Fixed ${result.count} OPD visits incorrectly marked as IPD (visitType='2')`);
+    }
+  }
 
   /** Search patients from HIS */
   async searchPatient(query: string, type?: string): Promise<HisPatientSearchResult[]> {
@@ -352,7 +366,7 @@ export class HisIntegrationService {
         clinicCode: visit.clinicCode || null,
         // SSOP 0.93 fields (receiptNo fallback for billNo — HIS may send either)
         billNo: visit.billNo || visit.receiptNo || null,
-        visitType: visit.visitType || '1',
+        visitType: '1', // OPD import always = OPD (HIS ovstist is visit status, not OPD/IPD)
         dischargeType: visit.dischargeType || null,
         nextAppointmentDate: visit.nextAppointmentDate ? new Date(visit.nextAppointmentDate) : null,
         serviceClass: visit.serviceClass || null,
@@ -849,7 +863,7 @@ export class HisIntegrationService {
           physicianLicenseNo: freshVisit.physicianLicenseNo || null,
           clinicCode: freshVisit.clinicCode || null,
           billNo: freshVisit.billNo || freshVisit.receiptNo || null,
-          visitType: freshVisit.visitType || null,
+          // Do NOT overwrite visitType from HIS — it's ovstist (OPD visit status), not OPD/IPD
           dischargeType: freshVisit.dischargeType || null,
           nextAppointmentDate: freshVisit.nextAppointmentDate ? new Date(freshVisit.nextAppointmentDate) : null,
           serviceClass: freshVisit.serviceClass || null,
@@ -1078,6 +1092,22 @@ export class HisIntegrationService {
     this.logger.log(`Backfill complete: ${medications.length} processed, ${updatedAipn} AIPN codes set, ${updatedDrug} drugs resolved`);
 
     return { processed: medications.length, updatedAipn, updatedDrug };
+  }
+
+  /** Fix OPD visits that were incorrectly saved with visitType='2' due to HIS ovstist mapping bug.
+   *  Real IPD visits have synthetic VN starting with 'IPD-'. Any visit with visitType='2' and VN
+   *  NOT starting with 'IPD-' is an OPD visit that was mislabeled. */
+  async fixMislabeledVisitTypes(): Promise<{ fixed: number }> {
+    const result = await this.prisma.patientVisit.updateMany({
+      where: {
+        visitType: '2',
+        vn: { not: { startsWith: 'IPD-' } },
+      },
+      data: { visitType: '1' },
+    });
+
+    this.logger.log(`Fixed ${result.count} OPD visits incorrectly marked as IPD`);
+    return { fixed: result.count };
   }
 
   /** Purge all visit data (XLSX + HIS imports) — keeps Patients and PatientCases intact */

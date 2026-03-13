@@ -241,9 +241,9 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
           ELSE NULL END AS "serviceStartTime",
         d.licenseno AS "physicianLicenseNo",
         o.cur_dep AS "clinicCode",
-        TRIM(o.ovstist) AS "visitType",
         TRIM(o.ovstost) AS "dischargeType",
-        o.an
+        o.an,
+        TRIM(o.pttype) AS pttype
       FROM ovst o
       LEFT JOIN doctor d ON d.code = o.doctor
       WHERE o.hn = $1
@@ -295,7 +295,7 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         serviceStartTime: row.serviceStartTime || undefined,
         physicianLicenseNo: row.physicianLicenseNo || undefined,
         clinicCode: row.clinicCode || undefined,
-        visitType: row.visitType || undefined,
+        pttype: row.pttype || undefined,
         dischargeType: row.dischargeType || undefined,
         primaryDiagnosis: primaryDiagnosis || '',
         secondaryDiagnoses: secondaryDiagnoses || undefined,
@@ -362,7 +362,9 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         d.licenseno AS "attendingDoctorLicense",
         i.drg,
         i.rw::numeric AS rw,
-        i.adjrw::numeric AS "adjRw"
+        i.adjrw::numeric AS "adjRw",
+        TRIM(i.admtype) AS "admissionType",
+        TRIM(i.admsource) AS "admissionSource"
       FROM ipt i
       LEFT JOIN doctor d ON d.code = i.admdoctor
       WHERE i.hn = $1
@@ -436,6 +438,8 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         drg: row.drg || null,
         rw: row.rw ? Number(row.rw) : undefined,
         adjRw: row.adjRw ? Number(row.adjRw) : undefined,
+        admissionType: row.admissionType || null,
+        admissionSource: row.admissionSource || null,
         lengthOfStay,
         diagnoses,
         procedures,
@@ -461,47 +465,68 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
       ...(body.secondaryDiagnosisCodes || []).map((c) => c),
     ];
 
-    // Base: find visits with matching diagnoses in date range
-    let sql = `
-      WITH matching_visits AS (
-        SELECT DISTINCT o.hn, COUNT(DISTINCT o.vn) AS visit_count
-        FROM ovst o
-        INNER JOIN ovstdiag od ON od.vn = o.vn
-        WHERE o.vstdate BETWEEN $1::date AND $2::date
-    `;
     const params: any[] = [body.from, body.to];
 
+    // Build optional filter clauses (shared by OPD + IPD halves)
+    let icdFilter = '';
     if (icdPatterns.length > 0) {
       params.push(icdPatterns);
-      sql += ` AND od.icd10 LIKE ANY($${params.length})`;
+      icdFilter = ` AND diag.icd10 LIKE ANY($${params.length})`;
     }
 
-    // Drug keywords filter via subquery
+    let drugFilterOpd = '';
+    let drugFilterIpd = '';
     if (body.drugKeywords && body.drugKeywords.length > 0) {
       const drugLikePatterns = body.drugKeywords.map((kw) => `%${kw}%`);
       params.push(drugLikePatterns);
-      sql += `
+      const drugParamIdx = params.length;
+      drugFilterOpd = `
         AND EXISTS (
           SELECT 1 FROM opitemrece oi
           INNER JOIN drugitems di ON di.icode = oi.icode
           WHERE oi.vn = o.vn
-            AND di.generic_name ILIKE ANY($${params.length})
-        )
-      `;
+            AND di.generic_name ILIKE ANY($${drugParamIdx})
+        )`;
+      drugFilterIpd = `
+        AND EXISTS (
+          SELECT 1 FROM opitemrece oi
+          INNER JOIN drugitems di ON di.icode = oi.icode
+          WHERE oi.an = i.an
+            AND di.generic_name ILIKE ANY($${drugParamIdx})
+        )`;
     }
 
-    sql += `
-        GROUP BY o.hn
+    // UNION OPD (ovst) + IPD (ipt) to find patients across both visit types
+    const sql = `
+      WITH matching_visits AS (
+        -- OPD visits
+        SELECT o.hn, o.vn AS visit_key
+        FROM ovst o
+        INNER JOIN ovstdiag diag ON diag.vn = o.vn
+        WHERE o.vstdate BETWEEN $1::date AND $2::date
+          ${icdFilter}
+          ${drugFilterOpd}
+
+        UNION ALL
+
+        -- IPD admissions
+        SELECT i.hn, i.an AS visit_key
+        FROM ipt i
+        INNER JOIN iptdiag diag ON diag.an = i.an
+        WHERE i.regdate BETWEEN $1::date AND $2::date
+          ${icdFilter}
+          ${drugFilterIpd}
       )
       SELECT p.hn,
         p.cid AS "citizenId",
         CONCAT(COALESCE(p.pname,''), COALESCE(p.fname,''), ' ', COALESCE(p.lname,'')) AS "fullName",
         CASE p.sex WHEN '1' THEN 'M' WHEN '2' THEN 'F' END AS gender,
         TO_CHAR(p.birthday, 'YYYY-MM-DD') AS "dateOfBirth",
-        mv.visit_count::int AS "matchingVisitCount"
+        COUNT(DISTINCT mv.visit_key)::int AS "matchingVisitCount"
       FROM matching_visits mv
       INNER JOIN patient p ON p.hn = mv.hn
-      ORDER BY mv.visit_count DESC
+      GROUP BY p.hn, p.cid, p.pname, p.fname, p.lname, p.sex, p.birthday
+      ORDER BY "matchingVisitCount" DESC
       LIMIT 500
     `;
 
@@ -596,7 +621,7 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         CONCAT_WS(' ', di.generic_name, di.strength, di.dosageform) AS "dfsText",
         oi.qty AS quantity,
         oi.unitprice::numeric AS "unitPrice",
-        oi.sum_price::numeric AS "claimUnitPrice",
+        oi.sum_price::numeric AS "sumPrice",
         oi.discount::numeric AS discount,
         oi.drugusage AS "sigCode",
         oi.idr AS "sigText",
@@ -643,7 +668,7 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
       dfsText: r.dfsText?.trim() || undefined,
       quantity: r.quantity ? Number(r.quantity) : 0,
       unitPrice: r.unitPrice ? Number(r.unitPrice) : 0,
-      claimUnitPrice: r.claimUnitPrice ? Number(r.claimUnitPrice) : undefined,
+      claimUnitPrice: r.sumPrice ? Number(r.sumPrice) : undefined, // HOSxP sum_price = total (qty×price-discount), normalized later
       discount: r.discount ? Number(r.discount) : undefined,
       sigCode: r.sigCode?.trim() || undefined,
       sigText: r.sigText?.trim() || undefined,

@@ -156,6 +156,13 @@ export class HisIntegrationController {
     return this.hisService.backfillAipnCodes();
   }
 
+  @Post('fix-visit-types')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'แก้ไข OPD visits ที่ถูก mark เป็น IPD ผิดพลาด (one-time fix)' })
+  fixVisitTypes() {
+    return this.hisService.fixMislabeledVisitTypes();
+  }
+
   @Post('purge-visits')
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'ล้างข้อมูล visit ทั้งหมด (SUPER_ADMIN only)' })

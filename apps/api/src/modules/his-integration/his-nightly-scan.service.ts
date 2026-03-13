@@ -60,6 +60,11 @@ export class HisNightlyScanService {
     let skipped = 0;
     let errors = 0;
 
+    // IPD counters
+    let ipdImported = 0;
+    let ipdSkipped = 0;
+    let ipdErrors = 0;
+
     try {
       const patients = await this.hisClient.advancedSearchPatients({
         from: yesterday,
@@ -122,6 +127,45 @@ export class HisNightlyScanService {
           });
         }
       }
+
+      // === IPD Admission Scan ===
+      const ipdEnabled = await this.isIpdEnabled();
+      if (ipdEnabled) {
+        this.logger.log(`[NightlyScan] Starting IPD scan for ${yesterday}`);
+        // Collect unique HNs from OPD-scanned patients + existing tracked patients
+        const trackedPatients = await this.prisma.patient.findMany({
+          where: { isActive: true },
+          select: { hn: true },
+        });
+        const ipdHns = new Set([
+          ...patients.map((p) => p.hn),
+          ...trackedPatients.map((p) => p.hn!),
+        ]);
+
+        for (const hn of ipdHns) {
+          try {
+            const result = await this.hisService.importAdmissions(hn, null, yesterday, yesterday);
+            if (result.importedVisits > 0) {
+              ipdImported += result.importedVisits;
+            } else {
+              ipdSkipped++;
+            }
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            // BadRequestException from "no admissions" is expected — don't log as error
+            if (!msg.includes('ไม่พบ admission')) {
+              this.logger.warn(`[NightlyScan/IPD] Failed for HN ${hn}: ${msg}`);
+              ipdErrors++;
+            } else {
+              ipdSkipped++;
+            }
+          }
+        }
+
+        this.logger.log(
+          `[NightlyScan/IPD] Done: ${ipdImported} admissions imported, ${ipdSkipped} skipped, ${ipdErrors} errors`,
+        );
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`[NightlyScan] Fatal error: ${msg}`);
@@ -178,10 +222,13 @@ export class HisNightlyScanService {
       newVisits,
       skipped,
       errors,
+      ipdImported,
+      ipdSkipped,
+      ipdErrors,
     });
 
     this.logger.log(
-      `[NightlyScan] Done: ${newPatients} new patients, ${newVisits} new visits, ${errors} errors (${Date.now() - startTime}ms)`,
+      `[NightlyScan] Done: ${newPatients} new patients, ${newVisits} OPD visits, ${ipdImported} IPD admissions, ${errors + ipdErrors} errors (${Date.now() - startTime}ms)`,
     );
   }
 
@@ -193,6 +240,18 @@ export class HisNightlyScanService {
       return setting?.settingValue === 'true';
     } catch {
       return false;
+    }
+  }
+
+  private async isIpdEnabled(): Promise<boolean> {
+    try {
+      const setting = await this.prisma.appSetting.findUnique({
+        where: { settingKey: 'his_scan_ipd_enabled' },
+      });
+      // Default to true if setting doesn't exist
+      return setting ? setting.settingValue === 'true' : true;
+    } catch {
+      return true;
     }
   }
 

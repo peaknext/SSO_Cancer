@@ -72,9 +72,10 @@ export default function CancerPatientsPage() {
   const [sortOrder, setSortOrder, h5] = usePersistedState<'asc' | 'desc'>('cp-sortOrder', 'asc');
   const [sourceHospitalId, setSourceHospitalId, h6] = usePersistedState('cp-sourceHospitalId', '');
   const [drugName, setDrugName, h7] = usePersistedState('cp-drugName', '');
+  const [visitType, setVisitType, h8] = usePersistedState('cp-visitType', '');
   const [drugNameLocal, setDrugNameLocal] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
-  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7;
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7 && h8;
 
   // Sync local drug input from persisted state after hydration
   useEffect(() => {
@@ -99,6 +100,7 @@ export default function CancerPatientsPage() {
     cancerSiteId: cancerSiteId || undefined,
     sourceHospitalId: sourceHospitalId || undefined,
     drugName: drugName || undefined,
+    visitType: visitType || undefined,
     sortBy,
     sortOrder,
   }, { enabled: filtersHydrated });
@@ -301,6 +303,16 @@ export default function CancerPatientsPage() {
             </button>
           )}
         </div>
+        <Select
+          value={visitType}
+          onChange={(v) => { setVisitType(v); setPage(1); }}
+          options={[
+            { value: '1', label: 'OPD ผู้ป่วยนอก' },
+            { value: '2', label: 'IPD ผู้ป่วยใน' },
+          ]}
+          placeholder="ประเภท Visit ทั้งหมด"
+          className="w-full sm:w-48"
+        />
       </div>
 
       {isLoading ? (
@@ -332,6 +344,7 @@ export default function CancerPatientsPage() {
           cancerSiteId: cancerSiteId || undefined,
           sourceHospitalId: sourceHospitalId || undefined,
           drugName: drugName || undefined,
+          visitType: visitType || undefined,
         }}
       />
     </div>

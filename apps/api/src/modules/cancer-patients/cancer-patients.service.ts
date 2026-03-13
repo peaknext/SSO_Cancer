@@ -52,6 +52,7 @@ export class CancerPatientsService {
       sourceHospitalId,
       isActive,
       drugName,
+      visitType,
     } = query;
 
     const where: Prisma.PatientWhereInput = {};
@@ -74,6 +75,11 @@ export class CancerPatientsService {
 
     if (isActive !== undefined) {
       where.isActive = isActive;
+    }
+
+    // Filter patients who have visits of specified type
+    if (visitType) {
+      where.visits = { some: { visitType } };
     }
 
     // Filter by drug name: find HNs that have visits with matching resolved drug
@@ -137,7 +143,7 @@ export class CancerPatientsService {
           // 1. Total visit counts per HN
           this.prisma.patientVisit.groupBy({
             by: ['hn'],
-            where: { hn: { in: hns } },
+            where: { hn: { in: hns }, ...(visitType ? { visitType } : {}) },
             _count: true,
           }),
           // 2. Z51x visit counts per HN (chemo/immunotherapy encounters)
@@ -146,6 +152,7 @@ export class CancerPatientsService {
             where: {
               hn: { in: hns },
               secondaryDiagnoses: { contains: 'Z51', mode: 'insensitive' },
+              ...(visitType ? { visitType } : {}),
             },
             _count: true,
           }),
