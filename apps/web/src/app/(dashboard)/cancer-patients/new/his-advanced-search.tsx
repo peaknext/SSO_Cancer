@@ -80,6 +80,7 @@ export function HisAdvancedSearch({
     total: number;
     completed: number;
     current?: string;
+    step?: 'OPD' | 'IPD';
   } | null>(null);
 
   // Apply imported patient updates to results
@@ -164,34 +165,64 @@ export function HisAdvancedSearch({
     const importedMap = new Map<string, number>();
     let successCount = 0;
     let failCount = 0;
+    let opdTotal = 0;
+    let ipdTotal = 0;
+
+    const isAlreadyImportedError = (msg: string) =>
+      msg.includes('นำเข้าแล้ว') || msg.includes('ไม่พบ visit') || msg.includes('ไม่พบ admission');
 
     for (let i = 0; i < hns.length; i++) {
       const hn = hns[i];
-      setBulkProgress({ total: hns.length, completed: i, current: hn });
+      const params = new URLSearchParams();
+      if (dateFrom) params.set('from', dateFrom);
+      if (dateTo) params.set('to', dateTo);
+      const qs = params.toString();
+      const suffix = qs ? `?${qs}` : '';
+
+      let opdOk = false;
+      let ipdOk = false;
+
+      // OPD import
+      setBulkProgress({ total: hns.length, completed: i, current: hn, step: 'OPD' });
       try {
-        const params = new URLSearchParams();
-        if (dateFrom) params.set('from', dateFrom);
-        if (dateTo) params.set('to', dateTo);
-        const qs = params.toString();
-        const result = await apiClient.post<{
-          patientId: number;
-          importedVisits: number;
-        }>(`/his-integration/import/${encodeURIComponent(hn)}${qs ? `?${qs}` : ''}`);
-        importedMap.set(hn, result.patientId);
-        successCount++;
-      } catch {
-        failCount++;
+        const r = await apiClient.post<{ patientId: number; importedVisits: number }>(
+          `/his-integration/import/${encodeURIComponent(hn)}${suffix}`,
+        );
+        importedMap.set(hn, r.patientId);
+        opdTotal += r.importedVisits;
+        opdOk = true;
+      } catch (err: any) {
+        const msg = err?.error?.message || err?.message || '';
+        if (isAlreadyImportedError(msg)) opdOk = true;
       }
+
+      // IPD import
+      setBulkProgress({ total: hns.length, completed: i, current: hn, step: 'IPD' });
+      try {
+        const r = await apiClient.post<{ patientId: number; importedVisits: number }>(
+          `/his-integration/ipd/import/${encodeURIComponent(hn)}${suffix}`,
+        );
+        if (!importedMap.has(hn)) importedMap.set(hn, r.patientId);
+        ipdTotal += r.importedVisits;
+        ipdOk = true;
+      } catch (err: any) {
+        const msg = err?.error?.message || err?.message || '';
+        if (isAlreadyImportedError(msg)) ipdOk = true;
+      }
+
+      if (opdOk || ipdOk) successCount++;
+      else failCount++;
     }
 
     setBulkProgress({ total: hns.length, completed: hns.length });
 
+    const detail = `OPD: ${opdTotal} visits, IPD: ${ipdTotal} admissions`;
     if (failCount > 0) {
       toast.warning(`นำเข้าสำเร็จ ${successCount}/${hns.length} ราย`, {
-        description: `${failCount} ราย ล้มเหลว`,
+        description: `${failCount} ราย ล้มเหลว — ${detail}`,
       });
     } else {
-      toast.success(`นำเข้า ${successCount} ราย สำเร็จ`);
+      toast.success(`นำเข้า ${successCount} ราย สำเร็จ`, { description: detail });
     }
 
     // Notify parent + clear selection
@@ -385,7 +416,7 @@ export function HisAdvancedSearch({
                 ) : (
                   <Download className="h-3.5 w-3.5" />
                 )}
-                นำเข้าข้อมูลที่เลือกไว้ ({selectedHns.size})
+                นำเข้า OPD+IPD ที่เลือกไว้ ({selectedHns.size})
               </Button>
             )}
           </div>
@@ -398,7 +429,9 @@ export function HisAdvancedSearch({
               <span>
                 กำลังนำเข้า {bulkProgress.completed}/{bulkProgress.total}
                 {bulkProgress.current && (
-                  <span className="ml-1.5 text-foreground">(HN: {bulkProgress.current})</span>
+                  <span className="ml-1.5 text-foreground">
+                    (HN: {bulkProgress.current}{bulkProgress.step && ` — ${bulkProgress.step}`})
+                  </span>
                 )}
               </span>
               <span>{Math.round((bulkProgress.completed / bulkProgress.total) * 100)}%</span>

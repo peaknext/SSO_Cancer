@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Wrench,
+  Download,
   Server,
   Database,
   HardDrive,
@@ -638,6 +640,24 @@ export default function MaintenancePage() {
 
   return (
     <div className="space-y-4">
+      {/* Quick action: Bulk HIS Import */}
+      <Card className="border-primary/20 bg-primary/[0.02]">
+        <CardContent className="flex items-center justify-between py-4 px-5">
+          <div>
+            <h3 className="font-heading text-sm font-semibold">นำเข้าข้อมูลจำนวนมากจาก HIS</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Bulk Import OPD + IPD — สำหรับตั้งค่าระบบใหม่
+            </p>
+          </div>
+          <Button asChild size="sm" className="gap-1.5">
+            <Link href="/settings/maintenance/bulk-import">
+              <Download className="h-3.5 w-3.5" />
+              เปิดเครื่องมือ
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* ─── Section A: System Diagnostics ─── */}
       <Section
         id="diagnostics"
