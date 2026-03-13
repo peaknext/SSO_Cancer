@@ -156,6 +156,13 @@ export class HisIntegrationController {
     return this.hisService.backfillAipnCodes();
   }
 
+  @Post('backfill-pttype')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Backfill สิทธิ์การรักษา (pttype) สำหรับ visits ที่มีอยู่' })
+  backfillPttype() {
+    return this.hisService.backfillPttype();
+  }
+
   @Post('fix-visit-types')
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'แก้ไข OPD visits ที่ถูก mark เป็น IPD ผิดพลาด (one-time fix)' })

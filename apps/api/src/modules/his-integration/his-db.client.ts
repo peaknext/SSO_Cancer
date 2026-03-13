@@ -272,7 +272,8 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         o.cur_dep AS "clinicCode",
         TRIM(o.ovstost) AS "dischargeType",
         o.an,
-        TRIM(o.pttype) AS pttype
+        TRIM(o.pttype) AS pttype,
+        TRIM(pt.name) AS "pttypeName"
       FROM ovst o
       INNER JOIN pttype pt ON pt.pttype = o.pttype
       LEFT JOIN doctor d ON d.code = o.doctor
@@ -327,6 +328,7 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         physicianLicenseNo: row.physicianLicenseNo || undefined,
         clinicCode: row.clinicCode || undefined,
         pttype: row.pttype || undefined,
+        pttypeName: row.pttypeName || undefined,
         dischargeType: row.dischargeType || undefined,
         primaryDiagnosis: primaryDiagnosis || '',
         secondaryDiagnoses: secondaryDiagnoses || undefined,
@@ -400,6 +402,8 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         i.drg,
         i.rw::numeric AS rw,
         i.adjrw::numeric AS "adjRw",
+        TRIM(i.pttype) AS pttype,
+        TRIM(pt.name) AS "pttypeName",
         ${optionalSelects}
       FROM ipt i
       INNER JOIN pttype pt ON pt.pttype = i.pttype
@@ -478,6 +482,8 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
         adjRw: row.adjRw ? Number(row.adjRw) : undefined,
         admissionType: row.admissionType || null,
         admissionSource: row.admissionSource || null,
+        pttype: row.pttype || undefined,
+        pttypeName: row.pttypeName || undefined,
         lengthOfStay,
         diagnoses,
         procedures,
@@ -577,6 +583,71 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
       ...r,
       hn: this.stripHn(r.hn || ''),
     }));
+  }
+
+  /**
+   * Batch lookup pttype for OPD visits by VN.
+   * Returns Map<vn, { pttype, pttypeName }>.
+   */
+  async batchLookupPttype(
+    vns: string[],
+  ): Promise<Map<string, { pttype: string; pttypeName: string }>> {
+    const result = new Map<string, { pttype: string; pttypeName: string }>();
+    if (vns.length === 0) return result;
+
+    const pool = await this.getPool();
+
+    // OPD visits: lookup pttype from ovst
+    const placeholders = vns.map((_, i) => `$${i + 1}`).join(',');
+    const sql = `
+      SELECT o.vn, TRIM(o.pttype) AS pttype, TRIM(pt.name) AS "pttypeName"
+      FROM ovst o
+      INNER JOIN pttype pt ON pt.pttype = o.pttype
+      WHERE o.vn IN (${placeholders})
+    `;
+    const { rows } = await pool.query(sql, vns);
+    for (const row of rows) {
+      if (row.vn && row.pttype) {
+        result.set(row.vn.trim(), {
+          pttype: row.pttype,
+          pttypeName: row.pttypeName || '',
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Batch lookup pttype for IPD admissions by AN.
+   * Returns Map<an, { pttype, pttypeName }>.
+   */
+  async batchLookupPttypeByAn(
+    ans: string[],
+  ): Promise<Map<string, { pttype: string; pttypeName: string }>> {
+    const result = new Map<string, { pttype: string; pttypeName: string }>();
+    if (ans.length === 0) return result;
+
+    const pool = await this.getPool();
+
+    const placeholders = ans.map((_, i) => `$${i + 1}`).join(',');
+    const sql = `
+      SELECT i.an, TRIM(i.pttype) AS pttype, TRIM(pt.name) AS "pttypeName"
+      FROM ipt i
+      INNER JOIN pttype pt ON pt.pttype = i.pttype
+      WHERE i.an IN (${placeholders})
+    `;
+    const { rows } = await pool.query(sql, ans);
+    for (const row of rows) {
+      if (row.an && row.pttype) {
+        result.set(row.an.trim(), {
+          pttype: row.pttype,
+          pttypeName: row.pttypeName || '',
+        });
+      }
+    }
+
+    return result;
   }
 
   async healthCheck(): Promise<{ ok: boolean; message: string }> {

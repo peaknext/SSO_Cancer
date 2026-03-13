@@ -44,4 +44,10 @@ export interface IHisClient {
 
   /** Test connectivity / configuration */
   healthCheck(): Promise<{ ok: boolean; message: string }>;
+
+  /** Batch lookup pttype for OPD visits by VN (DB client only) */
+  batchLookupPttype?(vns: string[]): Promise<Map<string, { pttype: string; pttypeName: string }>>;
+
+  /** Batch lookup pttype for IPD admissions by AN (DB client only) */
+  batchLookupPttypeByAn?(ans: string[]): Promise<Map<string, { pttype: string; pttypeName: string }>>;
 }

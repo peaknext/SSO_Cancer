@@ -373,6 +373,8 @@ export class HisIntegrationService implements OnModuleInit {
         serviceType: visit.serviceType || null,
         prescriptionTime: visit.prescriptionTime ? new Date(visit.prescriptionTime) : null,
         dayCover: visit.dayCover || null,
+        pttype: visit.pttype || null,
+        pttypeName: visit.pttypeName || null,
         resolvedSiteId,
         patientId,
       },
@@ -864,6 +866,8 @@ export class HisIntegrationService implements OnModuleInit {
           clinicCode: freshVisit.clinicCode || null,
           billNo: freshVisit.billNo || freshVisit.receiptNo || null,
           // Do NOT overwrite visitType from HIS — it's ovstist (OPD visit status), not OPD/IPD
+          pttype: freshVisit.pttype || null,
+          pttypeName: freshVisit.pttypeName || null,
           dischargeType: freshVisit.dischargeType || null,
           nextAppointmentDate: freshVisit.nextAppointmentDate ? new Date(freshVisit.nextAppointmentDate) : null,
           serviceClass: freshVisit.serviceClass || null,
@@ -1105,6 +1109,86 @@ export class HisIntegrationService implements OnModuleInit {
     this.logger.log(`Backfill complete: ${medications.length} processed, ${updatedAipn} AIPN codes set, ${updatedDrug} drugs resolved`);
 
     return { processed: medications.length, updatedAipn, updatedDrug };
+  }
+
+  /**
+   * Backfill pttype for existing visits that don't have it.
+   * Queries HOSxP DB for OPD (by VN) and IPD (by AN) visits.
+   */
+  async backfillPttype(): Promise<{
+    totalWithout: number;
+    updatedOpd: number;
+    updatedIpd: number;
+  }> {
+    if (!this.hisClient.batchLookupPttype) {
+      throw new BadRequestException(
+        'Backfill pttype ใช้ได้เฉพาะโหมด HOSxP DB เท่านั้น (ไม่รองรับ REST API)',
+      );
+    }
+
+    // 1. Find OPD visits without pttype
+    const opdVisits = await this.prisma.patientVisit.findMany({
+      where: { pttype: null, visitType: '1' },
+      select: { id: true, vn: true },
+    });
+
+    // 2. Find IPD visits without pttype
+    const ipdVisits = await this.prisma.patientVisit.findMany({
+      where: { pttype: null, visitType: '2', an: { not: null } },
+      select: { id: true, vn: true, an: true },
+    });
+
+    const totalWithout = opdVisits.length + ipdVisits.length;
+    let updatedOpd = 0;
+    let updatedIpd = 0;
+
+    // 3. Batch lookup OPD pttype (chunks of 500)
+    if (opdVisits.length > 0) {
+      const CHUNK = 500;
+      for (let i = 0; i < opdVisits.length; i += CHUNK) {
+        const chunk = opdVisits.slice(i, i + CHUNK);
+        const vns = chunk.map((v) => v.vn);
+        const pttypeMap = await this.hisClient.batchLookupPttype!(vns);
+
+        for (const visit of chunk) {
+          const info = pttypeMap.get(visit.vn);
+          if (info) {
+            await this.prisma.patientVisit.update({
+              where: { id: visit.id },
+              data: { pttype: info.pttype, pttypeName: info.pttypeName },
+            });
+            updatedOpd++;
+          }
+        }
+      }
+    }
+
+    // 4. Batch lookup IPD pttype (chunks of 500)
+    if (ipdVisits.length > 0 && this.hisClient.batchLookupPttypeByAn) {
+      const CHUNK = 500;
+      for (let i = 0; i < ipdVisits.length; i += CHUNK) {
+        const chunk = ipdVisits.slice(i, i + CHUNK);
+        const ans = chunk.map((v) => v.an!);
+        const pttypeMap = await this.hisClient.batchLookupPttypeByAn!(ans);
+
+        for (const visit of chunk) {
+          const info = pttypeMap.get(visit.an!);
+          if (info) {
+            await this.prisma.patientVisit.update({
+              where: { id: visit.id },
+              data: { pttype: info.pttype, pttypeName: info.pttypeName },
+            });
+            updatedIpd++;
+          }
+        }
+      }
+    }
+
+    this.logger.log(
+      `Backfill pttype: ${totalWithout} visits without pttype, updated ${updatedOpd} OPD + ${updatedIpd} IPD`,
+    );
+
+    return { totalWithout, updatedOpd, updatedIpd };
   }
 
   /** Fix OPD visits that were incorrectly saved with visitType='2' due to HIS ovstist mapping bug.
@@ -1554,6 +1638,8 @@ export class HisIntegrationService implements OnModuleInit {
         drgVersion: admission.drgVersion || null,
         rw: admission.rw ?? null,
         adjRw: admission.adjRw ?? null,
+        pttype: admission.pttype || null,
+        pttypeName: admission.pttypeName || null,
         authCode: admission.authCode || null,
         authDate: admission.authDate ? new Date(admission.authDate) : null,
       },

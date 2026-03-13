@@ -116,6 +116,11 @@ export function VisitTimelineEntry({
               IPD
             </Badge>
           )}
+          {visit.pttypeName && (
+            <Badge variant="outline" className="text-[10px] shrink-0 hidden sm:inline-flex">
+              {visit.pttypeName}
+            </Badge>
+          )}
           <CodeBadge code={isIpd && visit.an ? visit.an : visit.vn} copyable />
           {visit.case ? (
             <Badge variant="default" className="text-[10px]">

@@ -63,6 +63,9 @@ export interface Visit {
   hpi: string | null;
   doctorNotes: string | null;
   confirmedAt: string | null;
+  // Insurance type
+  pttype?: string | null;
+  pttypeName?: string | null;
   // IPD fields
   visitType?: string | null;
   an?: string | null;

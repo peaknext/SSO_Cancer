@@ -407,6 +407,8 @@ model PatientVisit {
   serviceType         String?   @map("service_type") @db.VarChar(5)
   prescriptionTime    DateTime? @map("prescription_time") @db.Timestamptz(6)
   dayCover            String?   @map("day_cover") @db.VarChar(10)
+  pttype              String?   @db.VarChar(10)
+  pttypeName          String?   @map("pttype_name") @db.VarChar(100)
   resolvedSiteId      Int?      @map("resolved_site_id")
   confirmedProtocolId Int?      @map("confirmed_protocol_id")
   confirmedRegimenId  Int?      @map("confirmed_regimen_id")

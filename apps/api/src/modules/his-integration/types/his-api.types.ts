@@ -77,7 +77,8 @@ export interface HisVisit {
   secondaryDiagnoses?: string;
   hpi?: string;
   doctorNotes?: string;
-  pttype?: string; // Patient insurance type (10=SSO, 90=self-pay)
+  pttype?: string; // Patient insurance type code (e.g. 02=SSO)
+  pttypeName?: string; // Insurance type name (e.g. ประกันสังคม)
   // SSOP 0.93 fields
   billNo?: string;
   visitType?: string;
@@ -281,6 +282,8 @@ export interface HisAdmission {
   drgVersion?: string;
   rw?: number;
   adjRw?: number;
+  pttype?: string; // Patient insurance type code (e.g. 02=SSO)
+  pttypeName?: string; // Insurance type name (e.g. ประกันสังคม)
   authCode?: string;
   authDate?: string;
   diagnoses: HisDiagnosis[];

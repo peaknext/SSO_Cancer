@@ -118,6 +118,9 @@ interface VisitDetail {
   confirmedProtocol: { id: number; protocolCode: string; nameEnglish: string; nameThai: string | null } | null;
   confirmedRegimen: { id: number; regimenCode: string; regimenName: string } | null;
   confirmedByUser: { id: number; fullName: string; fullNameThai: string | null } | null;
+  // Insurance type
+  pttype?: string | null;
+  pttypeName?: string | null;
   // IPD fields
   visitType?: string | null;
   admitTime?: string | null;
@@ -915,6 +918,9 @@ export default function ProtocolAnalysisPage() {
                   )}
                   <span>วันที่: {new Date(visitDetail.visitDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                   <span>วินิจฉัยหลัก: <span className="font-mono text-foreground">{visitDetail.primaryDiagnosis}</span></span>
+                  {visitDetail.pttypeName && (
+                    <span>สิทธิ์: <span className="text-foreground/80">{visitDetail.pttypeName}</span></span>
+                  )}
                 </div>
                 {visitDetail.secondaryDiagnoses && (
                   <p className="text-xs text-foreground/60 mt-1">
