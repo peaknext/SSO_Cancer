@@ -984,11 +984,11 @@ export default function ProtocolAnalysisPage() {
                       </div>
                       <div>
                         <span className="text-foreground/50">RW</span>
-                        <p className="font-mono font-medium text-foreground">{visitDetail.rw != null ? visitDetail.rw.toFixed(4) : '-'}</p>
+                        <p className="font-mono font-medium text-foreground">{visitDetail.rw != null ? Number(visitDetail.rw).toFixed(4) : '-'}</p>
                       </div>
                       <div>
                         <span className="text-foreground/50">AdjRW</span>
-                        <p className="font-mono font-medium text-foreground">{visitDetail.adjRw != null ? visitDetail.adjRw.toFixed(4) : '-'}</p>
+                        <p className="font-mono font-medium text-foreground">{visitDetail.adjRw != null ? Number(visitDetail.adjRw).toFixed(4) : '-'}</p>
                       </div>
                     </div>
                   )}
