@@ -43,9 +43,10 @@ import {
 import { cn } from '@/lib/utils';
 
 // ─── Manual Version ─────────────────────────────────────────
-const MANUAL_VERSION = '1.0.2';
-const MANUAL_DATE = '11 มีนาคม 2569';
+const MANUAL_VERSION = '1.1.0';
+const MANUAL_DATE = '14 มีนาคม 2569';
 const MANUAL_CHANGELOG = [
+  { version: '1.1.0', date: '14 มีนาคม 2569', description: 'เพิ่ม: ส่งออก CIPN, โปรไฟล์ผู้ใช้, บำรุงรักษาระบบ/Bulk Import, ลบ Visit/ผู้ป่วย, ตัวกรอง Z510/Z511, สิทธิ์ประกัน (pttype), metastatic fallback, OPD/IPD แยกคอลัมน์' },
   { version: '1.0.2', date: '11 มีนาคม 2569', description: 'เพิ่มเอกสาร: HIS Nightly Scan, บันทึกสแกน HIS, ตัวกรองนำเข้าอัจฉริยะ, SSOP Export smart filtering พร้อมสถานะเรียกเก็บ' },
   { version: '1.0.1', date: '9 มีนาคม 2569', description: 'แก้ไขข้อมูลแดชบอร์ด (กราฟ/ตาราง/ตัวกรอง) ให้ตรงกับระบบจริง, ระบุสถานะ SSOP Export' },
   { version: '1.0.0', date: '8 มีนาคม 2569', description: 'เวอร์ชันแรก — ครอบคลุมทุกฟีเจอร์ของระบบ' },
@@ -70,16 +71,19 @@ function RoleTable() {
   const features = [
     { name: 'ดูแดชบอร์ดและข้อมูลทั่วไป', viewer: true, editor: true, admin: true },
     { name: 'ดูรายละเอียดผู้ป่วย/โปรโตคอล/ยา', viewer: true, editor: true, admin: true },
-    { name: 'เพิ่ม/แก้ไข/ลบ ข้อมูลผู้ป่วย', viewer: false, editor: true, admin: true },
+    { name: 'จัดการโปรไฟล์ส่วนตัว', viewer: true, editor: true, admin: true },
+    { name: 'เพิ่ม/แก้ไข ข้อมูลผู้ป่วย', viewer: false, editor: true, admin: true },
+    { name: 'ลบ Visit', viewer: false, editor: true, admin: true },
     { name: 'เพิ่ม/แก้ไข/ลบ โปรโตคอล สูตรยา ยา', viewer: false, editor: true, admin: true },
     { name: 'นำเข้าข้อมูล (Import)', viewer: false, editor: true, admin: true },
     { name: 'วิเคราะห์และยืนยันโปรโตคอล', viewer: false, editor: true, admin: true },
     { name: 'ขอคำแนะนำจาก AI', viewer: false, editor: true, admin: true },
-    { name: 'ส่งออก SSOP / Excel', viewer: false, editor: true, admin: true },
+    { name: 'ส่งออก SSOP / CIPN / Excel', viewer: false, editor: true, admin: true },
     { name: 'จัดการผู้ใช้งาน', viewer: false, editor: false, admin: true },
     { name: 'ดูบันทึกกิจกรรม (Audit Log)', viewer: false, editor: false, admin: true },
     { name: 'ดูบันทึกสแกน HIS (Scan Logs)', viewer: false, editor: false, admin: true },
     { name: 'ดาวน์โหลดสำรองข้อมูล', viewer: false, editor: false, admin: true },
+    { name: 'ลบผู้ป่วย / บำรุงรักษาระบบ / Bulk Import', viewer: false, editor: false, admin: true },
   ];
 
   return (
@@ -414,8 +418,9 @@ const sections: Section[] = [
                 { icon: FlaskConical, name: 'สูตรยา', desc: 'ชุดยาที่ใช้ร่วมกัน' },
                 { icon: Microscope, name: 'ตำแหน่งมะเร็ง', desc: 'ข้อมูลอ้างอิง 23 ตำแหน่ง' },
                 { icon: SearchCheck, name: 'วิเคราะห์โปรโตคอล', desc: 'จับคู่การรักษากับมาตรฐาน' },
-                { icon: FileArchive, name: 'ส่งออก SSOP', desc: 'สร้างไฟล์เบิกจ่าย สปส.' },
-                { icon: Settings, name: 'ตั้งค่า', desc: 'ADMIN+ — ผู้ใช้ AI บัญชียา บันทึก สแกน สำรอง' },
+                { icon: FileArchive, name: 'ส่งออก SSOP', desc: 'สร้างไฟล์เบิกจ่าย สปส. (ผู้ป่วยนอก)' },
+                { icon: Receipt, name: 'ส่งออก CIPN', desc: 'สร้างไฟล์เบิกจ่าย สปส. (ผู้ป่วยใน)' },
+                { icon: Settings, name: 'ตั้งค่า', desc: 'ADMIN+ — ผู้ใช้ AI บัญชียา บันทึก สแกน สำรอง บำรุงรักษา' },
               ].map((item) => (
                 <div key={item.name} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm">
                   <item.icon className="h-4 w-4 text-primary shrink-0" />
@@ -558,16 +563,20 @@ const sections: Section[] = [
           <>
             <p className="text-sm text-muted-foreground leading-relaxed">
               หน้ารายการผู้ป่วยแสดงตารางข้อมูลผู้ป่วยทั้งหมด พร้อม HN ชื่อ-สกุล เลขบัตรประชาชน ตำแหน่งมะเร็ง
-              สถานะเคส และจำนวน visit
+              สถานะเคส จำนวน visit แยก OPD/IPD และจำนวน Z51x ของแต่ละประเภท
             </p>
             <div className="my-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-2">วิธีค้นหาผู้ป่วย:</p>
+              <p className="font-medium text-foreground mb-2">วิธีค้นหาและกรองผู้ป่วย:</p>
               <ul className="space-y-1 ml-4 list-disc">
                 <li>พิมพ์ HN, ชื่อ-สกุล, หรือเลขบัตรประชาชนในช่องค้นหา</li>
                 <li>ใช้ตัวกรองตำแหน่งมะเร็ง (Cancer Site filter) เพื่อแสดงเฉพาะผู้ป่วยมะเร็งตำแหน่งนั้น</li>
+                <li>ใช้ตัวกรองชื่อยา (Drug Name) เพื่อค้นหาตามยาที่ได้รับ</li>
+                <li>ใช้ปุ่ม &quot;ยังไม่มีเคส&quot; เพื่อแสดงเฉพาะผู้ป่วยที่ยังไม่มีเคสรักษา</li>
+                <li>กดปุ่ม &quot;ล้างตัวกรอง&quot; เพื่อรีเซ็ตตัวกรองทั้งหมด</li>
                 <li>คลิกที่แถวเพื่อเข้าดูรายละเอียดผู้ป่วย</li>
               </ul>
             </div>
+            <Tip>คอลัมน์ visit แยกเป็น OPD (ผู้ป่วยนอก) และ IPD (ผู้ป่วยใน) พร้อมจำนวน Z51x ของแต่ละประเภท</Tip>
           </>
         ),
       },
@@ -626,12 +635,27 @@ const sections: Section[] = [
               ในหน้ารายละเอียดผู้ป่วย ส่วนล่างแสดง visit ทั้งหมดเรียงตามวันที่ (ล่าสุดอยู่บน)
             </p>
             <div className="my-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">ข้อมูลที่แสดง:</p>
               <ul className="space-y-1 ml-4 list-disc">
-                <li>แต่ละ visit แสดง VN, วันที่, รหัส ICD-10 หลัก</li>
-                <li>กดขยายเพื่อดู: ICD-10 รอง, รายการยาที่ได้รับ (ชื่อยา ปริมาณ หน่วย)</li>
+                <li>แต่ละ visit แสดง VN, วันที่, รหัส ICD-10 หลัก, ป้ายสิทธิ์ประกัน (pttype)</li>
+                <li>visit ผู้ป่วยในจะมีป้าย &quot;IPD&quot; กำกับ พร้อมเลข AN</li>
+                <li>กดขยายเพื่อดู: ICD-10 รอง, รายการยาที่ได้รับ (ชื่อยา ปริมาณ หน่วย), ผลจับคู่โปรโตคอล</li>
                 <li>ระบบจดจำสถานะขยาย/ย่อของแต่ละ visit (เปิดหน้าใหม่ก็ยังเหมือนเดิม)</li>
               </ul>
             </div>
+            <div className="my-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">ตัวกรอง visit:</p>
+              <ul className="space-y-1 ml-4 list-disc">
+                <li><strong>กรองตามเคส</strong> — แสดงเฉพาะ visit ที่อยู่ในเคสที่เลือก หรือแสดงเฉพาะ visit ที่ยังไม่ได้มอบหมายเคส</li>
+                <li><strong>กรองตามสถานะโปรโตคอล</strong> — ยืนยันแล้ว / ยังไม่ยืนยัน</li>
+                <li><strong>กรองตามสถานะเรียกเก็บ</strong> — ยังไม่เรียกเก็บ / รอผล / ผ่าน / ไม่ผ่าน</li>
+              </ul>
+            </div>
+            <div className="my-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">ลบ Visit (EDITOR+):</p>
+              <p>ในแต่ละ visit ที่ขยายอยู่ จะมีปุ่ม &quot;ลบ Visit&quot; สีแดง — เมื่อกดจะมีกล่องยืนยันก่อนลบ การลบจะลบข้อมูลที่เกี่ยวข้องทั้งหมด (ยา, billing claims, AI suggestions)</p>
+            </div>
+            <Warning>ลบผู้ป่วย (SUPER_ADMIN เท่านั้น) — ปุ่มอยู่ที่ส่วนหัวของหน้ารายละเอียดผู้ป่วย จะลบข้อมูลทั้งหมด รวมถึง visits, cases, ยา, billing claims</Warning>
           </>
         ),
       },
@@ -683,8 +707,20 @@ const sections: Section[] = [
             <p className="text-sm text-muted-foreground leading-relaxed">
               ระบบวิเคราะห์โปรโตคอลเป็นหัวใจสำคัญของ SSO Cancer Care ทำหน้าที่จับคู่ข้อมูลการรักษาจริงของผู้ป่วย
               กับโปรโตคอลมาตรฐานของ สปส. โดยวิเคราะห์จากรหัส ICD-10 ยาที่ได้รับ และระยะโรค
-              แล้วเสนอโปรโตคอลที่เหมาะสมพร้อมคะแนนความเข้ากัน
+              แล้วเสนอโปรโตคอลที่เหมาะสมพร้อมคะแนนความเข้ากัน ข้อมูลผู้ป่วยในหน้านี้มาจากการนำเข้าผ่าน HIS
             </p>
+            <div className="my-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">ตัวกรอง (Filter):</p>
+              <ul className="space-y-1 ml-4 list-disc">
+                <li><strong>OPD / IPD</strong> — สลับดูผู้ป่วยนอก (OPD) หรือผู้ป่วยใน (IPD)</li>
+                <li><strong>ตำแหน่งมะเร็ง</strong> — กรองตาม Cancer Site</li>
+                <li><strong>มีรายการยา</strong> — แสดงเฉพาะ visit ที่มียา</li>
+                <li><strong>Z510 (รังสี)</strong> — กรองเฉพาะ visit รังสีรักษา</li>
+                <li><strong>Z511 (เคมี)</strong> — กรองเฉพาะ visit เคมีบำบัด</li>
+                <li><strong>ช่วงวันที่</strong> — กรองตามช่วงวันที่ visit</li>
+              </ul>
+            </div>
+            <Tip>กรณีรหัสวินิจฉัยหลัก (PDx) เป็น C77/C78/C79 (มะเร็งทุติยภูมิ/แพร่กระจาย) ระบบจะค้นหาตำแหน่งมะเร็งปฐมภูมิจากรหัสวินิจฉัยรอง (SDx) โดยอัตโนมัติ เพื่อจับคู่โปรโตคอลได้ถูกต้อง</Tip>
           </>
         ),
       },
@@ -828,8 +864,12 @@ const sections: Section[] = [
         content: (
           <>
             <p className="text-sm text-muted-foreground leading-relaxed mb-2">สิทธิ์: EDITOR ขึ้นไป | ต้องตั้งค่า HIS API ก่อน</p>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+              ระบบรองรับนำเข้าทั้งข้อมูล <strong className="text-foreground">OPD</strong> (ผู้ป่วยนอก — visit) และ <strong className="text-foreground">IPD</strong> (ผู้ป่วยใน — admission)
+              จาก HIS โดยตรง ข้อมูล IPD จะมีเลข AN, วันรับ/จำหน่าย, หัตถการ, และรายการยาจาก billing items
+            </p>
             <StepList steps={[
-              'ค้นหาผู้ป่วย — พิมพ์ HN เลขบัตรประชาชน หรือชื่อผู้ป่วย',
+              'ค้นหาผู้ป่วย — พิมพ์ HN หรือเลขบัตรประชาชน',
               'เลือกช่วงวันที่ ดูจำนวน visit (ทั้งหมด / เกี่ยวกับมะเร็ง / นำเข้าแล้ว / ใหม่)',
               'กด "นำเข้า" — ระบบดึงเฉพาะ visit มะเร็ง (ICD-10: C, D0, Z51) พร้อมรายการยาและเบิกจ่าย',
             ]} />
@@ -841,8 +881,12 @@ const sections: Section[] = [
               สำหรับผู้ป่วยที่มีเคสรักษาอยู่ในระบบ ผลการสแกนแสดงในแดชบอร์ดและดูรายละเอียดได้ที่ตั้งค่า &gt; บันทึกสแกน HIS
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-              <strong className="text-foreground">ตัวกรองนำเข้า:</strong> ตั้งค่าเลือกนำเข้าเฉพาะ visit ที่ต้องการ ได้แก่ วินิจฉัยมะเร็ง (cancer_diag), Z510 (เคมีบำบัด), Z511 (ภูมิคุ้มกันบำบัด)
-              — ตั้งค่าได้ที่หน้า ตั้งค่าระบบ &gt; App Settings (กลุ่ม hospital)
+              <strong className="text-foreground">ตัวกรองนำเข้า:</strong> ตั้งค่าเลือกนำเข้าเฉพาะ visit ที่ต้องการ ได้แก่ วินิจฉัยมะเร็ง (cancer_diag), Z510 (รังสีรักษา), Z511 (เคมีบำบัด)
+              — ตั้งค่าได้ที่หน้า ตั้งค่าระบบ &gt; บันทึกสแกน HIS &gt; ตั้งค่าการสแกน
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+              <strong className="text-foreground">สิทธิ์ประกัน (pttype):</strong> ระบบบันทึกรหัสสิทธิ์ประกันของผู้ป่วยแต่ละ visit อัตโนมัติจาก HIS
+              แสดงเป็นป้ายกำกับในหน้ารายละเอียดผู้ป่วยและวิเคราะห์โปรโตคอล
             </p>
             <Warning>ต้องตั้งค่า URL และ API key ของ HIS ที่หน้า &quot;ตั้งค่าระบบ&quot; ก่อนใช้งาน</Warning>
           </>
@@ -930,6 +974,8 @@ const sections: Section[] = [
               'คลิกปุ่ม "เพิ่มสูตรยา" กรอกชื่อสูตร คำอธิบาย กดบันทึก',
               'เพิ่มยาในสูตร: คลิก "เพิ่มยา" เลือกยา (ค้นหาได้) กรอกขนาด หน่วย เส้นทางการให้',
               'แก้ไข/ลบยาในสูตรได้ตลอดเวลา',
+              'ปิดใช้งาน: กดปุ่ม "ปิดใช้งานสูตรยา" (สีแดง) เพื่อ soft-delete — สูตรยาจะไม่แสดงในรายการปกติ',
+              'เปิดใช้งานกลับ: ในหน้าแก้ไขสูตรยาที่ถูกปิดใช้งาน กดปุ่ม "เปิดใช้งานสูตรยา" (สีเขียว) เพื่อกู้คืน',
             ]} />
           </>
         ),
@@ -1051,6 +1097,125 @@ const sections: Section[] = [
     ],
   },
   {
+    id: 'cipn-export',
+    title: 'ส่งออก CIPN',
+    icon: Receipt,
+    subsections: [
+      {
+        id: 'cipn-overview',
+        title: 'ภาพรวม',
+        content: (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              CIPN คือรูปแบบไฟล์สำหรับเบิกจ่ายค่ารักษาผู้ป่วยใน (IPD) ตามมาตรฐานกรมบัญชีกลาง
+              ระบบสร้างไฟล์ XML สำหรับแต่ละ admission (AN) แล้วรวมเป็น ZIP เข้าถึงได้จากเมนู &quot;ส่งออก CIPN&quot; ใน Sidebar
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+              <strong className="text-foreground">ความแตกต่างจาก SSOP:</strong> SSOP ใช้สำหรับผู้ป่วยนอก (OPD) เบิกกับ สปส.,
+              CIPN ใช้สำหรับผู้ป่วยใน (IPD) แต่ละไฟล์ XML จะมี 4 ส่วน: IPADT (ข้อมูลรับ-จำหน่าย), IPDx (วินิจฉัย),
+              IPOp (หัตถการ), BillItems (รายการเรียกเก็บ)
+            </p>
+            <Tip>สิทธิ์: EDITOR ขึ้นไป — เมนูจะไม่แสดงสำหรับ VIEWER</Tip>
+          </>
+        ),
+      },
+      {
+        id: 'cipn-create-export',
+        title: 'สร้างไฟล์ส่งออก',
+        content: (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-2">ขั้นตอน 3 ขั้น (เหมือน SSOP):</p>
+            <div className="my-3 space-y-4 text-sm text-muted-foreground">
+              <div>
+                <p className="font-medium text-foreground mb-1">ขั้นที่ 1: เลือก Admissions (Select)</p>
+                <p>เลือกช่วงวันที่ ค้นหาด้วย AN/HN/VN/ชื่อผู้ป่วย เลือก admission ที่พร้อมส่งออก (checkbox)
+                  ระบบแสดงเฉพาะ admission ที่มี AN, ข้อมูลผู้ป่วย, และรายการเรียกเก็บ</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-1">ขั้นที่ 2: ตรวจสอบ (Preview)</p>
+                <p>ระบบตรวจสอบข้อมูล แสดงสรุป: จำนวน admission ที่ผ่าน/ไม่ผ่าน และยอดรวมเงิน
+                  รายการที่ไม่ผ่านจะแสดงปัญหา เช่น ไม่มี AN, เลขบัตรประชาชนไม่ครบ 13 หลัก, ไม่มีวินิจฉัย</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-1">ขั้นที่ 3: สร้างไฟล์ (Generate)</p>
+                <p>กดสร้าง ดาวน์โหลด ZIP อัตโนมัติ (encoding Windows-874) แต่ละ admission ได้ 1 ไฟล์ XML
+                  ชื่อ ZIP: {'{hcode}CIPN{เลขงวด5หลัก}.ZIP'}</p>
+              </div>
+            </div>
+          </>
+        ),
+      },
+      {
+        id: 'cipn-export-history',
+        title: 'ประวัติการส่งออก',
+        content: (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              แท็บ &quot;ประวัติ Export&quot; แสดงรายการ batch ที่เคยสร้าง พร้อมเลขงวด วันที่ จำนวน visit ยอดรวม ชื่อไฟล์ ผู้ส่งออก
+              สามารถดาวน์โหลดซ้ำได้ (ระบบเก็บไฟล์ไว้ในฐานข้อมูล)
+            </p>
+            <Tip>เลขงวด CIPN เริ่มต้นที่ 10000 แยกจาก SSOP (เริ่มที่ 1) ตามมาตรฐาน</Tip>
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'profile',
+    title: 'โปรไฟล์ผู้ใช้',
+    icon: Users,
+    subsections: [
+      {
+        id: 'profile-overview',
+        title: 'ภาพรวม',
+        content: (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              หน้าโปรไฟล์ส่วนตัว เข้าถึงได้จากเมนูผู้ใช้ (คลิกชื่อ/avatar มุมบนขวา &gt; &quot;โปรไฟล์&quot;)
+              แสดงข้อมูลส่วนตัว บทบาท อีเมล แผนก/ตำแหน่ง เบอร์โทร
+              ผู้ใช้ทุกบทบาทสามารถเข้าถึงได้
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'profile-edit',
+        title: 'แก้ไขข้อมูลส่วนตัว',
+        content: (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+              กดปุ่ม &quot;แก้ไข&quot; เพื่อเปิดฟอร์มแก้ไขข้อมูล:
+            </p>
+            <StepList steps={[
+              'ชื่อ-นามสกุล (อังกฤษ) — จำเป็น',
+              'ชื่อ-นามสกุล (ไทย) — ไม่บังคับ',
+              'แผนก/หน่วยงาน',
+              'ตำแหน่ง',
+              'เบอร์โทรศัพท์',
+            ]} />
+            <Tip>อีเมลและบทบาทไม่สามารถแก้ไขเองได้ — ต้องติดต่อผู้ดูแลระบบ</Tip>
+          </>
+        ),
+      },
+      {
+        id: 'profile-sessions',
+        title: 'จัดการ Session',
+        content: (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              แสดงรายการ session ที่กำลังใช้งานอยู่ทั้งหมด พร้อม browser, ระบบปฏิบัติการ, IP address,
+              วันเวลาที่ใช้งานล่าสุด session ปัจจุบันจะมี badge &quot;เซสชันนี้&quot; และไม่สามารถเพิกถอนได้
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+              <strong className="text-foreground">เพิกถอน Session:</strong> กดปุ่มลบที่ session อื่น
+              เพื่อบังคับ logout จากอุปกรณ์นั้น เหมาะใช้เมื่อลืม logout จากเครื่องสาธารณะ
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
     id: 'settings',
     title: 'ตั้งค่าระบบ',
     icon: Settings,
@@ -1121,8 +1286,23 @@ const sections: Section[] = [
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
               คลิกขยายแต่ละรายการเพื่อดูรายละเอียดต่อผู้ป่วย: HN, ชื่อ, สถานะ (imported/skipped/error),
               จำนวน visit ที่นำเข้า/ข้าม พร้อมลิงก์ไปหน้ารายละเอียดผู้ป่วย
+              แต่ละรายการสแกนจะแสดง filter chips สรุปตัวกรองที่ใช้ เช่น &quot;Z510 ฉายรังสี&quot;, &quot;Z511 เคมีบำบัด&quot;,
+              &quot;ตำแหน่งมะเร็ง: X ตำแหน่ง&quot;, &quot;เฉพาะมียา&quot;
             </p>
-            <Tip>กรองตามสถานะ (สำเร็จ/ข้อผิดพลาด/กำลังทำงาน) ได้ด้วย dropdown ด้านบน</Tip>
+            <div className="text-sm text-muted-foreground mt-3">
+              <p className="font-medium text-foreground mb-2">ตั้งค่าสแกน (Scan Config):</p>
+              <p className="mb-2">
+                SUPER_ADMIN สามารถตั้งค่าการสแกนอัตโนมัติได้ผ่านแผงตั้งค่า (พับ/ขยายได้):
+              </p>
+              <StepList steps={[
+                'เปิด/ปิดสแกนอัตโนมัติ — เมื่อเปิดจะสแกนทุกวัน 01:00 น.',
+                'เลือกตำแหน่งมะเร็ง — จำกัดเฉพาะตำแหน่งที่ต้องการ หรือนำเข้าทั้งหมด (C, D0)',
+                'Z510 (รังสีรักษา) — นำเข้า visit ที่มีรหัส Z510 ในวินิจฉัย',
+                'Z511 (เคมีบำบัด) — นำเข้า visit ที่มีรหัส Z511 ในวินิจฉัย',
+                'เฉพาะ visit ที่มีรายการยา — กรองเฉพาะ visit ที่มียา',
+              ]} />
+            </div>
+            <Tip>กรองประวัติสแกนตามสถานะ (สำเร็จ/ข้อผิดพลาด/กำลังทำงาน) ได้ด้วย dropdown ด้านบน</Tip>
           </>
         ),
       },
@@ -1150,6 +1330,86 @@ const sections: Section[] = [
               เลือกว่าจะรวม audit log หรือไม่ แนะนำให้สำรองเป็นประจำ (เช่น ทุกสัปดาห์)
             </p>
             <Tip>ส่วนกู้คืน (Restore) สงวนสิทธิ์เฉพาะ SUPER_ADMIN</Tip>
+          </>
+        ),
+      },
+      {
+        id: 'set-maintenance',
+        title: 'บำรุงรักษาระบบ',
+        content: (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-2">สิทธิ์: SUPER_ADMIN เท่านั้น</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              หน้าบำรุงรักษาระบบ (/settings/maintenance) รวมเครื่องมือสำหรับผู้ดูแลระบบ แบ่งเป็นหมวด (พับ/ขยายได้):
+            </p>
+            <div className="my-3 space-y-3 text-sm text-muted-foreground">
+              <div>
+                <p className="font-medium text-foreground">ข้อมูลระบบ (System Diagnostics)</p>
+                <p>เวอร์ชัน, Node.js, สถานะฐานข้อมูล (ขนาด, เวอร์ชัน), ทรัพยากร (memory/CPU)</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">ฐานข้อมูล (Database Maintenance)</p>
+                <p>ขนาดตาราง, query ที่กำลังทำงาน, VACUUM ANALYZE, REINDEX, ยกเลิก query</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">จัดการ Session</p>
+                <p>ดู session ทั้งหมด, ลบ session หมดอายุ, force logout ผู้ใช้ทั้งหมด</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">แคช (Cache)</p>
+                <p>ดูสถานะแคช Dashboard/Settings, ล้างแคชทั้งหมด</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">ทำความสะอาดข้อมูล (Data Cleanup)</p>
+                <p>ลบข้อมูลเก่าตามระยะเวลา: audit log, AI suggestions, ไฟล์ส่งออก, scan log
+                  แต่ละประเภทกำหนดจำนวนวันขั้นต่ำที่เก็บไว้ได้ (เช่น audit log ≥30 วัน, ไฟล์ส่งออก ≥90 วัน)</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">ตรวจสอบความถูกต้องข้อมูล (Integrity Check)</p>
+                <p>ตรวจสอบความสอดคล้องของข้อมูลในฐานข้อมูล แสดงผลเป็น ok/warning/error</p>
+              </div>
+            </div>
+            <Warning>การดำเนินการในหน้านี้อาจมีผลกระทบต่อระบบ — อ่านคำเตือนก่อนกดยืนยันทุกครั้ง</Warning>
+          </>
+        ),
+      },
+      {
+        id: 'set-bulk-import',
+        title: 'Bulk Import (นำเข้าจำนวนมาก)',
+        content: (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-2">สิทธิ์: SUPER_ADMIN เท่านั้น | เส้นทาง: /settings/maintenance/bulk-import</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              นำเข้าข้อมูลผู้ป่วยจำนวนมากจาก HIS API รองรับทั้ง OPD และ IPD ในครั้งเดียว:
+            </p>
+            <div className="my-3 space-y-3 text-sm text-muted-foreground">
+              <div>
+                <p className="font-medium text-foreground">1. ตั้งค่าตัวกรอง</p>
+                <p>เลือกช่วงวันที่ (มี shortcut เดือน/ปี), ตำแหน่งมะเร็ง, วินิจฉัยรอง (Z510/Z511),
+                  คำค้นชื่อยา ระบบแบ่งช่วงวันที่เกิน 31 วันเป็นชุดย่อยอัตโนมัติ</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">2. ค้นหาจาก HIS</p>
+                <p>ส่งคำค้นไป HIS API แสดง progress ทีละชุด ผลลัพธ์หลอมรวมตาม HN (ตัดซ้ำ)</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">3. ตรวจสอบผลลัพธ์ (Preview)</p>
+                <p>แสดงสรุป: ผู้ป่วยทั้งหมด, ผู้ป่วยใหม่ที่ต้องนำเข้า, ที่นำเข้าแล้ว
+                  เลือกดูเฉพาะรายใหม่ได้ พร้อมประมาณเวลา (คำนวณจากจำนวน × 2.4 วินาที)</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">4. นำเข้าอัตโนมัติ</p>
+                <p>ระบบนำเข้าทีละราย (OPD ก่อน แล้ว IPD) มี delay ป้องกันโหลด HIS API
+                  แสดง progress: HN ที่กำลังทำ, ขั้นตอน OPD/IPD, เสร็จแล้ว/ทั้งหมด, ETA
+                  สามารถกดยกเลิกได้ระหว่างทาง</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">5. สรุปผล</p>
+                <p>แสดงจำนวนสำเร็จ/บางส่วน/ล้มเหลว, OPD visits และ IPD admissions ที่นำเข้า, เวลารวม
+                  หากมี error สามารถขยายดูรายละเอียดปัญหาต่อรายได้</p>
+              </div>
+            </div>
+            <Tip>ตัวกรองจะถูกจำไว้แม้ปิดหน้าไปแล้ว (persisted state) ไม่ต้องตั้งค่าใหม่ทุกครั้ง</Tip>
           </>
         ),
       },

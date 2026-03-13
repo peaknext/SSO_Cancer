@@ -587,6 +587,36 @@ export class ImportService {
     return null;
   }
 
+  /** Check if an ICD-10 code is a metastatic (secondary) cancer code (C77x, C78x, C79x) */
+  isMetastaticCode(icdCode: string): boolean {
+    const code = icdCode.replace(/\./g, '').toUpperCase();
+    return /^C7[789]/.test(code);
+  }
+
+  /**
+   * Resolve ICD-10 with fallback to secondary diagnoses for metastatic codes.
+   * When PDx is C77x/C78x/C79x, tries each SDx code to find the primary cancer site.
+   */
+  async resolveIcd10WithFallback(
+    primaryDiagnosis: string,
+    secondaryDiagnoses: string | null,
+  ): Promise<number | null> {
+    // Try primary first
+    const siteId = await this.resolveIcd10(primaryDiagnosis);
+    if (siteId) return siteId;
+
+    // Fallback: if primary is metastatic code, try secondary diagnoses
+    if (this.isMetastaticCode(primaryDiagnosis) && secondaryDiagnoses) {
+      const codes = secondaryDiagnoses.split(',').map((c) => c.trim()).filter(Boolean);
+      for (const code of codes) {
+        const fallbackSiteId = await this.resolveIcd10(code);
+        if (fallbackSiteId) return fallbackSiteId;
+      }
+    }
+
+    return null;
+  }
+
   /**
    * Confirm import: write parsed data to database
    */
@@ -637,8 +667,11 @@ export class ImportService {
           continue;
         }
 
-        // Resolve ICD-10 → CancerSite
-        const resolvedSiteId = await this.resolveIcd10(row.primaryDiagnosis);
+        // Resolve ICD-10 → CancerSite (with metastatic fallback to secondary diagnoses)
+        const resolvedSiteId = await this.resolveIcd10WithFallback(
+          row.primaryDiagnosis,
+          row.secondaryDiagnoses || null,
+        );
 
         // Auto-link to existing patient by HN
         const patientId = hnToPatientId.get(row.hn) ?? null;

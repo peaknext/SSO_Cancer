@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePersistedState } from '@/hooks/use-persisted-state';
-import Link from 'next/link';
 import {
-  Upload,
   Search,
   Calendar,
   Pill,
@@ -22,7 +20,6 @@ import {
   ShieldPlus,
   SearchCheck,
   RefreshCw,
-  Trash2,
   Banknote,
   ClipboardCheck,
   BedDouble,
@@ -246,11 +243,12 @@ export default function ProtocolAnalysisPage() {
   const [selectedVn, setSelectedVn, h3] = usePersistedState<string | null>('pa:vn', null);
   const [filterSiteId, setFilterSiteId, h4] = usePersistedState('pa:filterSite', '');
   const [filterHasMeds, setFilterHasMeds, h5] = usePersistedState('pa:filterMeds', false);
-  const [filterHasZ51, setFilterHasZ51, h6] = usePersistedState('pa:filterZ51', false);
+  const [filterHasZ510, setFilterHasZ510, h6] = usePersistedState('pa:filterZ510', false);
+  const [filterHasZ511, setFilterHasZ511, h6b] = usePersistedState('pa:filterZ511', false);
   const [filterDateFrom, setFilterDateFrom, h7] = usePersistedState('pa:dateFrom', '');
   const [filterDateTo, setFilterDateTo, h8] = usePersistedState('pa:dateTo', '');
   const [viewMode, setViewMode, hViewMode] = usePersistedState<'opd' | 'ipd'>('pa:viewMode', 'opd');
-  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7 && h8 && hViewMode;
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h6b && h7 && h8 && hViewMode;
 
   // Pre-select HN/VN from URL params (from "ดูการวิเคราะห์" link in patient detail)
   const appliedUrlParams = useRef(false);
@@ -286,18 +284,12 @@ export default function ProtocolAnalysisPage() {
   const [cancerSites, setCancerSites] = useState<CancerSite[]>([]);
   const [confirmingMatch, setConfirmingMatch] = useState<MatchResult | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const hasActiveFilters = !!filterSiteId || filterHasMeds || filterHasZ51 || !!filterDateFrom || !!filterDateTo;
+  const hasActiveFilters = !!filterSiteId || filterHasMeds || filterHasZ510 || filterHasZ511 || !!filterDateFrom || !!filterDateTo;
 
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestionResponse | null>(null);
   const [aiCached, setAiCached] = useState(false);
   const [loadingAi, setLoadingAi] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-
-  const [clearDialogOpen, setClearDialogOpen] = useState(false);
-  const [clearLoading, setClearLoading] = useState(false);
-  const [clearStats, setClearStats] = useState<{
-    imports: number; visits: number; medications: number; aiSuggestions: number;
-  } | null>(null);
 
   const user = useAuthStore((s) => s.user);
   const canConfirm = user && ['SUPER_ADMIN', 'ADMIN', 'EDITOR'].includes(user.role);
@@ -320,7 +312,8 @@ export default function ProtocolAnalysisPage() {
       if (patientSearch) params.set('search', patientSearch);
       if (filterSiteId) params.set('cancerSiteId', filterSiteId);
       if (filterHasMeds) params.set('hasMedications', 'true');
-      if (filterHasZ51) params.set('hasZ51', 'true');
+      if (filterHasZ510) params.set('hasZ510', 'true');
+      if (filterHasZ511) params.set('hasZ511', 'true');
       if (filterDateFrom) params.set('visitDateFrom', filterDateFrom);
       if (filterDateTo) params.set('visitDateTo', filterDateTo);
       params.set('visitType', viewMode === 'opd' ? '1' : '2');
@@ -334,7 +327,7 @@ export default function ProtocolAnalysisPage() {
     } finally {
       setLoadingPatients(false);
     }
-  }, [patientSearch, filterSiteId, filterHasMeds, filterHasZ51, filterDateFrom, filterDateTo, hasActiveFilters, filtersHydrated, viewMode]);
+  }, [patientSearch, filterSiteId, filterHasMeds, filterHasZ510, filterHasZ511, filterDateFrom, filterDateTo, hasActiveFilters, filtersHydrated, viewMode]);
 
   useEffect(() => {
     fetchPatients();
@@ -368,7 +361,8 @@ export default function ProtocolAnalysisPage() {
     const params = new URLSearchParams({ limit: '100', sortOrder: 'desc' });
     if (filterSiteId) params.set('cancerSiteId', filterSiteId);
     if (filterHasMeds) params.set('hasMedications', 'true');
-    if (filterHasZ51) params.set('hasZ51', 'true');
+    if (filterHasZ510) params.set('hasZ510', 'true');
+    if (filterHasZ511) params.set('hasZ511', 'true');
     if (filterDateFrom) params.set('visitDateFrom', filterDateFrom);
     if (filterDateTo) params.set('visitDateTo', filterDateTo);
     params.set('visitType', viewMode === 'opd' ? '1' : '2');
@@ -386,7 +380,7 @@ export default function ProtocolAnalysisPage() {
       })
       .catch(() => setVisits([]))
       .finally(() => setLoadingVisits(false));
-  }, [selectedHn, filterSiteId, filterHasMeds, filterHasZ51, filterDateFrom, filterDateTo, filtersHydrated, viewMode]);
+  }, [selectedHn, filterSiteId, filterHasMeds, filterHasZ510, filterHasZ511, filterDateFrom, filterDateTo, filtersHydrated, viewMode]);
 
   // ─── Fetch visit detail + match ────────────────────────────
   useEffect(() => {
@@ -438,7 +432,8 @@ export default function ProtocolAnalysisPage() {
   const clearFilters = () => {
     setFilterSiteId('');
     setFilterHasMeds(false);
-    setFilterHasZ51(false);
+    setFilterHasZ510(false);
+    setFilterHasZ511(false);
     setFilterDateFrom('');
     setFilterDateTo('');
   };
@@ -565,46 +560,6 @@ export default function ProtocolAnalysisPage() {
     }
   };
 
-  // ─── Clear all visit data handlers ────────────────────────────
-  const handleClearClick = async () => {
-    try {
-      const stats = await apiClient.get<{
-        imports: number; visits: number; medications: number; aiSuggestions: number;
-      }>('/protocol-analysis/imports/stats');
-      setClearStats(stats);
-      setClearDialogOpen(true);
-    } catch {
-      toast.error('ไม่สามารถดึงข้อมูลสถิติได้');
-    }
-  };
-
-  const handleClearAll = async () => {
-    setClearLoading(true);
-    try {
-      const result = await apiClient.delete<{
-        deletedImports: number; deletedVisits: number; deletedMedications: number; deletedAiSuggestions: number;
-      }>('/protocol-analysis/imports/all');
-      toast.success(`ลบสำเร็จ — ${result.deletedImports} ชุดนำเข้า, ${result.deletedVisits} visits`);
-      setClearDialogOpen(false);
-      setPatients([]);
-      setVisits([]);
-      setSelectedHn(null);
-      setSelectedVn(null);
-      setVisitDetail(null);
-      setMatchResults([]);
-      setStageInference(null);
-      setNonProtocolChemoDrugs([]);
-      setAiSuggestion(null);
-      setIsEmpty(true);
-      fetchPatients();
-    } catch (err: unknown) {
-      const msg = (err as { error?: { message?: string } })?.error?.message || 'ลบข้อมูลไม่สำเร็จ';
-      toast.error(msg);
-    } finally {
-      setClearLoading(false);
-    }
-  };
-
   // ─── Empty state ───────────────────────────────────────────
   if (isEmpty && !loadingPatients) {
     return (
@@ -614,15 +569,8 @@ export default function ProtocolAnalysisPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-foreground mb-2">วิเคราะห์โปรโตคอล</h1>
         <p className="text-muted-foreground mb-6 max-w-md">
-          เริ่มต้นโดยนำเข้าข้อมูลผู้ป่วยจากไฟล์ Excel เพื่อวิเคราะห์
-          และจับคู่กับโปรโตคอลการรักษาในระบบ
+          ยังไม่มีข้อมูลผู้ป่วย — นำเข้าจาก HIS เพื่อวิเคราะห์และจับคู่กับโปรโตคอลการรักษาในระบบ
         </p>
-        <Button asChild>
-          <Link href="/protocol-analysis/import">
-            <Upload className="h-4 w-4 mr-2" />
-            นำเข้าข้อมูล
-          </Link>
-        </Button>
       </div>
     );
   }
@@ -643,25 +591,6 @@ export default function ProtocolAnalysisPage() {
           <p className="text-sm text-muted-foreground">
             เลือก HN &rarr; {viewMode === 'opd' ? 'VN' : 'AN'} เพื่อดูรายละเอียดและจับคู่โปรโตคอล
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {user?.role === 'SUPER_ADMIN' && patients.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleClearClick}
-              className="text-destructive border-destructive/30 hover:bg-destructive/10"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              ล้างข้อมูล
-            </Button>
-          )}
-          <Button asChild size="sm">
-            <Link href="/protocol-analysis/import">
-              <Upload className="h-4 w-4 mr-1" />
-              นำเข้าข้อมูล
-            </Link>
-          </Button>
         </div>
       </div>
 
@@ -718,11 +647,20 @@ export default function ProtocolAnalysisPage() {
         <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
           <input
             type="checkbox"
-            checked={filterHasZ51}
-            onChange={(e) => setFilterHasZ51(e.target.checked)}
+            checked={filterHasZ510}
+            onChange={(e) => setFilterHasZ510(e.target.checked)}
             className="rounded border-input accent-primary h-3.5 w-3.5"
           />
-          Z51x (รักษา)
+          Z510 (รังสี)
+        </label>
+        <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={filterHasZ511}
+            onChange={(e) => setFilterHasZ511(e.target.checked)}
+            className="rounded border-input accent-primary h-3.5 w-3.5"
+          />
+          Z511 (เคมี)
         </label>
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground shrink-0">จาก:</span>
@@ -1610,21 +1548,6 @@ export default function ProtocolAnalysisPage() {
         loading={confirmLoading}
       />
 
-      {/* Clear all visit data dialog */}
-      <ConfirmDialog
-        open={clearDialogOpen}
-        onConfirm={handleClearAll}
-        onCancel={() => setClearDialogOpen(false)}
-        title="ล้างข้อมูล Visit ทั้งหมด"
-        description={
-          clearStats
-            ? `คุณกำลังจะลบข้อมูลทั้งหมด:\n• ${clearStats.imports} ชุดนำเข้า\n• ${clearStats.visits} visits\n• ${clearStats.medications} รายการยา\n• ${clearStats.aiSuggestions} AI suggestions\n\nข้อมูลที่ลบไปจะไม่สามารถกู้คืนได้`
-            : ''
-        }
-        confirmText="ลบทั้งหมด"
-        variant="destructive"
-        loading={clearLoading}
-      />
     </div>
   );
 }

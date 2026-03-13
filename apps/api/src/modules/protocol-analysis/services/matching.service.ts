@@ -330,7 +330,15 @@ export class MatchingService {
     let siteName = visit.resolvedSite?.nameThai || visit.resolvedSite?.nameEnglish || '';
 
     if (!siteId) {
-      siteId = await this.importService.resolveIcd10(visit.primaryDiagnosis);
+      siteId = await this.importService.resolveIcd10WithFallback(
+        visit.primaryDiagnosis,
+        visit.secondaryDiagnoses,
+      );
+      if (siteId && this.importService.isMetastaticCode(visit.primaryDiagnosis)) {
+        stageInference.reasons.push(
+          `PDx ${visit.primaryDiagnosis} เป็นรหัส metastasis → ใช้ SDx เพื่อระบุตำแหน่งมะเร็งปฐมภูมิ`,
+        );
+      }
       if (siteId) {
         const site = await this.prisma.cancerSite.findUnique({
           where: { id: siteId },
@@ -361,7 +369,11 @@ export class MatchingService {
             lineOfTherapy: null, isPreferred: false,
             matchedDrugs: [], totalDrugs: 0, drugMatchRatio: 0,
           },
-          reasons: [`ไม่พบตำแหน่งมะเร็งจากรหัส ICD-10: ${visit.primaryDiagnosis}`],
+          reasons: [
+            this.importService.isMetastaticCode(visit.primaryDiagnosis)
+              ? `รหัส ${visit.primaryDiagnosis} เป็นรหัสมะเร็งทุติยภูมิ (metastasis) แต่ไม่พบรหัสมะเร็งปฐมภูมิในการวินิจฉัยรอง`
+              : `ไม่พบตำแหน่งมะเร็งจากรหัส ICD-10: ${visit.primaryDiagnosis}`,
+          ],
           stageMatch: null,
           inferredStage: stageInference.inferredStage,
           treatmentModality: stageInference.treatmentModality,

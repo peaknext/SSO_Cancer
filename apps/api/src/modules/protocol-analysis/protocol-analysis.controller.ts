@@ -194,7 +194,7 @@ export class ProtocolAnalysisController {
   @Get('patients')
   @ApiOperation({ summary: 'List unique HNs with visit count' })
   async listPatients(@Query() query: QueryPatientsDto) {
-    const { page = 1, limit = 25, search, cancerSiteId, hasMedications, hasZ51, visitDateFrom, visitDateTo, visitType } = query;
+    const { page = 1, limit = 25, search, cancerSiteId, hasMedications, hasZ510, hasZ511, visitDateFrom, visitDateTo, visitType } = query;
 
     const where: Prisma.PatientVisitWhereInput = {};
     if (search) {
@@ -209,8 +209,24 @@ export class ProtocolAnalysisController {
         { medicationsRaw: { not: 'ไม่มีรายการยา' } },
       ];
     }
-    if (hasZ51 === true) {
-      where.secondaryDiagnoses = { contains: 'Z51', mode: 'insensitive' };
+    // Z510 = radiation (รังสีรักษา), Z511 = chemotherapy (เคมีบำบัด)
+    if (hasZ510 && hasZ511) {
+      where.OR = [
+        { primaryDiagnosis: { startsWith: 'Z510' } },
+        { secondaryDiagnoses: { contains: 'Z510', mode: 'insensitive' } },
+        { primaryDiagnosis: { startsWith: 'Z511' } },
+        { secondaryDiagnoses: { contains: 'Z511', mode: 'insensitive' } },
+      ];
+    } else if (hasZ510) {
+      where.OR = [
+        { primaryDiagnosis: { startsWith: 'Z510' } },
+        { secondaryDiagnoses: { contains: 'Z510', mode: 'insensitive' } },
+      ];
+    } else if (hasZ511) {
+      where.OR = [
+        { primaryDiagnosis: { startsWith: 'Z511' } },
+        { secondaryDiagnoses: { contains: 'Z511', mode: 'insensitive' } },
+      ];
     }
     if (visitDateFrom || visitDateTo) {
       where.visitDate = {};
@@ -254,7 +270,7 @@ export class ProtocolAnalysisController {
     @Param('hn') hn: string,
     @Query() query: QueryVisitsDto,
   ) {
-    const { page = 1, limit = 50, sortOrder = 'desc', cancerSiteId, hasMedications, hasZ51, visitDateFrom, visitDateTo, visitType } = query;
+    const { page = 1, limit = 50, sortOrder = 'desc', cancerSiteId, hasMedications, hasZ510, hasZ511, visitDateFrom, visitDateTo, visitType } = query;
 
     const where: Prisma.PatientVisitWhereInput = { hn: normalizeHn(hn) };
     if (cancerSiteId) {
@@ -266,8 +282,24 @@ export class ProtocolAnalysisController {
         { medicationsRaw: { not: 'ไม่มีรายการยา' } },
       ];
     }
-    if (hasZ51 === true) {
-      where.secondaryDiagnoses = { contains: 'Z51', mode: 'insensitive' };
+    // Z510 = radiation (รังสีรักษา), Z511 = chemotherapy (เคมีบำบัด)
+    if (hasZ510 && hasZ511) {
+      where.OR = [
+        { primaryDiagnosis: { startsWith: 'Z510' } },
+        { secondaryDiagnoses: { contains: 'Z510', mode: 'insensitive' } },
+        { primaryDiagnosis: { startsWith: 'Z511' } },
+        { secondaryDiagnoses: { contains: 'Z511', mode: 'insensitive' } },
+      ];
+    } else if (hasZ510) {
+      where.OR = [
+        { primaryDiagnosis: { startsWith: 'Z510' } },
+        { secondaryDiagnoses: { contains: 'Z510', mode: 'insensitive' } },
+      ];
+    } else if (hasZ511) {
+      where.OR = [
+        { primaryDiagnosis: { startsWith: 'Z511' } },
+        { secondaryDiagnoses: { contains: 'Z511', mode: 'insensitive' } },
+      ];
     }
     if (visitDateFrom || visitDateTo) {
       where.visitDate = {};

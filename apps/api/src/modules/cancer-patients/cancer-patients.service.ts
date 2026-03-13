@@ -56,6 +56,7 @@ export class CancerPatientsService {
       isActive,
       drugName,
       visitType,
+      noCases,
     } = query;
 
     const where: Prisma.PatientWhereInput = {};
@@ -83,6 +84,11 @@ export class CancerPatientsService {
     // Filter patients who have visits of specified type
     if (visitType) {
       where.visits = { some: { visitType } };
+    }
+
+    // Filter patients with no active cases
+    if (noCases) {
+      where.cases = { none: { status: 'ACTIVE', isActive: true } };
     }
 
     // Filter by drug name: find HNs that have visits with matching resolved drug
@@ -141,25 +147,51 @@ export class CancerPatientsService {
     // Aggregate visit stats by HN (natural key)
     const hns = patients.map((p) => p.hn);
 
-    const [visitCounts, z51Counts, billingStatusRows] = hns.length
+    // Visit counts split by OPD/IPD with visitType + Z51 breakdown
+    const visitTypeFilter = visitType ? { visitType } : {};
+    const [
+      opdCounts,
+      ipdCounts,
+      opdZ51Counts,
+      ipdZ51Counts,
+      billingStatusRows,
+    ] = hns.length
       ? await Promise.all([
-          // 1. Total visit counts per HN
+          // OPD visit counts per HN
           this.prisma.patientVisit.groupBy({
             by: ['hn'],
-            where: { hn: { in: hns }, ...(visitType ? { visitType } : {}) },
+            where: { hn: { in: hns }, visitType: '1', ...visitTypeFilter },
             _count: true,
           }),
-          // 2. Z51x visit counts per HN (chemo/immunotherapy encounters)
+          // IPD visit counts per HN
+          this.prisma.patientVisit.groupBy({
+            by: ['hn'],
+            where: { hn: { in: hns }, visitType: '2', ...visitTypeFilter },
+            _count: true,
+          }),
+          // OPD Z51x visit counts per HN
           this.prisma.patientVisit.groupBy({
             by: ['hn'],
             where: {
               hn: { in: hns },
+              visitType: '1',
               secondaryDiagnoses: { contains: 'Z51', mode: 'insensitive' },
-              ...(visitType ? { visitType } : {}),
+              ...visitTypeFilter,
             },
             _count: true,
           }),
-          // 3. Billing status counts — latest claim per visit
+          // IPD Z51x visit counts per HN
+          this.prisma.patientVisit.groupBy({
+            by: ['hn'],
+            where: {
+              hn: { in: hns },
+              visitType: '2',
+              secondaryDiagnoses: { contains: 'Z51', mode: 'insensitive' },
+              ...visitTypeFilter,
+            },
+            _count: true,
+          }),
+          // Billing status counts — latest claim per visit
           this.prisma.$queryRawUnsafe<
             { hn: string; status: string; count: number }[]
           >(
@@ -177,10 +209,14 @@ export class CancerPatientsService {
             hns,
           ),
         ])
-      : [[], [], []];
+      : [[], [], [], [], []];
 
-    const hnVisitMap = new Map(visitCounts.map((vc) => [vc.hn, vc._count]));
-    const hnZ51Map = new Map(z51Counts.map((vc) => [vc.hn, vc._count]));
+    const toMap = (arr: { hn: string; _count: number }[]) =>
+      new Map(arr.map((v) => [v.hn, v._count]));
+    const opdMap = toMap(opdCounts);
+    const ipdMap = toMap(ipdCounts);
+    const opdZ51Map = toMap(opdZ51Counts);
+    const ipdZ51Map = toMap(ipdZ51Counts);
 
     // Build billing status map: HN → { PENDING, APPROVED, REJECTED }
     const billingMap = new Map<string, Record<string, number>>();
@@ -191,12 +227,18 @@ export class CancerPatientsService {
 
     const data = patients.map((p) => {
       const bc = billingMap.get(p.hn);
+      const opd = opdMap.get(p.hn) ?? 0;
+      const ipd = ipdMap.get(p.hn) ?? 0;
       return {
         ...p,
         _count: {
           ...p._count,
-          visits: hnVisitMap.get(p.hn) ?? 0,
-          z51Visits: hnZ51Map.get(p.hn) ?? 0,
+          visits: opd + ipd,
+          opdVisits: opd,
+          ipdVisits: ipd,
+          z51Visits: (opdZ51Map.get(p.hn) ?? 0) + (ipdZ51Map.get(p.hn) ?? 0),
+          opdZ51: opdZ51Map.get(p.hn) ?? 0,
+          ipdZ51: ipdZ51Map.get(p.hn) ?? 0,
         },
         _billingCounts: {
           pending: bc?.PENDING ?? 0,

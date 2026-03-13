@@ -37,4 +37,10 @@ export class QueryPatientsDto extends PaginationQueryDto {
   @Type(() => Boolean)
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ description: 'กรองเฉพาะผู้ป่วยที่ยังไม่มี case' })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  noCases?: boolean;
 }

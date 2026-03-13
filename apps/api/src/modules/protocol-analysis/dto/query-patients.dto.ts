@@ -22,11 +22,17 @@ export class QueryPatientsDto extends PaginationQueryDto {
   @IsBoolean()
   hasMedications?: boolean;
 
-  @ApiPropertyOptional({ description: 'Filter to patients with Z51x (treatment encounter) in secondary diagnoses' })
+  @ApiPropertyOptional({ description: 'Filter to patients with Z510 (radiation) in diagnoses' })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
-  hasZ51?: boolean;
+  hasZ510?: boolean;
+
+  @ApiPropertyOptional({ description: 'Filter to patients with Z511 (chemotherapy) in diagnoses' })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  hasZ511?: boolean;
 
   @ApiPropertyOptional({ description: 'Filter visits from this date (YYYY-MM-DD)', example: '2025-01-01' })
   @IsOptional()

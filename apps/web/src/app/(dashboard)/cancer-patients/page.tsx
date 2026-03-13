@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Plus, Download, Pill, X, FileArchive, Search } from 'lucide-react';
+import {
+  Users, Download, Pill, X, FileArchive, Search,
+  FilterX, UserX,
+} from 'lucide-react';
 import { usePaginatedApi } from '@/hooks/use-api';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DataTable, type Column } from '@/components/shared/data-table';
@@ -43,7 +46,15 @@ interface Patient {
   isActive: boolean;
   createdAt: string;
   cases: PatientCase[];
-  _count?: { visits: number; z51Visits: number; cases: number };
+  _count?: {
+    visits: number;
+    opdVisits: number;
+    ipdVisits: number;
+    z51Visits: number;
+    opdZ51: number;
+    ipdZ51: number;
+    cases: number;
+  };
   _billingCounts?: { pending: number; approved: number; rejected: number };
 }
 
@@ -73,9 +84,10 @@ export default function CancerPatientsPage() {
   const [sourceHospitalId, setSourceHospitalId, h6] = usePersistedState('cp-sourceHospitalId', '');
   const [drugName, setDrugName, h7] = usePersistedState('cp-drugName', '');
   const [visitType, setVisitType, h8] = usePersistedState('cp-visitType', '');
+  const [noCases, setNoCases, h9] = usePersistedState('cp-noCases', '');
   const [drugNameLocal, setDrugNameLocal] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
-  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7 && h8;
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7 && h8 && h9;
 
   // Sync local drug input from persisted state after hydration
   useEffect(() => {
@@ -93,6 +105,21 @@ export default function CancerPatientsPage() {
     }, 350);
   }, [setDrugName, setPage]);
 
+  const hasActiveFilters = !!(
+    search || cancerSiteId || sourceHospitalId || drugName || visitType || noCases
+  );
+
+  const clearAllFilters = useCallback(() => {
+    setSearch('');
+    setCancerSiteId('');
+    setSourceHospitalId('');
+    setDrugName('');
+    setDrugNameLocal('');
+    setVisitType('');
+    setNoCases('');
+    setPage(1);
+  }, [setSearch, setCancerSiteId, setSourceHospitalId, setDrugName, setVisitType, setNoCases, setPage]);
+
   const { data: response, isLoading } = usePaginatedApi<PatientsResponse>('/cancer-patients', {
     page,
     limit: 25,
@@ -101,6 +128,7 @@ export default function CancerPatientsPage() {
     sourceHospitalId: sourceHospitalId || undefined,
     drugName: drugName || undefined,
     visitType: visitType || undefined,
+    noCases: noCases === 'true' ? 'true' : undefined,
     sortBy,
     sortOrder,
   }, { enabled: filtersHydrated });
@@ -138,7 +166,7 @@ export default function CancerPatientsPage() {
     setPage(1);
   }, []);
 
-  const columns: Column<Patient>[] = [
+  const columns: Column<Patient>[] = useMemo(() => [
     {
       key: 'hn',
       header: 'HN',
@@ -177,18 +205,37 @@ export default function CancerPatientsPage() {
       },
     },
     {
-      key: 'visits',
-      header: 'Visits (ทั้งหมด/Z51x)',
-      className: 'text-center w-32',
+      key: 'opdVisits',
+      header: 'OPD',
+      className: 'text-center w-20',
       headerClassName: 'text-center',
       render: (row) => {
-        const total = row._count?.visits ?? 0;
-        const z51 = row._count?.z51Visits ?? 0;
+        const opd = row._count?.opdVisits ?? 0;
+        const z51 = row._count?.opdZ51 ?? 0;
+        if (opd === 0) return <span className="text-muted-foreground/40">—</span>;
         return (
           <div className="font-mono tabular-nums text-sm flex items-center justify-center gap-0.5">
-            <span className="text-foreground">{total}</span>
-            <span className="text-muted-foreground/60">/</span>
+            <span className="text-foreground">{opd}</span>
+            <span className="text-muted-foreground/40">/</span>
             <span className="text-primary font-semibold">{z51}</span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'ipdVisits',
+      header: 'IPD',
+      className: 'text-center w-20',
+      headerClassName: 'text-center',
+      render: (row) => {
+        const ipd = row._count?.ipdVisits ?? 0;
+        const z51 = row._count?.ipdZ51 ?? 0;
+        if (ipd === 0) return <span className="text-muted-foreground/40">—</span>;
+        return (
+          <div className="font-mono tabular-nums text-sm flex items-center justify-center gap-0.5">
+            <span className="text-foreground">{ipd}</span>
+            <span className="text-muted-foreground/40">/</span>
+            <span className="text-blue-600 dark:text-blue-400 font-semibold">{z51}</span>
           </div>
         );
       },
@@ -196,14 +243,14 @@ export default function CancerPatientsPage() {
     {
       key: 'billing',
       header: 'การเรียกเก็บ',
-      className: 'w-44',
+      className: 'w-40',
       render: (row) => {
         const bc = row._billingCounts;
         const p = bc?.pending ?? 0;
         const a = bc?.approved ?? 0;
         const r = bc?.rejected ?? 0;
         if (p === 0 && a === 0 && r === 0) {
-          return <span className="text-muted-foreground text-xs">—</span>;
+          return <span className="text-muted-foreground/40">—</span>;
         }
         return (
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -226,7 +273,11 @@ export default function CancerPatientsPage() {
         );
       },
     },
-  ];
+  ], []);
+
+  // Active filter count (for badge)
+  const filterCount = [search, cancerSiteId, sourceHospitalId, drugName, visitType, noCases]
+    .filter(Boolean).length;
 
   return (
     <div className="space-y-6">
@@ -261,62 +312,101 @@ export default function CancerPatientsPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 glass-light rounded-xl p-3">
-        <SearchInput
-          value={search}
-          onChange={handleSearch}
-          placeholder="ค้นหา HN / เลขบัตร / ชื่อ..."
-          className="w-full sm:w-[320px]"
-        />
-        <Select
-          value={cancerSiteId}
-          onChange={(v) => { setCancerSiteId(v); setPage(1); }}
-          options={siteOptions}
-          placeholder="ตำแหน่งมะเร็งทั้งหมด"
-          className="w-full sm:w-60"
-        />
-        <Select
-          value={sourceHospitalId}
-          onChange={(v) => { setSourceHospitalId(v); setPage(1); }}
-          options={hospitalOptions}
-          placeholder="รพ.ต้นทางทั้งหมด"
-          className="w-full sm:w-70"
-        />
-        <div className="relative w-full sm:w-55">
-          <Pill className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/60 pointer-events-none" />
-          <Input
-            value={drugNameLocal}
-            onChange={(e) => handleDrugNameChange(e.target.value)}
-            placeholder="กรองตามชื่อยา..."
-            className={cn(
-              'pl-9 pr-8',
-              drugNameLocal && 'ring-1 ring-primary/30 border-primary/40',
-            )}
+      {/* Filters */}
+      <div className="glass-light rounded-xl p-3 space-y-2">
+        <div className="flex flex-wrap gap-3">
+          <SearchInput
+            value={search}
+            onChange={handleSearch}
+            placeholder="ค้นหา HN / เลขบัตร / ชื่อ..."
+            className="w-full sm:w-75"
           />
-          {drugNameLocal && (
+          <Select
+            value={cancerSiteId}
+            onChange={(v) => { setCancerSiteId(v); setPage(1); }}
+            options={siteOptions}
+            placeholder="ตำแหน่งมะเร็งทั้งหมด"
+            className="w-full sm:w-56"
+          />
+          <Select
+            value={sourceHospitalId}
+            onChange={(v) => { setSourceHospitalId(v); setPage(1); }}
+            options={hospitalOptions}
+            placeholder="รพ.ต้นทางทั้งหมด"
+            className="w-full sm:w-64"
+          />
+          <div className="relative w-full sm:w-52">
+            <Pill className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/60 pointer-events-none" />
+            <Input
+              value={drugNameLocal}
+              onChange={(e) => handleDrugNameChange(e.target.value)}
+              placeholder="กรองตามชื่อยา..."
+              className={cn(
+                'pl-9 pr-8',
+                drugNameLocal && 'ring-1 ring-primary/30 border-primary/40',
+              )}
+            />
+            {drugNameLocal && (
+              <button
+                onClick={() => handleDrugNameChange('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                type="button"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <Select
+            value={visitType}
+            onChange={(v) => { setVisitType(v); setPage(1); }}
+            options={[
+              { value: '1', label: 'OPD ผู้ป่วยนอก' },
+              { value: '2', label: 'IPD ผู้ป่วยใน' },
+            ]}
+            placeholder="ประเภท Visit ทั้งหมด"
+            className="w-full sm:w-44"
+          />
+        </div>
+
+        {/* Quick filter pills + clear */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => { setNoCases(noCases === 'true' ? '' : 'true'); setPage(1); }}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border',
+              noCases === 'true'
+                ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700'
+                : 'bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground',
+            )}
+          >
+            <UserX className="h-3 w-3" />
+            ยังไม่มีเคส
+          </button>
+
+          {hasActiveFilters && (
             <button
-              onClick={() => handleDrugNameChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              type="button"
+              onClick={clearAllFilters}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 border border-destructive/30 transition-colors"
             >
-              <X className="h-3.5 w-3.5" />
+              <FilterX className="h-3 w-3" />
+              ล้างตัวกรอง
+              {filterCount > 1 && (
+                <span className="inline-flex items-center justify-center rounded-full bg-destructive/15 px-1.5 min-w-4.5 text-[10px]">
+                  {filterCount}
+                </span>
+              )}
             </button>
           )}
+
+          {/* Column legend */}
+          <div className="ml-auto hidden sm:flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span>คอลัมน์ OPD/IPD = <span className="font-mono">ทั้งหมด</span><span className="mx-0.5">/</span><span className="font-mono text-primary">Z51x</span></span>
+          </div>
         </div>
-        <Select
-          value={visitType}
-          onChange={(v) => { setVisitType(v); setPage(1); }}
-          options={[
-            { value: '1', label: 'OPD ผู้ป่วยนอก' },
-            { value: '2', label: 'IPD ผู้ป่วยใน' },
-          ]}
-          placeholder="ประเภท Visit ทั้งหมด"
-          className="w-full sm:w-48"
-        />
       </div>
 
       {isLoading ? (
-        <TableSkeleton rows={10} cols={5} />
+        <TableSkeleton rows={10} cols={6} />
       ) : (
         <DataTable
           columns={columns}
@@ -331,7 +421,7 @@ export default function CancerPatientsPage() {
           rowKey={(r) => r.id}
           onRowClick={(r) => router.push(`/cancer-patients/${r.id}`)}
           emptyTitle="ไม่พบผู้ป่วย"
-          emptyDescription="No patients found matching your criteria"
+          emptyDescription="ลองปรับตัวกรองหรือค้นหาด้วยคำอื่น"
         />
       )}
 

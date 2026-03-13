@@ -317,9 +317,6 @@ export class HisIntegrationService implements OnModuleInit {
     // M-06 fix: Sanitize ICD-10 codes from HIS before processing
     const sanitizedPrimaryDx = sanitizeIcd10(visit.primaryDiagnosis);
 
-    // Resolve ICD-10 → CancerSite (read-only lookup, OK outside tx)
-    const resolvedSiteId = await this.importService.resolveIcd10(sanitizedPrimaryDx);
-
     // Normalize diagnosis codes
     const primaryDx = sanitizedPrimaryDx.replace(/\./g, '').toUpperCase();
     // Secondary diagnoses are comma-separated — sanitize each code individually
@@ -330,6 +327,9 @@ export class HisIntegrationService implements OnModuleInit {
           .filter(Boolean)
           .join(',')
       : null;
+
+    // Resolve ICD-10 → CancerSite (with metastatic fallback to secondary diagnoses)
+    const resolvedSiteId = await this.importService.resolveIcd10WithFallback(sanitizedPrimaryDx, secondaryDx);
 
     // Build medicationsRaw from structured array (for protocol matching compatibility)
     const meds = visit.medications ?? [];
@@ -823,7 +823,6 @@ export class HisIntegrationService implements OnModuleInit {
 
     // 3. Prepare updated fields
     const sanitizedPrimaryDx = sanitizeIcd10(freshVisit.primaryDiagnosis);
-    const resolvedSiteId = await this.importService.resolveIcd10(sanitizedPrimaryDx);
     const primaryDx = sanitizedPrimaryDx.replace(/\./g, '').toUpperCase();
     const secondaryDx = freshVisit.secondaryDiagnoses
       ? freshVisit.secondaryDiagnoses
@@ -832,6 +831,7 @@ export class HisIntegrationService implements OnModuleInit {
           .filter(Boolean)
           .join(',')
       : null;
+    const resolvedSiteId = await this.importService.resolveIcd10WithFallback(sanitizedPrimaryDx, secondaryDx);
     const meds = freshVisit.medications ?? [];
     const medicationsRaw = meds.length > 0
       ? meds
@@ -1591,8 +1591,8 @@ export class HisIntegrationService implements OnModuleInit {
     }
     const secondaryDx = secondaryCodes.length > 0 ? secondaryCodes.join(',') : null;
 
-    // 3. Resolve ICD-10 → CancerSite
-    const resolvedSiteId = await this.importService.resolveIcd10(primaryDx);
+    // 3. Resolve ICD-10 → CancerSite (with metastatic fallback to secondary diagnoses)
+    const resolvedSiteId = await this.importService.resolveIcd10WithFallback(primaryDx, secondaryDx);
 
     // 4. Build medicationsRaw from drug billing items (IPD has no separate medications array)
     const allBillingItems = admission.billingItems ?? [];
