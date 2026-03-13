@@ -987,12 +987,25 @@ export class HisIntegrationService implements OnModuleInit {
       : [];
     const existingHnMap = new Map(existingPatients.map((p) => [p.hn, p.id]));
 
+    // 4b. Count imported visits per HN (for "new only" filtering on frontend)
+    const visitCounts = normalizedHns.length > 0
+      ? await this.prisma.patientVisit.groupBy({
+          by: ['hn'],
+          where: { hn: { in: normalizedHns } },
+          _count: true,
+        })
+      : [];
+    const importedCountMap = new Map(
+      visitCounts.map((vc) => [vc.hn, typeof vc._count === 'number' ? vc._count : 0]),
+    );
+
     // Map matchingVisitCount → totalVisitCount for frontend compatibility
     return results.map((p) => ({
       ...p,
       totalVisitCount: p.matchingVisitCount ?? p.totalVisitCount,
       existsInSystem: existingHnMap.has(normalizeHn(p.hn)),
       existingPatientId: existingHnMap.get(normalizeHn(p.hn)) ?? null,
+      importedVisitCount: importedCountMap.get(normalizeHn(p.hn)) ?? 0,
     }));
   }
 

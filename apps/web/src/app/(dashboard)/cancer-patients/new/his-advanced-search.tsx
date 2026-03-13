@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Search, AlertCircle, Calendar, Filter } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Search, AlertCircle, Calendar, Filter, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
@@ -22,6 +23,8 @@ interface HisAdvancedSearchProps {
   previewing: boolean;
   /** HN → patientId map of patients imported from this session */
   importedPatients?: Map<string, number>;
+  /** Called after bulk import completes with HN → patientId map */
+  onBulkImportComplete?: (importedMap: Map<string, number>) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -48,6 +51,7 @@ export function HisAdvancedSearch({
   importingHn,
   previewing,
   importedPatients,
+  onBulkImportComplete,
 }: HisAdvancedSearchProps) {
   const defaults = getDefaultDateRange();
 
@@ -68,6 +72,15 @@ export function HisAdvancedSearch({
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Selection + bulk import state
+  const [selectedHns, setSelectedHns] = useState<Set<string>>(new Set());
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{
+    total: number;
+    completed: number;
+    current?: string;
+  } | null>(null);
 
   // Apply imported patient updates to results
   const effectiveResults = useMemo(() => {
@@ -117,11 +130,85 @@ export function HisAdvancedSearch({
 
   const canSearch = dateValidation.valid && !searching;
 
+  // ─── Selection handlers ──────────────────────────────────────────────
+
+  const toggleSelect = useCallback((hn: string) => {
+    setSelectedHns((prev) => {
+      const next = new Set(prev);
+      if (next.has(hn)) next.delete(hn);
+      else next.add(hn);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback((pageHns: string[]) => {
+    setSelectedHns((prev) => {
+      const allSelected = pageHns.every((hn) => prev.has(hn));
+      const next = new Set(prev);
+      if (allSelected) {
+        pageHns.forEach((hn) => next.delete(hn));
+      } else {
+        pageHns.forEach((hn) => next.add(hn));
+      }
+      return next;
+    });
+  }, []);
+
+  // ─── Bulk import handler ─────────────────────────────────────────────
+
+  const handleBulkImport = useCallback(async () => {
+    const hns = Array.from(selectedHns);
+    if (hns.length === 0) return;
+
+    setBulkImporting(true);
+    const importedMap = new Map<string, number>();
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < hns.length; i++) {
+      const hn = hns[i];
+      setBulkProgress({ total: hns.length, completed: i, current: hn });
+      try {
+        const params = new URLSearchParams();
+        if (dateFrom) params.set('from', dateFrom);
+        if (dateTo) params.set('to', dateTo);
+        const qs = params.toString();
+        const result = await apiClient.post<{
+          patientId: number;
+          importedVisits: number;
+        }>(`/his-integration/import/${encodeURIComponent(hn)}${qs ? `?${qs}` : ''}`);
+        importedMap.set(hn, result.patientId);
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    setBulkProgress({ total: hns.length, completed: hns.length });
+
+    if (failCount > 0) {
+      toast.warning(`นำเข้าสำเร็จ ${successCount}/${hns.length} ราย`, {
+        description: `${failCount} ราย ล้มเหลว`,
+      });
+    } else {
+      toast.success(`นำเข้า ${successCount} ราย สำเร็จ`);
+    }
+
+    // Notify parent + clear selection
+    onBulkImportComplete?.(importedMap);
+    setSelectedHns(new Set());
+    setBulkImporting(false);
+    setBulkProgress(null);
+  }, [selectedHns, dateFrom, dateTo, onBulkImportComplete]);
+
+  // ─── Search handler ──────────────────────────────────────────────────
+
   const handleSearch = async () => {
     if (!canSearch) return;
     setSearching(true);
     setSearchError(null);
     setHasSearched(true);
+    setSelectedHns(new Set()); // Clear selection on new search
 
     try {
       const secondaryDiagCodes: string[] = [];
@@ -276,13 +363,67 @@ export function HisAdvancedSearch({
           </div>
         )}
 
+        {/* Action bar: selection count + bulk import button */}
+        {effectiveResults.length > 0 && (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-sm text-muted-foreground">
+              {selectedHns.size > 0 && (
+                <span className="font-medium text-foreground">
+                  เลือกแล้ว {selectedHns.size} ราย
+                </span>
+              )}
+            </div>
+            {selectedHns.size > 0 && (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={handleBulkImport}
+                disabled={bulkImporting || previewing}
+              >
+                {bulkImporting ? (
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                นำเข้าข้อมูลที่เลือกไว้ ({selectedHns.size})
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Bulk import progress */}
+        {bulkProgress && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                กำลังนำเข้า {bulkProgress.completed}/{bulkProgress.total}
+                {bulkProgress.current && (
+                  <span className="ml-1.5 text-foreground">(HN: {bulkProgress.current})</span>
+                )}
+              </span>
+              <span>{Math.round((bulkProgress.completed / bulkProgress.total) * 100)}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${(bulkProgress.completed / bulkProgress.total) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Results */}
         <PatientSearchResults
           results={effectiveResults}
           onSelect={onSelectPatient}
           onImportAll={onImportAll}
           importingHn={importingHn}
-          disabled={previewing}
+          disabled={previewing || bulkImporting}
+          showNewOnlyFilter
+          selectable
+          selectedHns={selectedHns}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={toggleSelectAll}
         />
 
         {/* No results */}

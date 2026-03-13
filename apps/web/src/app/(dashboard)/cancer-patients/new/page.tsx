@@ -179,6 +179,18 @@ export default function PatientCreatePage() {
   // Handlers
   // =====================================================
 
+  /** Handle bulk import completion from advanced search */
+  const handleBulkImportComplete = useCallback(
+    (importedMap: Map<string, number>) => {
+      setAdvImportedPatients((prev) => {
+        const next = new Map(prev);
+        importedMap.forEach((patientId, hn) => next.set(hn, patientId));
+        return next;
+      });
+    },
+    [],
+  );
+
   /** When a patient is selected from advanced search, load preview */
   const handleAdvancedSelectPatient = useCallback(
     async (patient: HisPatient) => {
@@ -575,6 +587,7 @@ export default function PatientCreatePage() {
             importingHn={importingHn}
             previewing={searching}
             importedPatients={advImportedPatients}
+            onBulkImportComplete={handleBulkImportComplete}
           />
         )}
 

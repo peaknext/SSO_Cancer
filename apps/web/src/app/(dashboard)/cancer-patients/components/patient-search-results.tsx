@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,7 @@ export interface HisPatient {
   matchingVisitCount?: number;
   existsInSystem?: boolean;
   existingPatientId?: number | null;
+  importedVisitCount?: number;
 }
 
 interface PatientSearchResultsProps {
@@ -30,6 +32,13 @@ interface PatientSearchResultsProps {
   onImportAll?: (patient: HisPatient) => void;
   importingHn?: string | null;
   disabled?: boolean;
+  /** Show "new only" filter checkbox */
+  showNewOnlyFilter?: boolean;
+  /** Enable per-row checkboxes for multi-select */
+  selectable?: boolean;
+  selectedHns?: Set<string>;
+  onToggleSelect?: (hn: string) => void;
+  onToggleSelectAll?: (pageHns: string[]) => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -55,9 +64,15 @@ export function PatientSearchResults({
   onImportAll,
   importingHn,
   disabled,
+  showNewOnlyFilter,
+  selectable,
+  selectedHns,
+  onToggleSelect,
+  onToggleSelectAll,
 }: PatientSearchResultsProps) {
   const [filter, setFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [showNewOnly, setShowNewOnly] = useState(false);
   const prevResultsLenRef = useRef(results.length);
 
   // Reset page only when filter changes or result count changes (new search),
@@ -71,43 +86,81 @@ export function PatientSearchResults({
 
   useEffect(() => {
     setPage(1);
-  }, [filter]);
+  }, [filter, showNewOnly]);
 
   const filtered = useMemo(() => {
-    if (!filter.trim()) return results;
-    const q = filter.toLowerCase().trim();
-    return results.filter(
-      (p) =>
-        p.fullName.toLowerCase().includes(q) ||
-        p.hn.toLowerCase().includes(q) ||
-        (p.citizenId && p.citizenId.includes(q)),
-    );
-  }, [results, filter]);
+    let list = results;
+    // "New only" filter: show new patients OR patients with potential new visits
+    if (showNewOnly) {
+      list = list.filter((p) => {
+        if (!p.existsInSystem) return true;
+        return (p.matchingVisitCount ?? 0) > (p.importedVisitCount ?? 0);
+      });
+    }
+    // Text filter
+    if (filter.trim()) {
+      const q = filter.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          p.fullName.toLowerCase().includes(q) ||
+          p.hn.toLowerCase().includes(q) ||
+          (p.citizenId && p.citizenId.includes(q)),
+      );
+    }
+    return list;
+  }, [results, filter, showNewOnly]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const allCurrentSelected = selectable && paged.length > 0 && paged.every((p) => selectedHns?.has(p.hn));
 
   if (results.length === 0) return null;
 
   return (
     <div className="space-y-2">
-      {/* Header: count + quick filter */}
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground shrink-0">
-          พบ {filtered.length === results.length ? results.length : `${filtered.length}/${results.length}`} ผลลัพธ์
-        </p>
-        {results.length > PAGE_SIZE && (
-          <div className="relative flex-1 max-w-55">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-            <input
-              type="text"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="กรอง ชื่อ/HN..."
-              className="w-full rounded-md border border-input bg-background pl-7 pr-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-        )}
+      {/* Toolbar: new-only filter + count + text filter */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-4">
+          {showNewOnlyFilter && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showNewOnly}
+                onChange={(e) => setShowNewOnly(e.target.checked)}
+                className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              />
+              <span className="text-xs">แสดงเฉพาะรายใหม่/รายที่มี visit ใหม่</span>
+            </label>
+          )}
+          <p className="text-xs text-muted-foreground shrink-0">
+            พบ {filtered.length === results.length ? results.length : `${filtered.length}/${results.length}`} ผลลัพธ์
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {selectable && onToggleSelectAll && (
+            <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={!!allCurrentSelected}
+                onChange={() => onToggleSelectAll(paged.map((p) => p.hn))}
+                className="h-4 w-4 rounded border-input text-primary focus:ring-primary/30"
+              />
+              เลือกทั้งหมด
+            </label>
+          )}
+          {results.length > PAGE_SIZE && (
+            <div className="relative flex-1 max-w-55">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+              <input
+                type="text"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="กรอง ชื่อ/HN..."
+                className="w-full rounded-md border border-input bg-background pl-7 pr-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Patient list */}
@@ -115,8 +168,23 @@ export function PatientSearchResults({
         {paged.map((p) => (
           <div
             key={p.hn}
-            className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex items-center justify-between gap-4"
+            className={cn(
+              'w-full text-left px-4 py-3 transition-colors flex items-center justify-between gap-4',
+              selectable && selectedHns?.has(p.hn) ? 'bg-primary/5' : 'hover:bg-muted/50',
+            )}
           >
+            {/* Checkbox */}
+            {selectable && onToggleSelect && (
+              <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={selectedHns?.has(p.hn) ?? false}
+                  onChange={() => onToggleSelect(p.hn)}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary/30"
+                  disabled={disabled || importingHn === p.hn}
+                />
+              </div>
+            )}
             <button
               className="min-w-0 flex-1 text-left"
               onClick={() => onSelect(p)}
@@ -150,6 +218,9 @@ export function PatientSearchResults({
                 )}
                 {p.matchingVisitCount == null && p.totalVisitCount != null && (
                   <span>{p.totalVisitCount} visits</span>
+                )}
+                {p.importedVisitCount != null && p.importedVisitCount > 0 && (
+                  <span className="text-emerald-600 dark:text-emerald-400">นำเข้าแล้ว {p.importedVisitCount}</span>
                 )}
               </div>
             </button>
