@@ -27,6 +27,7 @@ import {
   ClipboardCheck,
   BedDouble,
   Scissors,
+  Stethoscope,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -661,22 +662,32 @@ export default function ProtocolAnalysisPage() {
         </div>
       </div>
 
-      {/* OPD / IPD tab switcher */}
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant={viewMode === 'opd' ? 'default' : 'outline'}
+      {/* OPD / IPD segmented control */}
+      <div className="inline-flex items-center rounded-lg bg-muted/50 p-1 gap-0.5">
+        <button
           onClick={() => { setViewMode('opd'); setSelectedHn(null); setSelectedVn(null); }}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
+            viewMode === 'opd'
+              ? 'bg-primary text-white shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-white/50 dark:hover:bg-white/8',
+          )}
         >
+          <Stethoscope className="h-3.5 w-3.5" />
           OPD ผู้ป่วยนอก
-        </Button>
-        <Button
-          size="sm"
-          variant={viewMode === 'ipd' ? 'default' : 'outline'}
+        </button>
+        <button
           onClick={() => { setViewMode('ipd'); setSelectedHn(null); setSelectedVn(null); }}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
+            viewMode === 'ipd'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-white/50 dark:hover:bg-white/8',
+          )}
         >
+          <BedDouble className="h-3.5 w-3.5" />
           IPD ผู้ป่วยใน
-        </Button>
+        </button>
       </div>
 
       {/* Filter bar */}

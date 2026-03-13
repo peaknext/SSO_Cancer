@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   X,
   FlaskConical,
+  BedDouble,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,8 @@ import { cn } from '@/lib/utils';
 import { HisPatientCard } from '../components/his-patient-card';
 import { HisVisitTimeline } from '../components/his-visit-timeline';
 import { HisAdvancedSearch } from './his-advanced-search';
+import { HisAdmissionSummary } from '../components/his-admission-summary';
+import type { IpdPreviewResult } from '../components/his-admission-summary';
 import type { HisPatient } from '../components/patient-search-results';
 import type { VisitCompleteness } from '../components/his-completeness-badge';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -154,6 +157,11 @@ export default function PatientCreatePage() {
   // Track which HNs have been imported from advanced search (HN → patientId)
   const [advImportedPatients, setAdvImportedPatients] = useState<Map<string, number>>(new Map());
 
+  // IPD state
+  const [ipdPreview, setIpdPreview] = useState<IpdPreviewResult | null>(null);
+  const [ipdLoading, setIpdLoading] = useState(false);
+  const [ipdImporting, setIpdImporting] = useState(false);
+
   // General error
   const [error, setError] = useState<string | null>(null);
 
@@ -179,6 +187,7 @@ export default function PatientCreatePage() {
       setSearching(true);
       setSearchError(null);
       setError(null);
+      setIpdPreview(null);
       try {
         const result = await apiClient.get<HisSearchPreviewResult>(
           `/his-integration/search-preview?q=${encodeURIComponent(q)}&type=hn`,
@@ -186,6 +195,11 @@ export default function PatientCreatePage() {
         setSearchResult(result);
         setImportedVns(new Set());
         setStep('results');
+        // Fetch IPD preview in parallel (fire-and-forget)
+        apiClient
+          .get<IpdPreviewResult>(`/his-integration/ipd/preview/${encodeURIComponent(q)}`)
+          .then(setIpdPreview)
+          .catch(() => setIpdPreview(null));
       } catch (err: any) {
         const msg = err?.error?.message || err?.message || 'ไม่สามารถดึงข้อมูลจาก HIS ได้';
         setSearchError(msg);
@@ -244,6 +258,7 @@ export default function PatientCreatePage() {
     setSearching(true);
     setSearchError(null);
     setError(null);
+    setIpdPreview(null);
     try {
       const result = await apiClient.get<HisSearchPreviewResult>(
         `/his-integration/search-preview?q=${encodeURIComponent(q)}`,
@@ -251,6 +266,15 @@ export default function PatientCreatePage() {
       setSearchResult(result);
       setImportedVns(new Set());
       setStep('results');
+      // Fetch IPD preview in parallel (fire-and-forget)
+      if (result.patient?.hn) {
+        apiClient
+          .get<IpdPreviewResult>(
+            `/his-integration/ipd/preview/${encodeURIComponent(result.patient.hn)}`,
+          )
+          .then(setIpdPreview)
+          .catch(() => setIpdPreview(null));
+      }
     } catch (err: any) {
       const msg = err?.error?.message || err?.message || 'ไม่สามารถค้นหาจาก HIS ได้';
       setSearchError(msg);
@@ -369,6 +393,39 @@ export default function PatientCreatePage() {
     },
     [searchResult, router],
   );
+
+  /** Bulk import all IPD admissions */
+  const handleImportAllIpd = useCallback(async () => {
+    if (!searchResult?.patient?.hn) return;
+    const hn = searchResult.patient.hn;
+    setIpdImporting(true);
+    try {
+      const result = await apiClient.post<{
+        patientId: number;
+        importedVisits: number;
+      }>(`/his-integration/ipd/import/${encodeURIComponent(hn)}`);
+      if (result.importedVisits === 0) {
+        toast.info('ไม่พบ admission ใหม่ที่ยังไม่เคยนำเข้า');
+      } else {
+        toast.success(`นำเข้า ${result.importedVisits} admission ผู้ป่วยในสำเร็จ`, {
+          action: {
+            label: 'ดูข้อมูลผู้ป่วย',
+            onClick: () => router.push(`/cancer-patients/${result.patientId}`),
+          },
+        });
+      }
+      // Refresh IPD preview
+      apiClient
+        .get<IpdPreviewResult>(`/his-integration/ipd/preview/${encodeURIComponent(hn)}`)
+        .then(setIpdPreview)
+        .catch(() => {});
+    } catch (err: any) {
+      const msg = err?.error?.message || err?.message || 'ไม่สามารถนำเข้าข้อมูล IPD ได้';
+      toast.error('นำเข้า IPD ล้มเหลว', { description: msg });
+    } finally {
+      setIpdImporting(false);
+    }
+  }, [searchResult, router]);
 
   const handleManualSubmit = async (values: PatientFormValues) => {
     try {
@@ -571,7 +628,7 @@ export default function PatientCreatePage() {
               existingPatientId={searchResult.existingPatientId}
             />
 
-            {/* Visit timeline with summary + per-visit import + batch buttons */}
+            {/* OPD Visit timeline with summary + per-visit import + batch buttons */}
             <HisVisitTimeline
               visits={searchResult.visits}
               summary={searchResult.summary}
@@ -584,6 +641,27 @@ export default function PatientCreatePage() {
               importingAll={importingHn !== null}
               onBatchSync={undefined}
             />
+
+            {/* IPD Admission section */}
+            <div className="border-t border-border/60 pt-5">
+              {ipdLoading ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                  กำลังดึงข้อมูล IPD...
+                </div>
+              ) : ipdPreview ? (
+                <HisAdmissionSummary
+                  preview={ipdPreview}
+                  onImportAll={handleImportAllIpd}
+                  importing={ipdImporting}
+                />
+              ) : (
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  <BedDouble className="h-5 w-5 mx-auto mb-1 opacity-40" />
+                  ไม่พบข้อมูล Admission ผู้ป่วยใน
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
