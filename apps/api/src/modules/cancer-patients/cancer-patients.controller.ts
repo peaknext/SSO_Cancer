@@ -102,6 +102,13 @@ export class CancerPatientsController {
     return this.service.deactivate(id);
   }
 
+  @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'ลบผู้ป่วยถาวร พร้อม visits, cases, billing (SUPER_ADMIN only)' })
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    return this.service.remove(id);
+  }
+
   // ─── Case Management ──────────────────────────────────────────────────────
 
   @Post(':id/cases')

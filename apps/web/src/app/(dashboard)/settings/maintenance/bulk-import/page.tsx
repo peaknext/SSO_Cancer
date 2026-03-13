@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Users,
   Info,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { CancerSiteMultiSelect } from '@/components/shared/cancer-site-multi-select';
 import { DrugMultiSelect } from '@/components/shared/drug-multi-select';
 import { type HisPatient } from '@/app/(dashboard)/cancer-patients/components/patient-search-results';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -1040,6 +1042,209 @@ export default function BulkImportPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* ─── Purge by Import Date (SUPER_ADMIN only) ──────────────────────── */}
+      {user?.role === 'SUPER_ADMIN' && <PurgeByDateSection />}
     </div>
+  );
+}
+
+// ─── Purge by Import Date Section ─────────────────────────────────────────────
+
+interface PurgePreview {
+  date: string;
+  visitCount: number;
+  importCount: number;
+  patientCount: number;
+  batchCount: number;
+}
+
+function PurgeByDateSection() {
+  const [expanded, setExpanded] = useState(false);
+  const [purgeDate, setPurgeDate] = useState('');
+  const [preview, setPreview] = useState<PurgePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [purgeLoading, setPurgeLoading] = useState(false);
+  const [purgeResult, setPurgeResult] = useState<{
+    deletedVisits: number;
+    deletedImports: number;
+    deletedPatients: number;
+  } | null>(null);
+
+  const handlePreview = useCallback(async () => {
+    if (!purgeDate) return;
+    setPreviewLoading(true);
+    setPreview(null);
+    setPurgeResult(null);
+    try {
+      const data = await apiClient.get<PurgePreview>(
+        `/his-integration/purge-by-date/preview?date=${purgeDate}`,
+      );
+      setPreview(data);
+    } catch {
+      toast.error('ไม่สามารถดึงข้อมูล preview ได้');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [purgeDate]);
+
+  const handlePurge = useCallback(async () => {
+    if (!purgeDate) return;
+    setPurgeLoading(true);
+    try {
+      const data = await apiClient.post<{
+        deletedVisits: number;
+        deletedImports: number;
+        deletedPatients: number;
+      }>('/his-integration/purge-by-date', { date: purgeDate });
+      setPurgeResult(data);
+      setPreview(null);
+      setShowConfirm(false);
+      toast.success(
+        `ลบสำเร็จ: ${data.deletedVisits} visits, ${data.deletedPatients} ผู้ป่วย`,
+      );
+    } catch {
+      toast.error('ไม่สามารถลบข้อมูลได้');
+    } finally {
+      setPurgeLoading(false);
+    }
+  }, [purgeDate]);
+
+  const formatPurgeDate = (d: string) => {
+    if (!d) return '';
+    const date = new Date(d);
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear() + 543;
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  return (
+    <Card className="border-destructive/30">
+      <CardHeader
+        className="cursor-pointer select-none"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <CardTitle className="flex items-center gap-2 text-sm font-medium text-destructive">
+          <Trash2 className="h-4 w-4" />
+          ล้างข้อมูลนำเข้า
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 ml-auto transition-transform',
+              expanded && 'rotate-180',
+            )}
+          />
+        </CardTitle>
+      </CardHeader>
+
+      {expanded && (
+        <CardContent className="space-y-4 pt-0">
+          <p className="text-xs text-muted-foreground">
+            ลบ visits และผู้ป่วยที่นำเข้าจาก HIS ในวันที่ระบุ (เฉพาะข้อมูลที่ไม่มี case)
+          </p>
+
+          {/* Date picker */}
+          <div className="flex items-end gap-3">
+            <div className="flex-1 max-w-xs">
+              <Label className="text-xs mb-1">วันที่นำเข้า</Label>
+              <ThaiDatePicker
+                value={purgeDate}
+                onChange={(v) => {
+                  setPurgeDate(v);
+                  setPreview(null);
+                  setPurgeResult(null);
+                }}
+                placeholder="เลือกวันที่"
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePreview}
+              disabled={!purgeDate || previewLoading}
+            >
+              {previewLoading ? (
+                <Clock className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <Search className="h-3.5 w-3.5 mr-1" />
+              )}
+              ค้นหา
+            </Button>
+          </div>
+
+          {/* Preview results */}
+          {preview && (
+            <div className="rounded-lg border p-4 space-y-3">
+              <p className="text-sm font-medium">
+                ข้อมูลที่จะถูกลบ (วันที่ {formatPurgeDate(purgeDate)})
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-md border p-3 text-center">
+                  <p className="text-2xl font-bold text-foreground">
+                    {preview.visitCount}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Visits</p>
+                </div>
+                <div className="rounded-md border p-3 text-center">
+                  <p className="text-2xl font-bold text-foreground">
+                    {preview.patientCount}
+                  </p>
+                  <p className="text-xs text-muted-foreground">ผู้ป่วย (orphan)</p>
+                </div>
+                <div className="rounded-md border p-3 text-center">
+                  <p className="text-2xl font-bold text-foreground">
+                    {preview.importCount}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Import batches</p>
+                </div>
+              </div>
+
+              {preview.visitCount === 0 && preview.patientCount === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  ไม่พบข้อมูลที่นำเข้าจาก HIS ในวันนี้
+                </p>
+              ) : (
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => setShowConfirm(true)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    ลบข้อมูลนำเข้าวันที่ {formatPurgeDate(purgeDate)}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Purge result */}
+          {purgeResult && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 p-4">
+              <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 mb-2">
+                ลบข้อมูลสำเร็จ
+              </p>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>Visits ที่ลบ: {purgeResult.deletedVisits}</p>
+                <p>Import batches ที่ลบ: {purgeResult.deletedImports}</p>
+                <p>ผู้ป่วย (orphan) ที่ลบ: {purgeResult.deletedPatients}</p>
+              </div>
+            </div>
+          )}
+
+          <ConfirmDialog
+            open={showConfirm}
+            onConfirm={handlePurge}
+            onCancel={() => setShowConfirm(false)}
+            title="ลบข้อมูลนำเข้า"
+            description={`ลบข้อมูลที่นำเข้าจาก HIS วันที่ ${formatPurgeDate(purgeDate)} ทั้งหมด (${preview?.visitCount ?? 0} visits, ${preview?.patientCount ?? 0} ผู้ป่วย)? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+            confirmText="ลบถาวร"
+            variant="destructive"
+            loading={purgeLoading}
+          />
+        </CardContent>
+      )}
+    </Card>
   );
 }

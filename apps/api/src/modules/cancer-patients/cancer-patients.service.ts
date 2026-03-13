@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ConflictException,
   BadRequestException,
@@ -37,6 +38,8 @@ function formatThaiDate(d: Date | null): string {
 
 @Injectable()
 export class CancerPatientsService {
+  private readonly logger = new Logger(CancerPatientsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   // ─── Patient CRUD ──────────────────────────────────────────────────────────
@@ -562,6 +565,39 @@ export class CancerPatientsService {
       where: { id },
       data: { isActive: false },
     });
+  }
+
+  /** Hard-delete patient and ALL related data (visits by HN, cases by cascade) */
+  async remove(id: number) {
+    const patient = await this.prisma.patient.findUnique({ where: { id } });
+    if (!patient) {
+      throw new NotFoundException('ไม่พบผู้ป่วย — Patient not found');
+    }
+
+    const [visitCount, caseCount] = await Promise.all([
+      this.prisma.patientVisit.count({ where: { hn: patient.hn } }),
+      this.prisma.patientCase.count({ where: { patientId: id } }),
+    ]);
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Unlink visits from cases before deleting
+      await tx.patientVisit.updateMany({
+        where: { hn: patient.hn, caseId: { not: null } },
+        data: { caseId: null },
+      });
+
+      // 2. Delete all visits by HN (cascade: medications, billing items, claims, AI suggestions)
+      await tx.patientVisit.deleteMany({ where: { hn: patient.hn } });
+
+      // 3. Delete patient (cascade: PatientCase)
+      await tx.patient.delete({ where: { id } });
+    });
+
+    this.logger.warn(
+      `Deleted patient ${patient.hn} (${patient.fullName}): ${visitCount} visits, ${caseCount} cases`,
+    );
+
+    return { deletedVisitCount: visitCount, deletedCaseCount: caseCount };
   }
 
   // ─── Case Management ──────────────────────────────────────────────────────

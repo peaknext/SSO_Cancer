@@ -1167,6 +1167,140 @@ export class HisIntegrationService implements OnModuleInit {
     };
   }
 
+  /** Preview what would be deleted for a given import date (no actual deletion) */
+  async previewPurgeByDate(date: string) {
+    const startOfDay = new Date(`${date}T00:00:00.000Z`);
+    const endOfDay = new Date(`${date}T23:59:59.999Z`);
+
+    const imports = await this.prisma.patientImport.findMany({
+      where: {
+        createdAt: { gte: startOfDay, lte: endOfDay },
+        source: 'HIS_API',
+      },
+      select: { id: true },
+    });
+    const importIds = imports.map((i) => i.id);
+
+    if (importIds.length === 0) {
+      return { date, visitCount: 0, importCount: 0, patientCount: 0, batchCount: 0 };
+    }
+
+    const visitCount = await this.prisma.patientVisit.count({
+      where: { importId: { in: importIds } },
+    });
+
+    // Patients created on that date who would become orphans
+    const orphanPatients = await this.prisma.$queryRawUnsafe<{ count: number }[]>(
+      `SELECT COUNT(*)::int AS count FROM patients p
+       WHERE p.created_at >= $1 AND p.created_at <= $2
+         AND NOT EXISTS (
+           SELECT 1 FROM patient_visits pv WHERE pv.hn = p.hn AND pv.import_id != ALL($3::int[])
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM patient_cases pc WHERE pc.patient_id = p.id
+         )`,
+      startOfDay,
+      endOfDay,
+      importIds,
+    );
+
+    const batchCount = await this.prisma.billingExportBatch.count();
+
+    return {
+      date,
+      visitCount,
+      importCount: importIds.length,
+      patientCount: orphanPatients[0]?.count ?? 0,
+      batchCount,
+    };
+  }
+
+  /** Delete all visits imported on a specific date + orphaned patients */
+  async purgeByImportDate(date: string) {
+    const startOfDay = new Date(`${date}T00:00:00.000Z`);
+    const endOfDay = new Date(`${date}T23:59:59.999Z`);
+
+    const imports = await this.prisma.patientImport.findMany({
+      where: {
+        createdAt: { gte: startOfDay, lte: endOfDay },
+        source: 'HIS_API',
+      },
+      select: { id: true },
+    });
+    const importIds = imports.map((i) => i.id);
+
+    if (importIds.length === 0) {
+      return { deletedVisits: 0, deletedImports: 0, deletedPatients: 0, deletedBatches: 0 };
+    }
+
+    const visitCount = await this.prisma.patientVisit.count({
+      where: { importId: { in: importIds } },
+    });
+
+    // Collect HNs of visits being deleted (for orphan detection after deletion)
+    const affectedHns = await this.prisma.patientVisit.findMany({
+      where: { importId: { in: importIds } },
+      select: { hn: true },
+      distinct: ['hn'],
+    });
+    const hns = affectedHns.map((v) => v.hn);
+
+    let deletedPatients = 0;
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Unlink visits from cases
+      await tx.patientVisit.updateMany({
+        where: { importId: { in: importIds }, caseId: { not: null } },
+        data: { caseId: null },
+      });
+
+      // 2. Delete visits (cascade: medications, billing items, claims, AI suggestions)
+      await tx.patientVisit.deleteMany({
+        where: { importId: { in: importIds } },
+      });
+
+      // 3. Delete import records
+      await tx.patientImport.deleteMany({
+        where: { id: { in: importIds } },
+      });
+
+      // 4. Delete export batches (they reference visit IDs that may now be invalid)
+      await tx.billingExportBatch.deleteMany({});
+
+      // 5. Delete orphaned patients: created on that date, no remaining visits, no cases
+      if (hns.length > 0) {
+        const orphanResult = await tx.$queryRawUnsafe<{ id: number }[]>(
+          `SELECT p.id FROM patients p
+           WHERE p.hn = ANY($1::text[])
+             AND p.created_at >= $2 AND p.created_at <= $3
+             AND NOT EXISTS (SELECT 1 FROM patient_visits pv WHERE pv.hn = p.hn)
+             AND NOT EXISTS (SELECT 1 FROM patient_cases pc WHERE pc.patient_id = p.id)`,
+          hns,
+          startOfDay,
+          endOfDay,
+        );
+        const orphanIds = orphanResult.map((r) => r.id);
+        if (orphanIds.length > 0) {
+          await tx.patient.deleteMany({ where: { id: { in: orphanIds } } });
+          deletedPatients = orphanIds.length;
+        }
+      }
+    });
+
+    const batchCount = 0; // already deleted all above
+
+    this.logger.warn(
+      `Purged by date ${date}: ${visitCount} visits, ${importIds.length} imports, ${deletedPatients} patients deleted`,
+    );
+
+    return {
+      deletedVisits: visitCount,
+      deletedImports: importIds.length,
+      deletedPatients,
+      deletedBatches: batchCount,
+    };
+  }
+
   // ─── IPD (Inpatient) Import ───────────────────────────────────────────────
 
   /** Preview IPD import — fetch admissions from HIS and compute what will be imported */

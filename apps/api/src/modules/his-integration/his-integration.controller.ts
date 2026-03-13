@@ -170,6 +170,20 @@ export class HisIntegrationController {
     return this.hisService.purgeAllVisits();
   }
 
+  @Get('purge-by-date/preview')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Preview ข้อมูลที่จะถูกลบตามวันนำเข้า (ไม่ลบจริง)' })
+  previewPurgeByDate(@Query('date') date: string) {
+    return this.hisService.previewPurgeByDate(date);
+  }
+
+  @Post('purge-by-date')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'ลบ visits + ผู้ป่วย orphan ตามวันที่นำเข้า (SUPER_ADMIN only)' })
+  purgeByDate(@Body() body: { date: string }) {
+    return this.hisService.purgeByImportDate(body.date);
+  }
+
   @Get('health')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'ทดสอบการเชื่อมต่อ HIS API' })

@@ -2,6 +2,7 @@
 
 import { use, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -13,6 +14,7 @@ import {
   Loader2,
   Pencil,
   Plus,
+  Trash2,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -186,6 +188,8 @@ function AssignCaseConfirmDialog({
 
 export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const { data: patient, isLoading, isRefetching, refetch } = useApi<PatientDetail>(`/cancer-patients/${id}`);
 
   // Case creation modal
@@ -200,6 +204,24 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
 
   // Edit patient modal
   const [showEditPatient, setShowEditPatient] = useState(false);
+
+  // Delete patient
+  const [showDeletePatient, setShowDeletePatient] = useState(false);
+  const [deletePatientLoading, setDeletePatientLoading] = useState(false);
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
+  const handleDeletePatient = useCallback(async () => {
+    setDeletePatientLoading(true);
+    try {
+      await apiClient.delete(`/cancer-patients/${id}`);
+      toast.success('ลบผู้ป่วยสำเร็จ');
+      router.push('/cancer-patients');
+    } catch {
+      toast.error('ไม่สามารถลบผู้ป่วยได้');
+    } finally {
+      setDeletePatientLoading(false);
+    }
+  }, [id, router]);
 
   // Persisted preference: expand all visits by default?
   const [visitsExpanded, setVisitsExpanded] = usePersistedState('cp-detail-visitsExpanded', true);
@@ -539,10 +561,22 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             )}
           </div>
-          <Button size="sm" onClick={() => setShowEditPatient(true)}>
-            <Pencil className="h-4 w-4 mr-1" />
-            แก้ไข
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setShowEditPatient(true)}>
+              <Pencil className="h-4 w-4 mr-1" />
+              แก้ไข
+            </Button>
+            {isSuperAdmin && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setShowDeletePatient(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                ลบ
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -813,6 +847,21 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
         confirmText="ลบ"
         variant="destructive"
         loading={deleteLoading}
+      />
+
+      <ConfirmDialog
+        open={showDeletePatient}
+        onConfirm={handleDeletePatient}
+        onCancel={() => setShowDeletePatient(false)}
+        title="ลบผู้ป่วย"
+        description={
+          patient
+            ? `ข้อมูลผู้ป่วย ${patient.fullName} (HN: ${patient.hn}) จะถูกลบทั้งหมด รวมถึง cases, visits, ยา, billing claims, และ AI suggestions`
+            : ''
+        }
+        confirmText="ลบถาวร"
+        variant="destructive"
+        loading={deletePatientLoading}
       />
     </div>
   );
