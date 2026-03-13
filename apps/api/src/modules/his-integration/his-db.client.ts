@@ -29,6 +29,7 @@ interface HisDbSettings {
 export class HisDbClient implements IHisClient, OnModuleDestroy {
   private readonly logger = new Logger(HisDbClient.name);
   private pool: Pool | null = null;
+  private poolSettingsHash = '';
   private settingsCache: HisDbSettings | null = null;
   private settingsCacheTime = 0;
   private static readonly CACHE_TTL_MS = 60_000;
@@ -92,8 +93,16 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
     }
 
     // Recreate pool if settings changed
-    if (this.pool) {
+    const hash = `${settings.host}:${settings.port}/${settings.database}@${settings.user}`;
+    if (this.pool && hash === this.poolSettingsHash) {
       return this.pool;
+    }
+
+    // Settings changed — destroy old pool and create new one
+    if (this.pool) {
+      this.logger.log('HOSxP DB settings changed — recreating pool');
+      await this.pool.end().catch(() => {});
+      this.pool = null;
     }
 
     const poolConfig: PoolConfig = {
@@ -110,6 +119,7 @@ export class HisDbClient implements IHisClient, OnModuleDestroy {
     };
 
     this.pool = new Pool(poolConfig);
+    this.poolSettingsHash = hash;
     this.pool.on('error', (err) => {
       this.logger.error('HOSxP pool error:', err.message);
     });

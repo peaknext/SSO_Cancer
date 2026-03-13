@@ -1139,7 +1139,15 @@ export class HisIntegrationService {
     alreadyImportedAns: string[];
     newAdmissionsToImport: number;
   }> {
-    const hisData = await this.hisClient.fetchPatientWithAdmissions(hn, 'hn', from, to);
+    let hisData;
+    try {
+      hisData = await this.hisClient.fetchPatientWithAdmissions(hn, 'hn', from, to);
+    } catch (err: any) {
+      this.logger.error(`IPD preview failed for HN ${hn}: ${err.message}`, err.stack);
+      throw new BadRequestException(
+        err.message || 'ไม่สามารถดึงข้อมูลผู้ป่วยในจาก HIS ได้',
+      );
+    }
 
     const existingPatient = await this.prisma.patient.findFirst({
       where: {
@@ -1182,7 +1190,15 @@ export class HisIntegrationService {
     from?: string,
     to?: string,
   ): Promise<ImportResult> {
-    const hisData = await this.hisClient.fetchPatientWithAdmissions(hn, 'hn', from, to);
+    let hisData;
+    try {
+      hisData = await this.hisClient.fetchPatientWithAdmissions(hn, 'hn', from, to);
+    } catch (err: any) {
+      this.logger.error(`IPD import failed for HN ${hn}: ${err.message}`, err.stack);
+      throw new BadRequestException(
+        err.message || 'ไม่สามารถดึงข้อมูลผู้ป่วยในจาก HIS ได้',
+      );
+    }
 
     // 1. Filter cancer-related admissions
     const cancerAdmissions = hisData.admissions.filter(isCancerRelatedAdmission);
