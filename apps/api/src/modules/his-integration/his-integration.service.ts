@@ -1,7 +1,7 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Inject } from '@nestjs/common';
 import { PrismaService, Prisma } from '../../prisma';
 import { ImportService } from '../protocol-analysis/services/import.service';
-import { HisApiClient } from './his-api.client';
+import { IHisClient, HIS_CLIENT_TOKEN } from './his-client.interface';
 import {
   HisPatientSearchResult,
   HisPatientData,
@@ -63,7 +63,7 @@ export class HisIntegrationService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly hisClient: HisApiClient,
+    @Inject(HIS_CLIENT_TOKEN) private readonly hisClient: IHisClient,
     private readonly importService: ImportService,
   ) {}
 

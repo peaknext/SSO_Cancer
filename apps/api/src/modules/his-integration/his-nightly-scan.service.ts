@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { HisIntegrationService } from './his-integration.service';
-import { HisApiClient } from './his-api.client';
+import { IHisClient, HIS_CLIENT_TOKEN } from './his-client.interface';
 import { CANCER_ICD10_PREFIXES } from './types/his-api.types';
 
 interface ScanFilterConfig {
@@ -20,7 +20,7 @@ export class HisNightlyScanService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly hisService: HisIntegrationService,
-    private readonly hisClient: HisApiClient,
+    @Inject(HIS_CLIENT_TOKEN) private readonly hisClient: IHisClient,
   ) {}
 
   @Cron('0 1 * * *', { timeZone: 'Asia/Bangkok' })

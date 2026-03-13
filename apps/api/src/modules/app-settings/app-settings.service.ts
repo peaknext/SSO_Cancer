@@ -10,6 +10,7 @@ const SENSITIVE_KEYS = new Set([
   'ai_openai_api_key',
   'ai_ollama_api_key',
   'his_api_key',
+  'his_db_password',
 ]);
 
 function maskValue(value: string): string {

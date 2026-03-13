@@ -9,6 +9,7 @@ import {
   HisAdmissionData,
   extractDiagnosesFromArray,
 } from './types/his-api.types';
+import { IHisClient } from './his-client.interface';
 import { decryptValue } from '../../common/utils/crypto.util';
 
 // Hospital HIS APIs commonly use self-signed or incomplete-chain SSL certificates.
@@ -25,7 +26,7 @@ interface HisSettings {
 }
 
 @Injectable()
-export class HisApiClient {
+export class HisApiClient implements IHisClient {
   private readonly logger = new Logger(HisApiClient.name);
   private settingsCache: HisSettings | null = null;
   private settingsCacheTime = 0;
