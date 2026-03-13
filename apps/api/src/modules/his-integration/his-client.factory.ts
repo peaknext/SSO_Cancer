@@ -95,4 +95,20 @@ export class HisClientDelegate implements IHisClient {
       message: `[${mode}] ${result.message}`,
     };
   }
+
+  async batchLookupPttype(
+    vns: string[],
+  ): Promise<Map<string, { pttype: string; pttypeName: string }>> {
+    const client = await this.getActiveClient();
+    if (!client.batchLookupPttype) return new Map();
+    return client.batchLookupPttype(vns);
+  }
+
+  async batchLookupPttypeByAn(
+    ans: string[],
+  ): Promise<Map<string, { pttype: string; pttypeName: string }>> {
+    const client = await this.getActiveClient();
+    if (!client.batchLookupPttypeByAn) return new Map();
+    return client.batchLookupPttypeByAn(ans);
+  }
 }
