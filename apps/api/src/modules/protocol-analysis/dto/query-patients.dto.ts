@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsInt, IsBoolean, IsDateString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsInt, IsBoolean, IsDateString, IsIn, MaxLength } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
@@ -37,4 +37,9 @@ export class QueryPatientsDto extends PaginationQueryDto {
   @IsOptional()
   @IsDateString()
   visitDateTo?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by visit type: 1=OPD, 2=IPD' })
+  @IsOptional()
+  @IsIn(['1', '2'])
+  visitType?: string;
 }

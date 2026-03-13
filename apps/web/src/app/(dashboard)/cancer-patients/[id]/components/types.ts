@@ -63,6 +63,16 @@ export interface Visit {
   hpi: string | null;
   doctorNotes: string | null;
   confirmedAt: string | null;
+  // IPD fields
+  visitType?: string | null;
+  an?: string | null;
+  admitDate?: string | null;
+  dischargeDate?: string | null;
+  admitTime?: string | null;
+  dischargeTime?: string | null;
+  ward?: string | null;
+  dischargeStatus?: string | null;
+  lengthOfStay?: number | null;
   medications: VisitMedication[];
   case: {
     id: number;

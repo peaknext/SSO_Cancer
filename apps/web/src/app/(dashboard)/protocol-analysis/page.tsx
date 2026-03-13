@@ -25,6 +25,8 @@ import {
   Trash2,
   Banknote,
   ClipboardCheck,
+  BedDouble,
+  Scissors,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -54,6 +56,7 @@ interface CancerSite {
 interface VisitSummary {
   id: number;
   vn: string;
+  an?: string | null;
   visitDate: string;
   primaryDiagnosis: string;
   resolvedSite: { id: number; nameThai: string; siteCode: string } | null;
@@ -92,6 +95,7 @@ interface VisitDetail {
   id: number;
   hn: string;
   vn: string;
+  an?: string | null;
   visitDate: string;
   primaryDiagnosis: string;
   secondaryDiagnoses: string | null;
@@ -113,6 +117,23 @@ interface VisitDetail {
   confirmedProtocol: { id: number; protocolCode: string; nameEnglish: string; nameThai: string | null } | null;
   confirmedRegimen: { id: number; regimenCode: string; regimenName: string } | null;
   confirmedByUser: { id: number; fullName: string; fullNameThai: string | null } | null;
+  // IPD fields
+  visitType?: string | null;
+  admitTime?: string | null;
+  dischargeDate?: string | null;
+  dischargeTime?: string | null;
+  admissionType?: string | null;
+  admissionSource?: string | null;
+  dischargeStatus?: string | null;
+  ward?: string | null;
+  department?: string | null;
+  lengthOfStay?: number | null;
+  drg?: string | null;
+  drgVersion?: string | null;
+  rw?: number | null;
+  adjRw?: number | null;
+  diagnoses?: { id: number; sequence: number; diagCode: string; diagType: string; codeSys: string; diagTerm: string | null; doctorLicense: string | null; diagDate: string | null }[];
+  procedures?: { id: number; sequence: number; procedureCode: string; codeSys: string; procedureTerm: string | null; doctorLicense: string | null; startDate: string | null; startTime: string | null; endDate: string | null; endTime: string | null; location: string | null }[];
 }
 
 interface TreatmentModality {
@@ -224,7 +245,8 @@ export default function ProtocolAnalysisPage() {
   const [filterHasZ51, setFilterHasZ51, h6] = usePersistedState('pa:filterZ51', false);
   const [filterDateFrom, setFilterDateFrom, h7] = usePersistedState('pa:dateFrom', '');
   const [filterDateTo, setFilterDateTo, h8] = usePersistedState('pa:dateTo', '');
-  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7 && h8;
+  const [viewMode, setViewMode, hViewMode] = usePersistedState<'opd' | 'ipd'>('pa:viewMode', 'opd');
+  const filtersHydrated = h1 && h2 && h3 && h4 && h5 && h6 && h7 && h8 && hViewMode;
 
   // Pre-select HN/VN from URL params (from "ดูการวิเคราะห์" link in patient detail)
   const appliedUrlParams = useRef(false);
@@ -297,6 +319,7 @@ export default function ProtocolAnalysisPage() {
       if (filterHasZ51) params.set('hasZ51', 'true');
       if (filterDateFrom) params.set('visitDateFrom', filterDateFrom);
       if (filterDateTo) params.set('visitDateTo', filterDateTo);
+      params.set('visitType', viewMode === 'opd' ? '1' : '2');
       const res = await apiClient.get<PaginatedResponse<Patient>>(
         `/protocol-analysis/patients?${params}`,
       );
@@ -307,7 +330,7 @@ export default function ProtocolAnalysisPage() {
     } finally {
       setLoadingPatients(false);
     }
-  }, [patientSearch, filterSiteId, filterHasMeds, filterHasZ51, filterDateFrom, filterDateTo, hasActiveFilters, filtersHydrated]);
+  }, [patientSearch, filterSiteId, filterHasMeds, filterHasZ51, filterDateFrom, filterDateTo, hasActiveFilters, filtersHydrated, viewMode]);
 
   useEffect(() => {
     fetchPatients();
@@ -344,6 +367,7 @@ export default function ProtocolAnalysisPage() {
     if (filterHasZ51) params.set('hasZ51', 'true');
     if (filterDateFrom) params.set('visitDateFrom', filterDateFrom);
     if (filterDateTo) params.set('visitDateTo', filterDateTo);
+    params.set('visitType', viewMode === 'opd' ? '1' : '2');
     apiClient
       .get<PaginatedResponse<VisitSummary>>(
         `/protocol-analysis/patients/${selectedHn}/visits?${params}`,
@@ -358,7 +382,7 @@ export default function ProtocolAnalysisPage() {
       })
       .catch(() => setVisits([]))
       .finally(() => setLoadingVisits(false));
-  }, [selectedHn, filterSiteId, filterHasMeds, filterHasZ51, filterDateFrom, filterDateTo, filtersHydrated]);
+  }, [selectedHn, filterSiteId, filterHasMeds, filterHasZ51, filterDateFrom, filterDateTo, filtersHydrated, viewMode]);
 
   // ─── Fetch visit detail + match ────────────────────────────
   useEffect(() => {
@@ -613,7 +637,7 @@ export default function ProtocolAnalysisPage() {
             <HelpButton section="protocol-analysis" />
           </h1>
           <p className="text-sm text-muted-foreground">
-            เลือก HN &rarr; VN เพื่อดูรายละเอียดและจับคู่โปรโตคอล
+            เลือก HN &rarr; {viewMode === 'opd' ? 'VN' : 'AN'} เพื่อดูรายละเอียดและจับคู่โปรโตคอล
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -635,6 +659,24 @@ export default function ProtocolAnalysisPage() {
             </Link>
           </Button>
         </div>
+      </div>
+
+      {/* OPD / IPD tab switcher */}
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant={viewMode === 'opd' ? 'default' : 'outline'}
+          onClick={() => { setViewMode('opd'); setSelectedHn(null); setSelectedVn(null); }}
+        >
+          OPD ผู้ป่วยนอก
+        </Button>
+        <Button
+          size="sm"
+          variant={viewMode === 'ipd' ? 'default' : 'outline'}
+          onClick={() => { setViewMode('ipd'); setSelectedHn(null); setSelectedVn(null); }}
+        >
+          IPD ผู้ป่วยใน
+        </Button>
       </div>
 
       {/* Filter bar */}
@@ -759,7 +801,7 @@ export default function ProtocolAnalysisPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="ค้นหา VN..."
+                placeholder={viewMode === 'opd' ? 'ค้นหา VN...' : 'ค้นหา AN...'}
                 value={vnSearch}
                 onChange={(e) => setVnSearch(e.target.value)}
                 disabled={!selectedHn}
@@ -786,7 +828,7 @@ export default function ProtocolAnalysisPage() {
               </div>
             ) : filteredVisits.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-8">
-                {vnSearch ? 'ไม่พบ VN ที่ค้นหา' : 'ไม่มี VN'}
+                {vnSearch ? `ไม่พบ ${viewMode === 'opd' ? 'VN' : 'AN'} ที่ค้นหา` : `ไม่มี ${viewMode === 'opd' ? 'VN' : 'AN'}`}
               </p>
             ) : (
               filteredVisits.map((v) => (
@@ -801,7 +843,7 @@ export default function ProtocolAnalysisPage() {
                   )}
                 >
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="font-mono font-medium">{v.vn}</span>
+                    <span className="font-mono font-medium">{viewMode === 'ipd' && v.an ? v.an : v.vn}</span>
                     <div className="flex items-center gap-1">
                       {v.confirmedProtocolId && (
                         <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
@@ -834,7 +876,7 @@ export default function ProtocolAnalysisPage() {
           {!selectedVn ? (
             <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
               <Search className="h-8 w-8 mb-2 opacity-50" />
-              <p className="text-sm">&larr; เลือก VN เพื่อดูรายละเอียด</p>
+              <p className="text-sm">&larr; เลือก {viewMode === 'opd' ? 'VN' : 'AN'} เพื่อดูรายละเอียด</p>
             </div>
           ) : loadingDetail ? (
             <div className="flex items-center justify-center flex-1">
@@ -845,7 +887,7 @@ export default function ProtocolAnalysisPage() {
               {/* Visit header */}
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h2 className="font-heading text-base font-bold">VN: {visitDetail.vn}</h2>
+                  <h2 className="font-heading text-base font-bold">{viewMode === 'opd' ? 'VN' : 'AN'}: {viewMode === 'ipd' && visitDetail.an ? visitDetail.an : visitDetail.vn}</h2>
                   {visitDetail.resolvedSite && (
                     <Badge variant="outline" className="text-xs">
                       {visitDetail.resolvedSite.nameThai}
@@ -869,6 +911,125 @@ export default function ProtocolAnalysisPage() {
                   </p>
                 )}
               </div>
+
+              {/* IPD Admission Info Card */}
+              {viewMode === 'ipd' && visitDetail.an && (
+                <div className="rounded-lg border border-blue-200/60 dark:border-blue-800/40 bg-blue-50/50 dark:bg-blue-950/20 p-3 space-y-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <BedDouble className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-xs font-semibold text-foreground">ข้อมูลการรับผู้ป่วยใน</span>
+                  </div>
+
+                  {/* Admission dates + ward */}
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-foreground/50">AN</span>
+                      <p className="font-mono font-medium text-foreground">{visitDetail.an}</p>
+                    </div>
+                    <div>
+                      <span className="text-foreground/50">วันรับเข้า</span>
+                      <p className="font-medium text-foreground">
+                        {new Date(visitDetail.visitDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                        {visitDetail.admitTime && <span className="text-foreground/60 ml-1">{visitDetail.admitTime}</span>}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-foreground/50">วันจำหน่าย</span>
+                      <p className="font-medium text-foreground">
+                        {visitDetail.dischargeDate
+                          ? <>
+                              {new Date(visitDetail.dischargeDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                              {visitDetail.dischargeTime && <span className="text-foreground/60 ml-1">{visitDetail.dischargeTime}</span>}
+                            </>
+                          : <span className="text-amber-600 dark:text-amber-400">ยังไม่จำหน่าย</span>
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-foreground/50">หอผู้ป่วย</span>
+                      <p className="font-medium text-foreground">{visitDetail.ward || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-foreground/50">แผนก</span>
+                      <p className="font-medium text-foreground">{visitDetail.department || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-foreground/50">วันนอน</span>
+                      <p className="font-medium text-foreground">
+                        {visitDetail.lengthOfStay != null ? `${visitDetail.lengthOfStay} วัน` : '-'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* DRG info (if available) */}
+                  {(visitDetail.drg || visitDetail.rw != null) && (
+                    <div className="grid grid-cols-3 gap-2 text-xs border-t border-blue-200/40 dark:border-blue-800/30 pt-2">
+                      <div>
+                        <span className="text-foreground/50">DRG</span>
+                        <p className="font-mono font-medium text-foreground">{visitDetail.drg || '-'}{visitDetail.drgVersion && <span className="text-foreground/40 ml-1">v{visitDetail.drgVersion}</span>}</p>
+                      </div>
+                      <div>
+                        <span className="text-foreground/50">RW</span>
+                        <p className="font-mono font-medium text-foreground">{visitDetail.rw != null ? visitDetail.rw.toFixed(4) : '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-foreground/50">AdjRW</span>
+                        <p className="font-mono font-medium text-foreground">{visitDetail.adjRw != null ? visitDetail.adjRw.toFixed(4) : '-'}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Structured Diagnoses */}
+                  {visitDetail.diagnoses && visitDetail.diagnoses.length > 0 && (
+                    <div className="border-t border-blue-200/40 dark:border-blue-800/30 pt-2">
+                      <span className="text-xs font-semibold text-foreground/70 mb-1 block">วินิจฉัย ({visitDetail.diagnoses.length})</span>
+                      <div className="space-y-1">
+                        {visitDetail.diagnoses.map((dx) => (
+                          <div key={dx.id} className="flex items-center gap-2 text-xs">
+                            <Badge
+                              variant={dx.diagType === '1' ? 'default' : 'outline'}
+                              className={`text-[10px] px-1.5 py-0 shrink-0 ${dx.diagType === '1' ? 'bg-blue-600 text-white' : ''}`}
+                            >
+                              {dx.diagType === '1' ? 'หลัก' : dx.diagType === '2' ? 'ร่วม' : dx.diagType === '3' ? 'แทรก' : dx.diagType === '4' ? 'อื่น' : dx.diagType === '5' ? 'สาเหตุ' : `#${dx.diagType}`}
+                            </Badge>
+                            <span className="font-mono font-medium text-foreground">{dx.diagCode}</span>
+                            {dx.diagTerm && <span className="text-foreground/60 truncate">{dx.diagTerm}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Structured Procedures */}
+                  {visitDetail.procedures && visitDetail.procedures.length > 0 && (
+                    <div className="border-t border-blue-200/40 dark:border-blue-800/30 pt-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Scissors className="h-3 w-3 text-foreground/50" />
+                        <span className="text-xs font-semibold text-foreground/70">หัตถการ ({visitDetail.procedures.length})</span>
+                      </div>
+                      <div className="space-y-1">
+                        {visitDetail.procedures.map((proc) => (
+                          <div key={proc.id} className="flex items-center gap-2 text-xs">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
+                              {proc.codeSys}
+                            </Badge>
+                            <span className="font-mono font-medium text-foreground">{proc.procedureCode}</span>
+                            {proc.procedureTerm && <span className="text-foreground/60 truncate">{proc.procedureTerm}</span>}
+                            {proc.startDate && (
+                              <span className="text-foreground/40 shrink-0 ml-auto">
+                                {new Date(proc.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Confirmation banner */}
               {visitDetail.confirmedProtocol && (
@@ -1426,7 +1587,7 @@ export default function ProtocolAnalysisPage() {
         title="ยืนยันโปรโตคอล"
         description={
           confirmingMatch
-            ? `ยืนยัน ${confirmingMatch.protocolCode} — ${confirmingMatch.protocolName}${confirmingMatch.matchedRegimen ? ` (สูตร ${confirmingMatch.matchedRegimen.regimenCode})` : ''} สำหรับ VN ${selectedVn}?`
+            ? `ยืนยัน ${confirmingMatch.protocolCode} — ${confirmingMatch.protocolName}${confirmingMatch.matchedRegimen ? ` (สูตร ${confirmingMatch.matchedRegimen.regimenCode})` : ''} สำหรับ ${viewMode === 'opd' ? 'VN' : 'AN'} ${viewMode === 'ipd' && selectedVn?.startsWith('IPD-') ? selectedVn.slice(4) : selectedVn}?`
             : ''
         }
         loading={confirmLoading}

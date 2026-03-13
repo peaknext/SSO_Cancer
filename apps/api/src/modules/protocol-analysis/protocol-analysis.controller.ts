@@ -194,7 +194,7 @@ export class ProtocolAnalysisController {
   @Get('patients')
   @ApiOperation({ summary: 'List unique HNs with visit count' })
   async listPatients(@Query() query: QueryPatientsDto) {
-    const { page = 1, limit = 25, search, cancerSiteId, hasMedications, hasZ51, visitDateFrom, visitDateTo } = query;
+    const { page = 1, limit = 25, search, cancerSiteId, hasMedications, hasZ51, visitDateFrom, visitDateTo, visitType } = query;
 
     const where: Prisma.PatientVisitWhereInput = {};
     if (search) {
@@ -216,6 +216,9 @@ export class ProtocolAnalysisController {
       where.visitDate = {};
       if (visitDateFrom) where.visitDate.gte = new Date(visitDateFrom);
       if (visitDateTo) where.visitDate.lte = new Date(visitDateTo);
+    }
+    if (visitType) {
+      where.visitType = visitType;
     }
 
     // Group by HN to get unique patients
@@ -251,7 +254,7 @@ export class ProtocolAnalysisController {
     @Param('hn') hn: string,
     @Query() query: QueryVisitsDto,
   ) {
-    const { page = 1, limit = 50, sortOrder = 'desc', cancerSiteId, hasMedications, hasZ51, visitDateFrom, visitDateTo } = query;
+    const { page = 1, limit = 50, sortOrder = 'desc', cancerSiteId, hasMedications, hasZ51, visitDateFrom, visitDateTo, visitType } = query;
 
     const where: Prisma.PatientVisitWhereInput = { hn: normalizeHn(hn) };
     if (cancerSiteId) {
@@ -271,6 +274,9 @@ export class ProtocolAnalysisController {
       if (visitDateFrom) where.visitDate.gte = new Date(visitDateFrom);
       if (visitDateTo) where.visitDate.lte = new Date(visitDateTo);
     }
+    if (visitType) {
+      where.visitType = visitType;
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.patientVisit.findMany({
@@ -281,6 +287,7 @@ export class ProtocolAnalysisController {
         select: {
           id: true,
           vn: true,
+          an: true,
           visitDate: true,
           primaryDiagnosis: true,
           resolvedSite: { select: { id: true, nameThai: true, siteCode: true } },
@@ -334,6 +341,16 @@ export class ProtocolAnalysisController {
         visitBillingItems: {
           where: { isActive: true, billingGroup: '3' },
           select: { hospitalCode: true, sksDrugCode: true },
+        },
+        diagnoses: {
+          where: { isActive: true },
+          select: { id: true, sequence: true, diagCode: true, diagType: true, codeSys: true, diagTerm: true, doctorLicense: true, diagDate: true },
+          orderBy: { sequence: 'asc' },
+        },
+        procedures: {
+          where: { isActive: true },
+          select: { id: true, sequence: true, procedureCode: true, codeSys: true, procedureTerm: true, doctorLicense: true, startDate: true, startTime: true, endDate: true, endTime: true, location: true },
+          orderBy: { sequence: 'asc' },
         },
       },
     });

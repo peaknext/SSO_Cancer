@@ -126,6 +126,29 @@ export class HisIntegrationController {
     return this.hisService.getProtocolDrugNames();
   }
 
+  // ─── IPD (Inpatient) ─────────────────────────────────────────────
+
+  @Get('ipd/preview/:hn')
+  @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Preview admission ก่อน import จาก HIS (IPD)' })
+  previewAdmissions(
+    @Param('hn') hn: string,
+    @Query() dto: ImportPatientDto,
+  ) {
+    return this.hisService.previewAdmissions(hn, dto.from, dto.to);
+  }
+
+  @Post('ipd/import/:hn')
+  @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'นำเข้า admission จาก HIS (IPD)' })
+  importAdmissions(
+    @Param('hn') hn: string,
+    @Query() dto: ImportPatientDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.hisService.importAdmissions(hn, userId, dto.from, dto.to);
+  }
+
   @Post('backfill-aipn')
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Backfill AIPN codes สำหรับ VisitMedication ที่มีอยู่ (one-time)' })

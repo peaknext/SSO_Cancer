@@ -15,6 +15,12 @@ export interface HisPatientSearchResult {
   mainHospitalCode?: string;
   totalVisitCount?: number;
   matchingVisitCount?: number;
+  // CIPN demographic fields (from HIS Endpoint 4)
+  idType?: string; // 0=Thai ID, 1=passport
+  maritalStatus?: string;
+  nationality?: string; // country code
+  province?: string; // changwat code
+  district?: string; // amphur code
 }
 
 export interface HisMedication {
@@ -28,6 +34,9 @@ export interface HisDiagnosis {
   diagCode: string;
   diagType: string; // '1'=primary, '2'=comorbid, '3'=complication, '4'=other, '5'=external cause
   diagTerm?: string | null;
+  // CIPN fields (from HIS Endpoint 4)
+  doctorLicense?: string;
+  diagDate?: string; // ISO date
 }
 
 export interface HisBillingItem {
@@ -52,6 +61,9 @@ export interface HisBillingItem {
   stdGroup?: string; // SSO standard billing group (from income.std_group)
   sksDfsText?: string; // Drug description from drugitems.sks_dfs_text
   sksReimbPrice?: number; // SSO reimbursement price from drugitems.sks_reimb_price
+  // CIPN fields (from HIS Endpoint 4 billing items)
+  serviceDate?: string; // ISO datetime — when service was rendered during admission
+  discount?: number;
 }
 
 export interface HisVisit {
@@ -230,4 +242,85 @@ export function analyzeVisitCompleteness(visit: HisVisit): VisitCompleteness {
   else if (hasHighMissing) level = 'incomplete';
 
   return { level, score, missingFields };
+}
+
+// ─── IPD (Inpatient) Types ────────────────────────────────────────────────────
+
+export interface HisProcedure {
+  procedureCode: string; // ICD-9-CM code (e.g., '9925', '9224')
+  codeSys?: string; // 'ICD9CM'
+  procedureTerm?: string;
+  doctorLicense?: string;
+  startDate?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
+  location?: string;
+}
+
+export interface HisAdmission {
+  an: string;
+  hn: string;
+  admitDate: string;
+  admitTime?: string;
+  dischargeDate?: string | null;
+  dischargeTime?: string;
+  admissionType?: string; // A/C/E/L/N/U/O
+  admissionSource?: string; // O/E/S/B/T/R
+  dischargeStatus?: string;
+  dischargeType?: string;
+  ward?: string;
+  department?: string;
+  attendingDoctorLicense?: string;
+  lengthOfStay?: number;
+  leaveDay?: number;
+  birthWeight?: number | null;
+  drg?: string;
+  drgVersion?: string;
+  rw?: number;
+  adjRw?: number;
+  authCode?: string;
+  authDate?: string;
+  diagnoses: HisDiagnosis[];
+  procedures: HisProcedure[];
+  billingItems: HisBillingItem[];
+}
+
+export interface HisAdmissionData {
+  patient: HisPatientSearchResult;
+  admissions: HisAdmission[];
+}
+
+/** Check if admission has any cancer-related diagnosis */
+export function isCancerRelatedAdmission(admission: HisAdmission): boolean {
+  return admission.diagnoses.some((d) => isCancerRelatedIcd10(d.diagCode));
+}
+
+/** Extract modality signals from ICD-9-CM procedures */
+export function extractProcedureModality(procedures: HisProcedure[]): {
+  hasChemo: boolean;
+  hasRadiation: boolean;
+} {
+  let hasChemo = false;
+  let hasRadiation = false;
+  for (const p of procedures) {
+    const code = p.procedureCode?.trim();
+    if (code === '9925') hasChemo = true;
+    if (code === '9224') hasRadiation = true;
+  }
+  return { hasChemo, hasRadiation };
+}
+
+/**
+ * Convert ICD-9-CM procedure codes to secondary diagnosis codes
+ * that inferStage() already recognizes:
+ * - 9925 (chemo administration) → Z5111 (recognized by inferStage)
+ * - 9224 (teleradiotherapy) → 9224 (already recognized by inferStage)
+ */
+export function proceduresToSecondaryDiagCodes(procedures: HisProcedure[]): string[] {
+  const codes: string[] = [];
+  const { hasChemo, hasRadiation } = extractProcedureModality(procedures);
+  if (hasChemo) codes.push('Z5111');
+  if (hasRadiation) codes.push('9224');
+  return codes;
 }

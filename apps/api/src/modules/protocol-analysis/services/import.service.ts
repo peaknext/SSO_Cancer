@@ -655,6 +655,7 @@ export class ImportService {
             hpi: row.hpi,
             doctorNotes: row.doctorNotes,
             medicationsRaw: row.medicationsRaw,
+            visitType: '1',
             resolvedSiteId,
             patientId,
           },

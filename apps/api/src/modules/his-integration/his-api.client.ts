@@ -5,6 +5,8 @@ import {
   HisPatientSearchResult,
   HisPatientData,
   HisVisit,
+  HisAdmission,
+  HisAdmissionData,
   extractDiagnosesFromArray,
 } from './types/his-api.types';
 import { decryptValue } from '../../common/utils/crypto.util';
@@ -323,6 +325,91 @@ export class HisApiClient {
       }
       throw err;
     }
+  }
+
+  // ─── IPD (Inpatient) ───────────────────────────────────────────────────────
+
+  async fetchPatientWithAdmissions(
+    query: string,
+    type: 'hn' | 'citizen_id',
+    from?: string,
+    to?: string,
+  ): Promise<HisAdmissionData> {
+    let hn: string;
+
+    if (type === 'citizen_id') {
+      const patients = await this.searchPatient(query, 'citizen_id');
+      if (!patients.length) {
+        throw new Error('ไม่พบข้อมูลผู้ป่วยใน HIS');
+      }
+      hn = patients[0].hn;
+    } else {
+      hn = query.padStart(9, '0');
+    }
+
+    try {
+      const params = new URLSearchParams();
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      const qs = params.toString();
+      const data = await this.callApi<HisAdmissionData>(
+        `/patients/${encodeURIComponent(hn)}/admissions${qs ? '?' + qs : ''}`,
+      );
+      data.admissions = (data.admissions ?? []).map((a) => this.normalizeHisAdmission(a));
+      return data;
+    } catch (err: any) {
+      if (
+        err.message?.includes('404') ||
+        err.message?.includes('ไม่พบ') ||
+        err.message?.includes('NOT_FOUND')
+      ) {
+        throw new Error('ไม่พบข้อมูลผู้ป่วยใน HIS');
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Normalize HIS admission data — ensure arrays exist, trim fields.
+   */
+  private normalizeHisAdmission(admission: Record<string, any>): HisAdmission {
+    const rawDiagnoses = Array.isArray(admission.diagnoses) ? admission.diagnoses : [];
+    const diagnoses = rawDiagnoses.map((dx: any) => ({
+      diagCode: dx.diagCode?.trim() || '',
+      diagType: dx.diagType?.trim() || '',
+      diagTerm: dx.diagTerm || null,
+    }));
+
+    const rawProcedures = Array.isArray(admission.procedures) ? admission.procedures : [];
+    const procedures = rawProcedures.map((p: any) => ({
+      procedureCode: p.procedureCode?.trim() || '',
+      codeSys: p.codeSys?.trim() || 'ICD9CM',
+      procedureTerm: p.procedureTerm || null,
+      doctorLicense: p.doctorLicense?.trim() || null,
+      startDate: p.startDate?.trim() || null,
+      startTime: p.startTime?.trim() || null,
+      endDate: p.endDate?.trim() || null,
+      endTime: p.endTime?.trim() || null,
+      location: p.location || null,
+    }));
+
+    return {
+      ...admission,
+      diagnoses,
+      procedures,
+      billingItems: Array.isArray(admission.billingItems) ? admission.billingItems : [],
+      an: admission.an?.trim() || '',
+      hn: admission.hn?.trim() || '',
+      admitDate: admission.admitDate?.trim() || '',
+      admitTime: admission.admitTime?.trim() || null,
+      dischargeDate: admission.dischargeDate?.trim() || null,
+      dischargeTime: admission.dischargeTime?.trim() || null,
+      dischargeStatus: admission.dischargeStatus?.trim() || null,
+      dischargeType: admission.dischargeType?.trim() || null,
+      ward: admission.ward?.trim() || null,
+      department: admission.department?.trim() || null,
+      attendingDoctorLicense: admission.attendingDoctorLicense?.trim() || null,
+    } as HisAdmission;
   }
 
   /**

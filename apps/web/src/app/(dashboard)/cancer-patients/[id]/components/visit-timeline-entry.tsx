@@ -7,6 +7,7 @@ import {
   CreditCard,
   ExternalLink,
   FileArchive,
+  BedDouble,
   Pill,
   Plus,
   SearchCheck,
@@ -85,6 +86,7 @@ export function VisitTimelineEntry({
   }) => void;
   onDeleteVisit?: (vn: string) => void;
 }) {
+  const isIpd = visit.visitType === '2';
   const activeBillingClaims = visit.billingClaims.filter((bc) => bc.isActive);
   const caseOptions = activeCases.map((c) => ({
     value: String(c.id),
@@ -108,7 +110,13 @@ export function VisitTimelineEntry({
           <span className="text-xs text-muted-foreground w-[80px] shrink-0 tabular-nums">
             {formatThaiDate(visit.visitDate)}
           </span>
-          <CodeBadge code={visit.vn} copyable />
+          {isIpd && (
+            <Badge variant="default" className="text-[10px] bg-blue-600 hover:bg-blue-600 gap-0.5 shrink-0">
+              <BedDouble className="h-2.5 w-2.5" />
+              IPD
+            </Badge>
+          )}
+          <CodeBadge code={isIpd && visit.an ? visit.an : visit.vn} copyable />
           {visit.case ? (
             <Badge variant="default" className="text-[10px]">
               {visit.case.caseNumber}
@@ -181,6 +189,25 @@ export function VisitTimelineEntry({
                   <div>
                     <span className="text-xs text-muted-foreground">วินิจฉัยรอง:</span>
                     <span className="ml-2 font-mono text-xs">{visit.secondaryDiagnoses}</span>
+                  </div>
+                )}
+
+                {/* IPD admission info */}
+                {isIpd && visit.an && (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground rounded-md bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/40 dark:border-blue-800/30 px-3 py-2">
+                    <span>AN: <span className="font-mono font-medium text-foreground">{visit.an}</span></span>
+                    <span>รับเข้า: <span className="font-medium text-foreground">{formatThaiDate(visit.visitDate)}{visit.admitTime && ` ${visit.admitTime}`}</span></span>
+                    <span>
+                      จำหน่าย:{' '}
+                      {visit.dischargeDate
+                        ? <span className="font-medium text-foreground">{formatThaiDate(visit.dischargeDate)}{visit.dischargeTime && ` ${visit.dischargeTime}`}</span>
+                        : <span className="text-amber-600 dark:text-amber-400">ยังไม่จำหน่าย</span>
+                      }
+                    </span>
+                    {visit.ward && <span>หอผู้ป่วย: <span className="font-medium text-foreground">{visit.ward}</span></span>}
+                    {visit.lengthOfStay != null && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{visit.lengthOfStay} วัน</Badge>
+                    )}
                   </div>
                 )}
 

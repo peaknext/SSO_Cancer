@@ -6,7 +6,11 @@ import {
   HisPatientSearchResult,
   HisPatientData,
   HisVisit,
+  HisAdmission,
   isCancerRelatedIcd10,
+  isCancerRelatedAdmission,
+  extractDiagnosesFromArray,
+  proceduresToSecondaryDiagCodes,
   analyzeVisitCompleteness,
   HisSearchPreviewResult,
 } from './types/his-api.types';
@@ -265,6 +269,12 @@ export class HisIntegrationService {
       address: p.address ? String(p.address).trim().slice(0, 500) : null,
       phoneNumber: p.phoneNumber || null,
       mainHospitalCode: p.mainHospitalCode || null,
+      // CIPN demographic fields
+      idType: p.idType?.slice(0, 2) || null,
+      maritalStatus: p.maritalStatus?.slice(0, 2) || null,
+      nationality: p.nationality?.slice(0, 5) || null,
+      province: p.province?.slice(0, 5) || null,
+      district: p.district?.slice(0, 10) || null,
     };
 
     if (existing) {
@@ -342,7 +352,7 @@ export class HisIntegrationService {
         clinicCode: visit.clinicCode || null,
         // SSOP 0.93 fields (receiptNo fallback for billNo — HIS may send either)
         billNo: visit.billNo || visit.receiptNo || null,
-        visitType: visit.visitType || null,
+        visitType: visit.visitType || '1',
         dischargeType: visit.dischargeType || null,
         nextAppointmentDate: visit.nextAppointmentDate ? new Date(visit.nextAppointmentDate) : null,
         serviceClass: visit.serviceClass || null,
@@ -639,6 +649,8 @@ export class HisIntegrationService {
           stdGroup: normalized.stdGroup,
           sksDfsText: normalized.sksDfsText,
           sksReimbPrice: normalized.sksReimbPrice,
+          serviceDate: normalized.serviceDate,
+          discount: normalized.discount,
         },
       });
       count++;
@@ -699,7 +711,69 @@ export class HisIntegrationService {
       stdGroup: item.stdGroup ? String(item.stdGroup).slice(0, 10) : null,
       sksDfsText: item.sksDfsText || null,
       sksReimbPrice: item.sksReimbPrice ?? null,
+      // CIPN fields
+      serviceDate: item.serviceDate ? new Date(item.serviceDate) : null,
+      discount: item.discount ?? 0,
     };
+  }
+
+  /** Create structured VisitDiagnosis records from HIS diagnoses array (for CIPN IPDx) */
+  private async createVisitDiagnoses(
+    tx: TxClient,
+    visitId: number,
+    diagnoses: import('./types/his-api.types').HisDiagnosis[],
+  ): Promise<number> {
+    let count = 0;
+    for (let i = 0; i < diagnoses.length; i++) {
+      const dx = diagnoses[i];
+      const code = dx.diagCode?.trim();
+      if (!code) continue;
+      await tx.visitDiagnosis.create({
+        data: {
+          visitId,
+          sequence: i + 1,
+          diagCode: code.replace(/\./g, '').toUpperCase().slice(0, 10),
+          diagType: (dx.diagType?.trim() || '4').slice(0, 2),
+          codeSys: 'ICD-10',
+          diagTerm: dx.diagTerm?.slice(0, 500) || null,
+          doctorLicense: dx.doctorLicense?.slice(0, 20) || null,
+          diagDate: dx.diagDate ? new Date(dx.diagDate) : null,
+        },
+      });
+      count++;
+    }
+    return count;
+  }
+
+  /** Create structured VisitProcedure records from HIS procedures array (for CIPN IPOp) */
+  private async createVisitProcedures(
+    tx: TxClient,
+    visitId: number,
+    procedures: import('./types/his-api.types').HisProcedure[],
+  ): Promise<number> {
+    let count = 0;
+    for (let i = 0; i < procedures.length; i++) {
+      const proc = procedures[i];
+      const code = proc.procedureCode?.trim();
+      if (!code) continue;
+      await tx.visitProcedure.create({
+        data: {
+          visitId,
+          sequence: i + 1,
+          procedureCode: code.slice(0, 10),
+          codeSys: proc.codeSys?.slice(0, 15) || 'ICD9CM',
+          procedureTerm: proc.procedureTerm?.slice(0, 500) || null,
+          doctorLicense: proc.doctorLicense?.slice(0, 20) || null,
+          startDate: proc.startDate ? new Date(proc.startDate) : null,
+          startTime: proc.startTime?.slice(0, 8) || null,
+          endDate: proc.endDate ? new Date(proc.endDate) : null,
+          endTime: proc.endTime?.slice(0, 8) || null,
+          location: proc.location?.slice(0, 100) || null,
+        },
+      });
+      count++;
+    }
+    return count;
   }
 
   /** Sync an already-imported visit with latest data from HIS */
@@ -1048,6 +1122,267 @@ export class HisIntegrationService {
       deletedImports: importCount,
       deletedBatches: batchCount,
     };
+  }
+
+  // ─── IPD (Inpatient) Import ───────────────────────────────────────────────
+
+  /** Preview IPD import — fetch admissions from HIS and compute what will be imported */
+  async previewAdmissions(
+    hn: string,
+    from?: string,
+    to?: string,
+  ): Promise<{
+    patient: HisPatientSearchResult;
+    existingPatientId: number | null;
+    totalAdmissions: number;
+    cancerRelatedAdmissions: number;
+    alreadyImportedAns: string[];
+    newAdmissionsToImport: number;
+  }> {
+    const hisData = await this.hisClient.fetchPatientWithAdmissions(hn, 'hn', from, to);
+
+    const existingPatient = await this.prisma.patient.findFirst({
+      where: {
+        OR: [
+          { hn: normalizeHn(hisData.patient.hn) },
+          { hn: hisData.patient.hn },
+          ...(hisData.patient.citizenId ? [{ citizenId: hisData.patient.citizenId }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+
+    const cancerAdmissions = hisData.admissions.filter(isCancerRelatedAdmission);
+
+    // Check already-imported ANs
+    const allAns = cancerAdmissions.map((a) => a.an);
+    const existingAdmissions = allAns.length > 0
+      ? await this.prisma.patientVisit.findMany({
+          where: { an: { in: allAns } },
+          select: { an: true },
+        })
+      : [];
+    const existingAnSet = new Set(existingAdmissions.map((v) => v.an).filter((a): a is string => !!a));
+    const newAdmissions = cancerAdmissions.filter((a) => !existingAnSet.has(a.an));
+
+    return {
+      patient: hisData.patient,
+      existingPatientId: existingPatient?.id ?? null,
+      totalAdmissions: hisData.admissions.length,
+      cancerRelatedAdmissions: cancerAdmissions.length,
+      alreadyImportedAns: [...existingAnSet],
+      newAdmissionsToImport: newAdmissions.length,
+    };
+  }
+
+  /** Import IPD admissions from HIS into database */
+  async importAdmissions(
+    hn: string,
+    userId: number | null,
+    from?: string,
+    to?: string,
+  ): Promise<ImportResult> {
+    const hisData = await this.hisClient.fetchPatientWithAdmissions(hn, 'hn', from, to);
+
+    // 1. Filter cancer-related admissions
+    const cancerAdmissions = hisData.admissions.filter(isCancerRelatedAdmission);
+    const skippedNonCancer = hisData.admissions.length - cancerAdmissions.length;
+
+    // 2. Find already-imported ANs
+    const allAns = cancerAdmissions.map((a) => a.an);
+    const existingAdmissions = allAns.length > 0
+      ? await this.prisma.patientVisit.findMany({
+          where: { an: { in: allAns } },
+          select: { an: true },
+        })
+      : [];
+    const existingAnSet = new Set(existingAdmissions.map((v) => v.an).filter((a): a is string => !!a));
+    const newAdmissions = cancerAdmissions.filter((a) => !existingAnSet.has(a.an));
+    const skippedDuplicate = cancerAdmissions.length - newAdmissions.length;
+
+    if (newAdmissions.length === 0) {
+      throw new BadRequestException(
+        skippedDuplicate > 0
+          ? `มี ${skippedDuplicate} admission ที่นำเข้าแล้ว ไม่มี admission ใหม่`
+          : 'ไม่พบ admission ที่เกี่ยวข้องกับมะเร็งใน HIS',
+      );
+    }
+
+    // 3. Import within transaction
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const patientId = await this.upsertPatient(tx, hisData.patient);
+
+        const importRecord = await tx.patientImport.create({
+          data: {
+            filename: `HIS_API_IPD_${normalizeHn(hn)}_${new Date().toISOString().slice(0, 10)}`,
+            totalRows: hisData.admissions.length,
+            importedRows: 0,
+            skippedRows: 0,
+            source: 'HIS_API_IPD',
+            ...(userId ? { importedById: userId } : {}),
+            status: 'PROCESSING',
+          },
+        });
+
+        let importedCount = 0;
+        const errors: string[] = [];
+
+        for (const admission of newAdmissions) {
+          try {
+            await this.importAdmission(tx, admission, importRecord.id, patientId, hn);
+            importedCount++;
+          } catch (err: any) {
+            this.logger.error(`Failed to import admission AN=${admission.an}: ${err.message}`);
+            errors.push(`AN ${admission.an}: ${err.message}`);
+          }
+        }
+
+        await tx.patientImport.update({
+          where: { id: importRecord.id },
+          data: {
+            importedRows: importedCount,
+            skippedRows: skippedNonCancer + skippedDuplicate + (newAdmissions.length - importedCount),
+            status: 'COMPLETED',
+            ...(errors.length > 0 ? { errorLog: JSON.stringify(errors) } : {}),
+          },
+        });
+
+        return { patientId, importId: importRecord.id, importedCount };
+      },
+      { timeout: 60_000 },
+    );
+
+    // Count total linked visits for patient
+    const linkedVisitCount = await this.prisma.patientVisit.count({
+      where: { patientId: result.patientId },
+    });
+
+    return {
+      patientId: result.patientId,
+      importId: result.importId,
+      totalVisitsFromHis: hisData.admissions.length,
+      cancerRelatedVisits: cancerAdmissions.length,
+      importedVisits: result.importedCount,
+      skippedDuplicate,
+      skippedNonCancer,
+      linkedVisitCount,
+    };
+  }
+
+  /**
+   * Import a single IPD admission → 1 PatientVisit record (Option A: per-admission matching).
+   * Flattens diagnoses + procedures + billing items into a PatientVisit-compatible shape.
+   */
+  private async importAdmission(
+    tx: TxClient,
+    admission: HisAdmission,
+    importId: number,
+    patientId: number,
+    hn: string,
+  ): Promise<void> {
+    // Use the HN from the admission record itself (authoritative), not the input query parameter
+    const normalizedHn = normalizeHn(admission.hn);
+
+    // Guard against synthetic VN exceeding VarChar(30): "IPD-" (4) + AN must fit
+    if (admission.an.length > 26) {
+      throw new Error(
+        `Admission AN=${admission.an} exceeds 26 chars — synthetic VN would overflow VarChar(30)`,
+      );
+    }
+
+    // 1. Extract primary + secondary diagnoses from structured array
+    const { primaryDiagnosis: rawPrimary, secondaryDiagnoses: rawSecondary } =
+      extractDiagnosesFromArray(admission.diagnoses);
+
+    const primaryDx = sanitizeIcd10(rawPrimary).replace(/\./g, '').toUpperCase();
+    if (!primaryDx) {
+      throw new Error(`Admission AN=${admission.an} has no valid primary diagnosis`);
+    }
+
+    // 2. Append procedure-derived modality codes to secondary diagnoses
+    //    9925 → Z5111 (chemo), 9224 → 9224 (radiation) — recognized by inferStage()
+    const procedureCodes = proceduresToSecondaryDiagCodes(admission.procedures || []);
+    const secondaryCodes = rawSecondary
+      ? rawSecondary.split(',').map((c) => sanitizeIcd10(c.trim()).replace(/\./g, '').toUpperCase()).filter(Boolean)
+      : [];
+    // Append procedure codes only if not already present in diagnosis codes
+    for (const pc of procedureCodes) {
+      if (!secondaryCodes.includes(pc)) {
+        secondaryCodes.push(pc);
+      }
+    }
+    const secondaryDx = secondaryCodes.length > 0 ? secondaryCodes.join(',') : null;
+
+    // 3. Resolve ICD-10 → CancerSite
+    const resolvedSiteId = await this.importService.resolveIcd10(primaryDx);
+
+    // 4. Build medicationsRaw from drug billing items (IPD has no separate medications array)
+    const allBillingItems = admission.billingItems ?? [];
+    const drugBillingItems = allBillingItems.filter(
+      (b) => (b.billingGroup === '3' || b.billingGroup === '03') && b.sksDrugCode,
+    );
+    let medicationsRaw: string | null = null;
+    if (drugBillingItems.length > 0) {
+      medicationsRaw = drugBillingItems
+        .map((b) => `${b.hospitalCode || ''} - ${b.dfsText || b.sksDfsText || b.description}`.trim())
+        .join('\n');
+    }
+
+    // 5. Create PatientVisit record — synthetic VN to avoid collision with OPD
+    const createdVisit = await tx.patientVisit.create({
+      data: {
+        importId,
+        hn: normalizedHn,
+        vn: `IPD-${admission.an}`,
+        an: admission.an,
+        visitType: '2',
+        visitDate: new Date(admission.admitDate),
+        dischargeDate: admission.dischargeDate ? new Date(admission.dischargeDate) : null,
+        dischargeType: admission.dischargeType || null,
+        primaryDiagnosis: primaryDx,
+        secondaryDiagnoses: secondaryDx,
+        medicationsRaw,
+        physicianLicenseNo: admission.attendingDoctorLicense || null,
+        resolvedSiteId,
+        patientId,
+        // CIPN admission fields
+        admitTime: admission.admitTime || null,
+        dischargeTime: admission.dischargeTime || null,
+        admissionType: admission.admissionType || null,
+        admissionSource: admission.admissionSource || null,
+        dischargeStatus: admission.dischargeStatus || null,
+        ward: admission.ward || null,
+        department: admission.department || null,
+        lengthOfStay: admission.lengthOfStay ?? null,
+        leaveDay: admission.leaveDay ?? 0,
+        birthWeight: admission.birthWeight ?? null,
+        drg: admission.drg || null,
+        drgVersion: admission.drgVersion || null,
+        rw: admission.rw ?? null,
+        adjRw: admission.adjRw ?? null,
+        authCode: admission.authCode || null,
+        authDate: admission.authDate ? new Date(admission.authDate) : null,
+      },
+    });
+
+    // 6. Create VisitBillingItem records (reuse OPD method)
+    await this.createVisitBillingItems(tx, createdVisit.id, allBillingItems);
+
+    // 7. Create VisitMedication from drug billing items (IPD uses billing items, not medications array)
+    if (drugBillingItems.length > 0) {
+      await this.createMedicationsFromBillingItems(tx, createdVisit.id, drugBillingItems);
+    }
+
+    // 8. Create structured VisitDiagnosis records (for CIPN IPDx)
+    if (admission.diagnoses?.length > 0) {
+      await this.createVisitDiagnoses(tx, createdVisit.id, admission.diagnoses);
+    }
+
+    // 9. Create structured VisitProcedure records (for CIPN IPOp)
+    if (admission.procedures?.length > 0) {
+      await this.createVisitProcedures(tx, createdVisit.id, admission.procedures);
+    }
   }
 
   /** Health check for HIS API connectivity */

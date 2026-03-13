@@ -13,6 +13,7 @@ import {
   SearchCheck,
   Receipt,
   FileArchive,
+  BedDouble,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -79,6 +80,13 @@ const navItems: NavItem[] = [
     labelThai: 'ส่งออก SSOP',
     href: '/ssop-export',
     icon: FileArchive,
+    roles: ['EDITOR', 'ADMIN', 'SUPER_ADMIN'],
+  },
+  {
+    label: 'CIPN Export',
+    labelThai: 'ส่งออก CIPN',
+    href: '/cipn-export',
+    icon: BedDouble,
     roles: ['EDITOR', 'ADMIN', 'SUPER_ADMIN'],
   },
   {
