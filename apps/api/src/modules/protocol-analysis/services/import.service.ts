@@ -607,7 +607,7 @@ export class ImportService {
 
     // Fallback: if primary is metastatic code, try secondary diagnoses
     if (this.isMetastaticCode(primaryDiagnosis) && secondaryDiagnoses) {
-      const codes = secondaryDiagnoses.split(',').map((c) => c.trim()).filter(Boolean);
+      const codes = secondaryDiagnoses.split(/[|,;]/).map((c) => c.trim()).filter(Boolean);
       for (const code of codes) {
         const fallbackSiteId = await this.resolveIcd10(code);
         if (fallbackSiteId) return fallbackSiteId;

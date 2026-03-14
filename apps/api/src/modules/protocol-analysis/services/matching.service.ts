@@ -335,6 +335,24 @@ export class MatchingService {
         visit.secondaryDiagnoses,
       );
       if (siteId && this.importService.isMetastaticCode(visit.primaryDiagnosis)) {
+        const pdxCode = visit.primaryDiagnosis.replace(/\./g, '').toUpperCase();
+
+        if (pdxCode.startsWith('C78') || pdxCode.startsWith('C79')) {
+          stageInference.hasDistantMets = true;
+          stageInference.inferredStage = 'METASTATIC';
+          const desc = pdxCode.startsWith('C78')
+            ? C78_DESCRIPTIONS[pdxCode.substring(0, 4)] || C78_DESCRIPTIONS['C78']
+            : C79_DESCRIPTIONS[pdxCode.substring(0, 4)] || C79_DESCRIPTIONS['C79'];
+          stageInference.reasons.push(`PDx ${visit.primaryDiagnosis} → ${desc} → ระยะแพร่กระจาย`);
+        } else if (pdxCode.startsWith('C77')) {
+          stageInference.hasNodeInvolvement = true;
+          if (!stageInference.hasDistantMets) {
+            stageInference.inferredStage = 'LOCALLY_ADVANCED';
+          }
+          stageInference.reasons.push(
+            `PDx ${visit.primaryDiagnosis} → มีการแพร่กระจายไปต่อมน้ำเหลือง → ระยะลุกลามเฉพาะที่`,
+          );
+        }
         stageInference.reasons.push(
           `PDx ${visit.primaryDiagnosis} เป็นรหัส metastasis → ใช้ SDx เพื่อระบุตำแหน่งมะเร็งปฐมภูมิ`,
         );
