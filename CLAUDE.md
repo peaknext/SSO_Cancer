@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SSO Cancer Care is a bilingual (Thai/English) web application for managing Thai Social Security Office (SSO) cancer treatment protocols. It is a **Next.js 15 + NestJS 11 monorepo** with **Prisma 7 ORM**, **PostgreSQL**, and **TypeScript**.
+SSO Cancer Care is a bilingual (Thai/English) web application for managing Thai Social Security Office (SSO) cancer treatment protocols. It is a **Next.js 15 (React 19) + NestJS 11 monorepo** with **Prisma 7 ORM**, **PostgreSQL**, and **TypeScript**.
 
 The data covers 23 cancer sites with treatment protocols, drug regimens, staging, and SSO drug pricing (~1,700 rows of seed data). Full spec: `docs/SPECIFICATION.md`.
 
@@ -106,7 +106,7 @@ bash deploy/pull-and-run.sh v1.0.0          # Deploy on hospital server
 
 Copy `.env.example` to `.env`. Key variables: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CORS_ORIGIN`, `API_PORT` (48002), `WEB_PORT` (47001). High dev ports avoid conflict with Docker containers on 3000/4000.
 
-Additional production env vars (see `.env.production.example`): `MAX_FAILED_LOGIN_ATTEMPTS`, `LOCKOUT_DURATION_SECONDS`, `MAX_CONCURRENT_SESSIONS`, `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL`, `PASSWORD_HISTORY_COUNT`, `LOG_LEVEL`.
+Additional production env vars (see `.env.production.example`): `MAX_FAILED_LOGIN_ATTEMPTS`, `LOCKOUT_DURATION_SECONDS`, `MAX_CONCURRENT_SESSIONS`, `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL`, `PASSWORD_HISTORY_COUNT`, `LOG_LEVEL`, `SETTINGS_ENCRYPTION_KEY` (256-bit hex for AES-256-GCM app_settings encryption), `BACKUP_ENCRYPTION_KEY` (256-bit hex for backup file encryption), `SESSION_INACTIVITY_TIMEOUT` (seconds, default 1800).
 
 ### Testing
 
@@ -119,11 +119,11 @@ No test framework (Jest/Vitest) is configured yet.
 ```
 apps/api/       NestJS 11 REST API (dev port 48002, Docker port 4000, prefix /api/v1)
 apps/web/       Next.js 15 frontend (dev port 47001, Docker port 3000)
-prisma/         Schema, config, migrations, generated client
-database/seeds/ Numbered SQL files (001–017) executed by prisma/seed.ts
+prisma/         Schema, config, 24 migrations, generated client
+database/seeds/ Numbered SQL files (001–019) executed by prisma/seed.ts
 deploy/         4 deploy scripts + nginx config
-docs/           SPECIFICATION.md, DEPLOYMENT.md, DEPLOYMENT-WINDOWS-NATIVE.md, HIS_API_REQUEST.md, HIS_API_RESPONSE_ANALYSIS.md, HIS_ENDPOINT2_UPGRADE.md, OLLAMA_API.md, PRODUCTION_UPGRADE_PROMPT.md, SSOP_093_REFERENCE.md, SSOP_EXPORT_FIX_PLAN.md, SECURITY_AUDIT_REPORT.md, SECURITY_REMEDIATION.md
-scripts/        Seed generation utilities (export-seeds.ts, generate-aipn-seed.ts, etc.)
+docs/           SPECIFICATION.md, DEPLOYMENT.md, DEPLOYMENT-WINDOWS-NATIVE.md, HIS_API_REQUEST.md, HIS_API_RESPONSE_ANALYSIS.md, HIS_ENDPOINT2_UPGRADE.md, HIS_IPD_API_REQUEST.md, IPD_INTEGRATION_PROGRESS.md, OLLAMA_API.md, PRODUCTION_UPGRADE_PROMPT.md, SSOP_093_REFERENCE.md, SSOP_EXPORT_FIX_PLAN.md, SECURITY_AUDIT_REPORT.md, SECURITY_REMEDIATION.md
+scripts/        Seed generation + batch utilities (export-seeds.ts, batch-import-his.js, resolve-drugs.js, etc.)
 ```
 
 Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspace has its own tsconfig.
@@ -136,7 +136,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - **PrismaService** at `apps/api/src/prisma/prisma.service.ts` wraps PrismaClient in a `@Global()` NestJS module
 - **Barrel export** at `apps/api/src/prisma/index.ts` — services import `Prisma` namespace via `import { Prisma } from '../../prisma'`
 
-### Data Model (28 tables)
+### Data Model (32 tables)
 
 **Core medical entities (6):** Drug, DrugTradeName, CancerSite, CancerStage, ProtocolName, Regimen
 
@@ -146,17 +146,21 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 
 **Patient management (3):** Patient, PatientCase, VisitBillingClaim
 
-**HIS billing (2):** VisitBillingItem (per-visit itemized billing from HIS, with hospitalCode/aipnCode/tmtCode/billingGroup/claimCategory), BillingExportBatch (SSOP export audit trail, stores ZIP bytes + session number per hcode)
+**HIS billing (2):** VisitBillingItem (per-visit itemized billing from HIS, with hospitalCode/aipnCode/tmtCode/sksDrugCode/billingGroup/claimCategory), BillingExportBatch (SSOP export audit trail, stores ZIP bytes + session number per hcode)
 
 **Reference data (1):** Hospital (1,218 MOPH hospitals with hcode5, hcode9, name, level, province, address)
 
 **SSO formulary (2):** SsoAipnItem (national drug/equipment catalog with billing rates), SsoProtocolDrug (per-protocol approved drug formulary)
 
+**Structured clinical records (2):** VisitDiagnosis (ICD-10 diagnoses per visit for CIPN IPDx), VisitProcedure (ICD-9-CM procedures per visit for CIPN IPOp)
+
+**HIS scan logs (2):** NightlyScanLog (nightly auto-import tracking: status, counts, duration), NightlyScanDetail (per-patient scan results)
+
 **Auth/system tables (5):** User, Session, PasswordHistory, AuditLog, AppSetting
 
 ### NestJS API Architecture
 
-**21 feature modules** in `apps/api/src/modules/`:
+**24 feature modules** in `apps/api/src/modules/`:
 
 - `health` — GET /health
 - `auth` — login, refresh, logout, change-password, me (JWT + refresh cookie)
@@ -167,7 +171,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `drugs`, `drug-trade-names` — CRUD with category/price filters
 - `dashboard` — aggregation stats with 5-min in-memory cache (12 cached endpoints; `getRecentActivity` and `getZ51ActionableVisits` uncached)
 - `audit-logs` — paginated query + CSV export (ADMIN+)
-- `app-settings` — grouped key-value config (SUPER_ADMIN to edit). Settings groups: `ai` (13 keys), `hospital` (4 keys: `hospital_id`, `his_api_base_url`, `his_api_key`, `his_api_timeout`), `ssop` (1 key: `ssop_care_account`). `his_api_key` and `ai_ollama_api_key` are in `SENSITIVE_KEYS` (masked in GET responses).
+- `app-settings` — grouped key-value config (SUPER_ADMIN to edit). Settings groups: `ai` (13 keys), `hospital` (4 keys: `hospital_id`, `his_api_base_url`, `his_api_key`, `his_api_timeout`), `ssop` (1 key: `ssop_care_account`), `system` (6+ keys: `audit_log_retention_days`, `his_nightly_scan_enabled`, `his_scan_*` filters). Sensitive keys (`his_api_key`, `ai_*_api_key`) masked in GET responses + encrypted at rest via AES-256-GCM if `SETTINGS_ENCRYPTION_KEY` set.
 - `protocol-analysis` — CSV/Excel import of hospital visit data, drug resolution (4-tier: see Drug Resolution below), protocol matching with scoring, protocol confirmation (PATCH confirm/DELETE unconfirm per visit). Import service auto-links visits to existing Patient records by HN during import.
 - `ai` — multi-provider AI suggestion engine (see AI Module below)
 - `cancer-patients` — Patient registration, case management (multi-case per patient), visit-to-case assignment, billing claims per visit (multiple rounds with status tracking), Excel export with field picker (EDITOR+). Additional endpoints: `GET /case-hospitals` (distinct hospitals in active cases), `GET /export` (Excel download with configurable fields). **Visits are linked by HN (natural key)**, not `patientId` FK — `findById` queries `patientVisit` by `WHERE hn = patient.hn` and opportunistically re-links stale `patientId` values. `findAll` counts visits per patient via `groupBy(['hn'])`. This survives patient re-creation with new IDs.
@@ -176,13 +180,15 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 - `hospitals` — Read-only MOPH hospital reference data (1,218 hospitals). GET /hospitals with search (name, hcode5, province), GET /hospitals/:id
 - `his-integration` — HIS (Hospital Information System) REST API integration for pulling patient/visit data directly. See HIS Integration below.
 - `ssop-export` — SSOP 0.93 electronic billing file generation. See SSOP Export below.
+- `cipn-export` — CIPN (Central Government Budget Inpatient Claims) format for IPD claims to CSMBS. Placeholder module with stub generator — IPD module under development. Endpoints: `POST /cipn-export/generate`, `GET /cipn-export/batches`.
+- `maintenance` — Admin utilities for data cleanup, migration, diagnostics. Placeholder for future extensions.
 - `backup-restore` — Full database backup/restore (SUPER_ADMIN only). `GET /backup-restore/status` (table row counts), `GET /backup-restore/backup?includeAuditLogs=` (download `.json.gz` with SHA256 checksum), `POST /backup-restore/restore/preview` (validate uploaded file, compare row counts, no DB write), `POST /backup-restore/restore/confirm` (full restore: disable FK → TRUNCATE → INSERT in dependency order → reset sequences → verify). Backup format: `{ metadata, data: { [table]: rows[] } }`. Restore handles both `.json.gz` and `.json` uploads (50 MB limit). Frontend at `/settings/backup`.
 
 **Global guards** (registered via `APP_GUARD` in `app.module.ts`):
 
 1. `JwtAuthGuard` — all endpoints require auth unless `@Public()` decorator
 2. `RolesGuard` — checks `@Roles(UserRole.ADMIN, ...)` metadata
-3. `ThrottlerGuard` — 60 requests/minute
+3. `ThrottlerGuard` — 120 requests/minute (login endpoint throttled to 5/min separately)
 
 **Global interceptors**:
 
@@ -204,8 +210,8 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 
 **Scheduled jobs** (`ScheduleModule.forRoot()`):
 
-1. HIS nightly scan (`his-nightly-scan.service.ts`) — `@Cron('0 1 * * *')` Asia/Bangkok, auto-imports new visits for tracked patients. Controlled by `his_nightly_scan_enabled` AppSetting.
-2. Audit logs cleanup (`audit-logs.service.ts`) — `@Cron(EVERY_DAY_AT_3AM)`, purges old audit log entries.
+1. HIS nightly scan (`his-nightly-scan.service.ts`) — `@Cron('0 1 * * *')` Asia/Bangkok, auto-imports new OPD visits + IPD admissions for tracked patients. Controlled by `his_nightly_scan_enabled` AppSetting. Filter config via `his_scan_filter_*` settings. Results saved to NightlyScanLog table + `his_nightly_scan_last_result` AppSetting.
+2. Audit logs cleanup (`audit-logs.service.ts`) — `@Cron(EVERY_DAY_AT_3AM)`, purges logs older than 90 days (configurable via `audit_log_retention_days` setting).
 
 ### Next.js Frontend Architecture
 
@@ -224,19 +230,24 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
   - `/cancer-patients/new` — Patient registration form
   - `/cancer-patients/[id]` — Patient detail: case management (create/close/edit protocol), visit timeline (expand/collapse with persisted state), billing claims per visit (add/edit rounds with dates)
   - `/ssop-export` — SSOP 0.93 billing export: two-tab page (create export with 3-step select→preview→generate flow using ThaiDatePicker + multi-select checkboxes; export history with re-download). Uses raw `fetch()` for binary ZIP download with `X-Batch-Id` response header.
+  - `/cipn-export` — IPD billing export (placeholder, future)
   - `/revenue` — Placeholder (Coming Soon)
+  - `/profile` — User profile page
   - `/user-manual` — User manual/help page
   - `/settings/users`, `/settings/users/[id]` — User management (ADMIN+)
   - `/settings/app` — App settings with inline editing (SUPER_ADMIN to edit)
   - `/settings/ai` — AI provider configuration (SUPER_ADMIN to edit)
   - `/settings/audit-logs` — Audit log viewer with expandable diff (ADMIN+)
+  - `/settings/scan-logs` — HIS nightly scan log viewer (ADMIN+)
   - `/settings/backup` — Database backup download + restore upload with preview/confirm state machine (SUPER_ADMIN)
   - `/settings/aipn-catalog` — SSO AIPN drug/equipment catalog viewer
+  - `/settings/maintenance` — System maintenance tools (SUPER_ADMIN)
+  - `/settings/maintenance/bulk-import` — Bulk patient import (SUPER_ADMIN)
 - Error boundaries at root and dashboard level, custom 404
 
 **State management** (Zustand with `persist` middleware):
 
-- `auth-store.ts` — user + isAuthenticated persisted; **accessToken is NOT persisted** (security). On page reload, `onRehydrateStorage` calls `/auth/refresh` to get a new token via httpOnly refresh cookie. Cookie `sso-cancer-auth-flag` set as `SameSite=Lax` with 7-day max-age (`Secure` only when HTTPS). Store has `isHydrating` state + `refreshInFlight` mutex — dashboard layout checks `isHydrating` to prevent flash-redirect to `/login` before token refresh completes.
+- `auth-store.ts` — user + isAuthenticated persisted; **accessToken is NOT persisted** (security). On page reload, `onRehydrateStorage` calls `/auth/refresh` to get a new token via httpOnly refresh cookie. Cookie `sso-cancer-auth-flag` set as `SameSite=Strict` with 7-day max-age (`Secure` only when HTTPS). Store has `isHydrating` state + `refreshInFlight` mutex — dashboard layout checks `isHydrating` to prevent flash-redirect to `/login` before token refresh completes.
 - `language-store.ts` — locale ('th' | 'en')
 
 **Key patterns:**
@@ -253,7 +264,7 @@ Root `tsconfig.json` scope is limited to `prisma/**/*.ts` only — each workspac
 
 **Root layout** providers: `ThemeProvider` from `next-themes` (attribute="class", defaultTheme="light", enableSystem), `Toaster` from `sonner` (top-right, richColors).
 
-**`next.config.ts`**: `output: 'standalone'`, `outputFileTracingRoot` set to monorepo root, `eslint.ignoreDuringBuilds: true`. Rewrites `/api/*` to backend using `API_INTERNAL_URL` env var (falls back to `http://localhost:48002`).
+**`next.config.ts`**: `output: 'standalone'`, `outputFileTracingRoot` set to monorepo root, `eslint.ignoreDuringBuilds: true`, `experimental.workerThreads: false` + `experimental.cpus: 1` (fixes Windows Server prerender crash). CSP headers with `connect-src` to API. Rewrites `/api/*` to backend using `API_INTERNAL_URL` env var (falls back to `http://localhost:48002`).
 
 ### Authentication
 
@@ -293,6 +304,8 @@ Controllers return `createPaginatedResponse(data, total, page, limit)` → `{ su
 - Core medical entity FKs cascade delete. Operational/audit FKs use SetNull to preserve history: AuditLog→User, PatientImport→User, PatientVisit→Patient, PatientCase→Protocol/Hospital/User, VisitMedication→Drug, VisitBillingClaim→User, AiSuggestion→Protocol/Regimen/User
 - Bilingual fields: `nameThai` + `nameEnglish` on CancerSite, CancerStage, ProtocolName
 - Unique constraints on all code fields; composite uniques on junction tables
+- `PatientVisit` has both OPD and IPD fields: `vn` (unique, OPD visit number), `an` (unique, IPD admission number), `visitType` ('1'=OPD, '2'=IPD). IPD fields include `dischargeDate`, `admitTime`, `dischargeTime`, `admissionType`, `ward`, `department`, `lengthOfStay`, `drg`, `rw`, `adjRw`, `authCode`
+- `SsoAipnItem` is versioned by composite unique `(code, dateEffective)` to support historical pricing
 
 ### Naming Conventions
 
@@ -362,7 +375,16 @@ Module in `apps/api/src/modules/his-integration/` — connects to a hospital's H
 - `POST /backfill-aipn` (SUPER_ADMIN) — backfill AIPN codes for existing VisitMedication records
 - `POST /purge-visits` (SUPER_ADMIN) — delete all visits, imports, and export batches (cascade)
 
-**Data flow**: `PatientImport.source` = `'HIS_API'` (vs `'EXCEL'` for CSV import). Reuses `ImportService.resolveIcd10()` and `ImportService.resolveDrug()` from `protocol-analysis` module. HIS API spec: `docs/HIS_API_REQUEST.md`.
+**IPD endpoints**:
+
+- `GET /ipd/preview/:hn` — preview inpatient admissions
+- `POST /ipd/import/:hn` — import admissions (creates PatientVisit with visitType='2', an field)
+
+**Scan log endpoints**:
+
+- `GET /scan-logs` — query nightly scan history (NightlyScanLog + NightlyScanDetail)
+
+**Data flow**: `PatientImport.source` = `'HIS_API'` (vs `'EXCEL'` for CSV import). Reuses `ImportService.resolveIcd10()` and `ImportService.resolveDrug()` from `protocol-analysis` module. HIS API spec: `docs/HIS_API_REQUEST.md`, IPD spec: `docs/HIS_IPD_API_REQUEST.md`.
 
 **Batch import script**: `scripts/batch-import-his.js` — imports all patients from HIS API with rate-limit-safe concurrency (1 req + 1.2s delay). Usage: `node scripts/batch-import-his.js [--concurrency 1] [--from 2024-01-01] [--to 2027-12-31]`. Retries on 429 with exponential backoff.
 
@@ -387,6 +409,7 @@ Module in `apps/api/src/modules/ssop-export/` — generates SSOP 0.93 compliant 
 - `POST /generate` — generate ZIP file (uses `@Res()` → manual audit log). ZIP filename: `{hcode5}_SSOPBIL_{sessno4}_{subunit2}_{YYYYMMDD-HHMMSS}.zip`
 - `GET /batches` — export batch history
 - `GET /batches/:id/download` — re-download prior batch ZIP
+- `GET /visit-export-status` — check if visits were already exported
 
 **Key behaviors**:
 
@@ -458,7 +481,7 @@ CSV/Excel import expects these column headers (Thai or English):
 
 ### Seed System
 
-Seeds in `database/seeds/` as 17 numbered SQL files (001–017). The seeder (`prisma/seed.ts`) has a **hardcoded `seedFiles` array** — new seed files must be added to this array. Strips comments, splits by semicolons (quote-aware), executes via `$executeRawUnsafe`, and skips duplicates via `ON CONFLICT DO NOTHING`. Seed data: 23 cancer sites, 98 drugs, ~380 trade names, 169 protocols, ~63 regimens, 10 AI settings, ~1,200 SSO AIPN items (014), ~1,700 SSO protocol drug formulary entries (015), 1,218 MOPH hospitals (016), hospital/SSOP settings (017).
+Seeds in `database/seeds/` as 19 numbered SQL files (001–019). The seeder (`prisma/seed.ts`) has a **hardcoded `seedFiles` array** — new seed files must be added to this array. Strips comments, splits by semicolons (quote-aware), executes via `$executeRawUnsafe`, and skips duplicates via `ON CONFLICT DO NOTHING`. Seed data: 23 cancer sites, 98 drugs, ~380 trade names, 169 protocols, ~63 regimens, 10 AI settings, ~1,200 SSO AIPN items (014), ~1,700 SSO protocol drug formulary entries (015), 1,218 MOPH hospitals (016), hospital/SSOP settings (017), Ollama AI defaults (018), HIS DB settings (019).
 
 ### TypeScript Path Aliases
 

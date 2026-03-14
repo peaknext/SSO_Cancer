@@ -43,9 +43,10 @@ import {
 import { cn } from '@/lib/utils';
 
 // ─── Manual Version ─────────────────────────────────────────
-const MANUAL_VERSION = '1.1.0';
+const MANUAL_VERSION = '1.2.0';
 const MANUAL_DATE = '14 มีนาคม 2569';
 const MANUAL_CHANGELOG = [
+  { version: '1.2.0', date: '14 มีนาคม 2569', description: 'เพิ่ม: ภาพประกอบหน้าจอในทุกหมวดของคู่มือ (25 ภาพ), ปรับปรุงส่วนนำเข้าข้อมูลให้เป็น HIS เท่านั้น (ยกเลิก CSV/Excel import)' },
   { version: '1.1.0', date: '14 มีนาคม 2569', description: 'เพิ่ม: ส่งออก CIPN, โปรไฟล์ผู้ใช้, บำรุงรักษาระบบ/Bulk Import, ลบ Visit/ผู้ป่วย, ตัวกรอง Z510/Z511, สิทธิ์ประกัน (pttype), metastatic fallback, OPD/IPD แยกคอลัมน์' },
   { version: '1.0.2', date: '11 มีนาคม 2569', description: 'เพิ่มเอกสาร: HIS Nightly Scan, บันทึกสแกน HIS, ตัวกรองนำเข้าอัจฉริยะ, SSOP Export smart filtering พร้อมสถานะเรียกเก็บ' },
   { version: '1.0.1', date: '9 มีนาคม 2569', description: 'แก้ไขข้อมูลแดชบอร์ด (กราฟ/ตาราง/ตัวกรอง) ให้ตรงกับระบบจริง, ระบุสถานะ SSOP Export' },
@@ -169,6 +170,21 @@ function FeatureCard({ icon: Icon, title, description }: { icon: LucideIcon; tit
   );
 }
 
+function ManualImage({ src, alt, caption }: { src: string; alt: string; caption?: string }) {
+  return (
+    <figure className="my-5">
+      <div className="rounded-xl border border-border/60 overflow-hidden shadow-sm">
+        <img src={src} alt={alt} className="w-full h-auto" loading="lazy" />
+      </div>
+      {caption && (
+        <figcaption className="mt-2 text-center text-xs text-muted-foreground italic">
+          {caption}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
 // ─── Section data ───────────────────────────────────────────
 const sections: Section[] = [
   {
@@ -187,6 +203,7 @@ const sections: Section[] = [
               สามารถจัดการข้อมูลการรักษามะเร็งได้อย่างมีประสิทธิภาพ ครอบคลุม 23 ตำแหน่งมะเร็ง
               พร้อมข้อมูลสูตรยา การจัดระยะโรค และราคายาตามบัญชีของ สปส.
             </p>
+            <ManualImage src="/images/manual/25-user-manual.png" alt="User manual page" caption="หน้าคู่มือการใช้งาน" />
             <p className="text-sm text-muted-foreground leading-relaxed mt-3">
               ระบบทำงานผ่านเว็บเบราว์เซอร์โดยไม่ต้องติดตั้งซอฟต์แวร์เพิ่มเติม
               ข้อมูลในฐานข้อมูล (เช่น ชื่อมะเร็ง ชื่อโปรโตคอล) เก็บทั้งภาษาไทยและอังกฤษ
@@ -220,7 +237,7 @@ const sections: Section[] = [
               <FeatureCard icon={Users} title="บริหารจัดการผู้ป่วย" description="ลงทะเบียน เปิดเคส ติดตามการรักษา จัดการเบิกจ่าย" />
               <FeatureCard icon={SearchCheck} title="วิเคราะห์โปรโตคอล" description="จับคู่การรักษาจริงกับโปรโตคอลมาตรฐาน สปส. อัตโนมัติ" />
               <FeatureCard icon={Sparkles} title="AI แนะนำโปรโตคอล" description="ใช้ปัญญาประดิษฐ์ช่วยวิเคราะห์และแนะนำโปรโตคอลที่เหมาะสม" />
-              <FeatureCard icon={Upload} title="นำเข้าข้อมูล" description="รองรับ CSV/Excel และเชื่อมต่อระบบ HIS โดยตรง" />
+              <FeatureCard icon={Upload} title="นำเข้าข้อมูล" description="เชื่อมต่อระบบ HIS โดยตรง ดึงข้อมูลผู้ป่วย OPD/IPD อัตโนมัติ" />
               <FeatureCard icon={FileArchive} title="ส่งออก SSOP 0.93" description="สร้างไฟล์เบิกจ่ายตามมาตรฐาน สปส. พร้อมส่ง" />
               <FeatureCard icon={Database} title="ข้อมูลอ้างอิงครบครัน" description="โปรโตคอล สูตรยา บัญชียา AIPN ตำแหน่งมะเร็ง 23 ตำแหน่ง" />
               <FeatureCard icon={Shield} title="ระบบความปลอดภัย" description="สิทธิ์ผู้ใช้ 4 ระดับ, บันทึกกิจกรรม, สำรองข้อมูล" />
@@ -298,6 +315,7 @@ const sections: Section[] = [
         content: (
           <>
             <p className="text-sm text-muted-foreground leading-relaxed">เปิดเว็บเบราว์เซอร์แล้วไปที่ URL ของระบบ จะเห็นหน้า Login</p>
+            <ManualImage src="/images/manual/01-login.png" alt="Login screen" caption="หน้าจอเข้าสู่ระบบ" />
             <StepList steps={[
               'กรอกอีเมลของคุณในช่อง "อีเมล"',
               'กรอกรหัสผ่านในช่อง "รหัสผ่าน"',
@@ -377,6 +395,7 @@ const sections: Section[] = [
         content: (
           <>
             <p className="text-sm text-muted-foreground leading-relaxed">หลังเข้าสู่ระบบ หน้าจอหลักประกอบด้วย 3 ส่วนสำคัญ:</p>
+            <ManualImage src="/images/manual/02-layout-overview.png" alt="Main layout overview showing sidebar, topbar and content area" caption="โครงสร้างหน้าจอหลัก — Sidebar, Topbar และพื้นที่เนื้อหา" />
             <div className="my-4 rounded-xl border border-border/60 overflow-hidden">
               <div className="bg-primary/5 border-b border-border/60 px-4 py-2 text-xs font-mono text-muted-foreground flex items-center gap-2">
                 <Layers className="h-3.5 w-3.5" />
@@ -493,6 +512,7 @@ const sections: Section[] = [
               แดชบอร์ดคือหน้าแรกหลังเข้าสู่ระบบ แสดงสรุปข้อมูลสำคัญของระบบในรูปแบบภาพ (Visual)
               เหมาะสำหรับดูภาพรวมอย่างรวดเร็ว
             </p>
+            <ManualImage src="/images/manual/03-dashboard-stats.png" alt="Dashboard overview with statistics and charts" caption="หน้าแดชบอร์ดแสดงภาพรวมข้อมูลระบบ" />
             <Tip>ข้อมูลแดชบอร์ดมีการ cache 5 นาที — ตัวเลขอาจไม่ใช่ข้อมูล realtime หากต้องการข้อมูลล่าสุด ให้ refresh หน้า</Tip>
           </>
         ),
@@ -565,6 +585,7 @@ const sections: Section[] = [
               หน้ารายการผู้ป่วยแสดงตารางข้อมูลผู้ป่วยทั้งหมด พร้อม HN ชื่อ-สกุล เลขบัตรประชาชน ตำแหน่งมะเร็ง
               สถานะเคส จำนวน visit แยก OPD/IPD และจำนวน Z51x ของแต่ละประเภท
             </p>
+            <ManualImage src="/images/manual/04-patient-list.png" alt="Cancer patient list with search and filters" caption="หน้ารายการผู้ป่วยมะเร็ง" />
             <div className="my-3 text-sm text-muted-foreground">
               <p className="font-medium text-foreground mb-2">วิธีค้นหาและกรองผู้ป่วย:</p>
               <ul className="space-y-1 ml-4 list-disc">
@@ -586,6 +607,7 @@ const sections: Section[] = [
         content: (
           <>
             <p className="text-sm text-muted-foreground leading-relaxed mb-2">สิทธิ์: EDITOR ขึ้นไป</p>
+            <ManualImage src="/images/manual/06-patient-new.png" alt="New patient registration form" caption="ฟอร์มลงทะเบียนผู้ป่วยใหม่" />
             <StepList steps={[
               'ที่หน้ารายการผู้ป่วย คลิกปุ่ม "เพิ่มผู้ป่วย"',
               'กรอก HN (เลขประจำตัวผู้ป่วยของโรงพยาบาล)',
@@ -593,7 +615,7 @@ const sections: Section[] = [
               'กรอกข้อมูลติดต่อ (ที่อยู่, โทรศัพท์) ถ้ามี',
               'กดปุ่ม "บันทึก" — ระบบตรวจสอบว่า HN/เลขบัตรประชาชนซ้ำหรือไม่',
             ]} />
-            <Tip>ผู้ป่วยที่นำเข้าจาก Excel/CSV หรือระบบ HIS จะถูกสร้างอัตโนมัติจาก HN โดยไม่ต้องลงทะเบียนซ้ำ</Tip>
+            <Tip>ผู้ป่วยที่นำเข้าจากระบบ HIS จะถูกสร้างอัตโนมัติจาก HN โดยไม่ต้องลงทะเบียนซ้ำ</Tip>
           </>
         ),
       },
@@ -605,6 +627,7 @@ const sections: Section[] = [
             <p className="text-sm text-muted-foreground leading-relaxed">
               ผู้ป่วย 1 คนสามารถมีหลายเคส (กรณีมะเร็งมากกว่า 1 ตำแหน่ง หรือเปิดเคสใหม่หลังเปลี่ยนโปรโตคอล)
             </p>
+            <ManualImage src="/images/manual/05-patient-detail.png" alt="Patient case management page" caption="หน้าจัดการเคสรักษาของผู้ป่วย" />
             <div className="my-3 text-sm text-muted-foreground">
               <p className="font-medium text-foreground mb-2">เปิดเคสใหม่:</p>
             </div>
@@ -729,6 +752,7 @@ const sections: Section[] = [
         title: 'รูปแบบหน้าจอ 3 คอลัมน์',
         content: (
           <>
+            <ManualImage src="/images/manual/07-protocol-analysis.png" alt="Three-column protocol analysis layout" caption="หน้าวิเคราะห์โปรโตคอลแบบ 3 คอลัมน์" />
             <div className="my-4 rounded-xl border border-border/60 overflow-hidden">
               <div className="bg-primary/5 border-b border-border/60 px-4 py-2 text-xs font-mono text-muted-foreground flex items-center gap-2">
                 <Layers className="h-3.5 w-3.5" />
@@ -814,64 +838,22 @@ const sections: Section[] = [
     icon: Upload,
     subsections: [
       {
-        id: 'pai-file-format',
-        title: 'รูปแบบไฟล์ที่รองรับ',
-        content: (
-          <>
-            <div className="my-2 space-y-1 text-sm text-muted-foreground">
-              <KeyValue label="รูปแบบ" value="CSV (.csv) หรือ Excel (.xlsx)" />
-              <KeyValue label="ขนาดสูงสุด" value="10 MB" />
-            </div>
-            <div className="mt-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-2">คอลัมน์ที่จำเป็น:</p>
-              <ul className="space-y-1 ml-4 list-disc">
-                <li><code className="font-mono text-xs bg-primary/5 px-1.5 py-0.5 rounded">HN</code> — เลขผู้ป่วย</li>
-                <li><code className="font-mono text-xs bg-primary/5 px-1.5 py-0.5 rounded">VN</code> — เลขรับบริการ</li>
-                <li><code className="font-mono text-xs bg-primary/5 px-1.5 py-0.5 rounded">วันที่</code> — วันที่ visit (vsdate/visitDate/visit_date)</li>
-                <li><code className="font-mono text-xs bg-primary/5 px-1.5 py-0.5 rounded">วินิจฉัยหลัก</code> — primaryDiagnosis (รหัส ICD-10)</li>
-              </ul>
-            </div>
-            <div className="mt-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-2">คอลัมน์เพิ่มเติม (ไม่บังคับ):</p>
-              <ul className="space-y-1 ml-4 list-disc">
-                <li>วินิจฉัยรอง, HPI, หมายเหตุจากแพทย์, รายการยาที่ได้รับ</li>
-              </ul>
-            </div>
-            <Tip>รองรับหัวคอลัมน์ทั้งภาษาไทยและอังกฤษ</Tip>
-          </>
-        ),
-      },
-      {
-        id: 'pai-upload-steps',
-        title: 'ขั้นตอนการนำเข้าไฟล์',
-        content: (
-          <>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-2">สิทธิ์: EDITOR ขึ้นไป</p>
-            <StepList steps={[
-              'ไปที่เมนู "วิเคราะห์โปรโตคอล" แล้วคลิกปุ่ม "นำเข้าข้อมูล"',
-              'เลือกไฟล์ CSV/Excel หรือลากวาง (drag & drop)',
-              'ระบบแสดงตัวอย่างข้อมูล (preview) — ตรวจสอบจำนวนแถว คอลัมน์ที่พบ ข้อผิดพลาด',
-              'กด "ยืนยันนำเข้า"',
-              'ระบบจับคู่ยาอัตโนมัติ (3 ระดับ: exact → startsWith → contains) สร้าง visit และผูกกับผู้ป่วย',
-              'ดูผลสรุป: นำเข้าสำเร็จกี่รายการ ข้ามกี่รายการ',
-            ]} />
-          </>
-        ),
-      },
-      {
         id: 'pai-his-integration',
-        title: 'นำเข้าจากระบบ HIS โดยตรง',
+        title: 'นำเข้าจากระบบ HIS',
         content: (
           <>
             <p className="text-sm text-muted-foreground leading-relaxed mb-2">สิทธิ์: EDITOR ขึ้นไป | ต้องตั้งค่า HIS API ก่อน</p>
             <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-              ระบบรองรับนำเข้าทั้งข้อมูล <strong className="text-foreground">OPD</strong> (ผู้ป่วยนอก — visit) และ <strong className="text-foreground">IPD</strong> (ผู้ป่วยใน — admission)
-              จาก HIS โดยตรง ข้อมูล IPD จะมีเลข AN, วันรับ/จำหน่าย, หัตถการ, และรายการยาจาก billing items
+              ระบบนำเข้าข้อมูลจาก HIS โดยตรง รองรับทั้ง <strong className="text-foreground">OPD</strong> (ผู้ป่วยนอก — visit)
+              และ <strong className="text-foreground">IPD</strong> (ผู้ป่วยใน — admission)
+              ข้อมูล IPD จะมีเลข AN, วันรับ/จำหน่าย, หัตถการ, และรายการยาจาก billing items
             </p>
+            <ManualImage src="/images/manual/08-import-page.png" alt="HIS data import interface" caption="หน้าจอนำเข้าข้อมูลจาก HIS" />
             <StepList steps={[
-              'ค้นหาผู้ป่วย — พิมพ์ HN หรือเลขบัตรประชาชน',
+              'ไปที่หน้ารายละเอียดผู้ป่วย แล้วดึงข้อมูลจาก HIS ในแผงข้อมูล HIS',
               'เลือกช่วงวันที่ ดูจำนวน visit (ทั้งหมด / เกี่ยวกับมะเร็ง / นำเข้าแล้ว / ใหม่)',
               'กด "นำเข้า" — ระบบดึงเฉพาะ visit มะเร็ง (ICD-10: C, D0, Z51) พร้อมรายการยาและเบิกจ่าย',
+              'ระบบจับคู่ยาอัตโนมัติ (4 ระดับ: sksDrugCode → dfsText → exactName → contains) และผูกกับผู้ป่วย',
             ]} />
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
               <strong className="text-foreground">ค้นหาขั้นสูง:</strong> ค้นด้วยช่วงวันที่ + รหัส ICD-10 + ตำแหน่งมะเร็ง + ยา (สูงสุด 31 วันต่อครั้ง)
@@ -892,6 +874,34 @@ const sections: Section[] = [
           </>
         ),
       },
+      {
+        id: 'pai-data-details',
+        title: 'ข้อมูลที่นำเข้าจาก HIS',
+        content: (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+              ข้อมูลที่ระบบดึงจาก HIS สำหรับแต่ละ visit:
+            </p>
+            <div className="mt-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-2">OPD (ผู้ป่วยนอก):</p>
+              <ul className="space-y-1 ml-4 list-disc">
+                <li>ข้อมูลผู้ป่วย (HN, ชื่อ-นามสกุล, เลขบัตรประชาชน, สิทธิ์ประกัน)</li>
+                <li>วินิจฉัย ICD-10 (หลัก + รอง)</li>
+                <li>รายการยาและการเบิกจ่าย (billing items) พร้อมรหัส TMT/AIPN</li>
+              </ul>
+            </div>
+            <div className="mt-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-2">IPD (ผู้ป่วยใน):</p>
+              <ul className="space-y-1 ml-4 list-disc">
+                <li>เลข AN, วันรับ/จำหน่าย, หอผู้ป่วย</li>
+                <li>วินิจฉัย ICD-10 + หัตถการ ICD-9-CM</li>
+                <li>รายการยาและ billing items, DRG, RW</li>
+              </ul>
+            </div>
+            <Tip>ระบบจะจับคู่ผู้ป่วยกับข้อมูลเดิมอัตโนมัติจาก HN — หากไม่พบจะสร้างข้อมูลผู้ป่วยใหม่</Tip>
+          </>
+        ),
+      },
     ],
   },
   {
@@ -908,6 +918,7 @@ const sections: Section[] = [
               โปรโตคอลคือแนวทางการรักษามะเร็งมาตรฐานที่กำหนดโดย สปส. แต่ละโปรโตคอลประกอบด้วย ชื่อ (ไทย/อังกฤษ)
               ตำแหน่งมะเร็ง ระยะโรคที่ครอบคลุม สูตรยาที่ใช้ และประเภทการรักษา ระบบมีข้อมูลประมาณ 169 โปรโตคอล
             </p>
+            <ManualImage src="/images/manual/10-protocol-detail.png" alt="Protocol management overview" caption="ภาพรวมหน้าจัดการโปรโตคอล" />
           </>
         ),
       },
@@ -920,6 +931,7 @@ const sections: Section[] = [
               ตารางแสดงโปรโตคอลทั้งหมด พร้อมรหัส ชื่อ ตำแหน่งมะเร็ง จำนวนสูตรยา สถานะ
               ค้นหาด้วยชื่อ/รหัส กรองตามตำแหน่งมะเร็ง คลิกแถวเพื่อดูรายละเอียด
             </p>
+            <ManualImage src="/images/manual/09-protocol-list.png" alt="Protocol list with search and filters" caption="รายการโปรโตคอลการรักษา" />
           </>
         ),
       },
@@ -961,6 +973,7 @@ const sections: Section[] = [
               แต่ละสูตรยาประกอบด้วยรายการยาพร้อมขนาด หน่วย เส้นทางการให้ และรอบการรักษา
               สูตรยา 1 ตัวสามารถเชื่อมโยงกับหลายโปรโตคอล
             </p>
+            <ManualImage src="/images/manual/11-regimen-list.png" alt="Regimen list page" caption="หน้ารายการสูตรยา (Regimens)" />
           </>
         ),
       },
@@ -997,6 +1010,7 @@ const sections: Section[] = [
               ราคา, รูปแบบยา (form), ขนาด (strength), และชื่อการค้า (trade names)
               ระบบมีข้อมูลประมาณ 98 ยาและ 380 ชื่อการค้า
             </p>
+            <ManualImage src="/images/manual/12-drug-list.png" alt="Drug list page with all medications" caption="หน้ารายการยาทั้งหมด" />
           </>
         ),
       },
@@ -1030,6 +1044,7 @@ const sections: Section[] = [
               ข้อมูลอ้างอิง 23 ตำแหน่งมะเร็งตามที่ สปส. กำหนด (อ่านอย่างเดียว — ไม่สามารถแก้ไข)
               แต่ละตำแหน่งมีชื่อไทย/อังกฤษ รหัส ICD-10 และระยะโรค ใช้อ้างอิงในหลายส่วนของระบบ
             </p>
+            <ManualImage src="/images/manual/13-cancer-sites.png" alt="Cancer sites reference list" caption="หน้ารายการตำแหน่งมะเร็ง" />
           </>
         ),
       },
@@ -1050,6 +1065,7 @@ const sections: Section[] = [
               ประกอบด้วย 3 ส่วน: BILLTRAN (ข้อมูลการเงิน), BILLDISP (ข้อมูลการจ่ายยา), OPServices (บริการและวินิจฉัย)
               ระบบสร้างไฟล์ ZIP ตามมาตรฐานพร้อมส่ง เข้าถึงได้จากเมนู &quot;ส่งออก SSOP&quot; ใน Sidebar
             </p>
+            <ManualImage src="/images/manual/14-ssop-export.png" alt="SSOP export page for SSO billing" caption="หน้าส่งออก SSOP สำหรับเบิกจ่ายประกันสังคม" />
           </>
         ),
       },
@@ -1110,6 +1126,7 @@ const sections: Section[] = [
               CIPN คือรูปแบบไฟล์สำหรับเบิกจ่ายค่ารักษาผู้ป่วยใน (IPD) ตามมาตรฐานกรมบัญชีกลาง
               ระบบสร้างไฟล์ XML สำหรับแต่ละ admission (AN) แล้วรวมเป็น ZIP เข้าถึงได้จากเมนู &quot;ส่งออก CIPN&quot; ใน Sidebar
             </p>
+            <ManualImage src="/images/manual/15-cipn-export.png" alt="CIPN export page for Comptroller General billing" caption="หน้าส่งออก CIPN สำหรับกรมบัญชีกลาง" />
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
               <strong className="text-foreground">ความแตกต่างจาก SSOP:</strong> SSOP ใช้สำหรับผู้ป่วยนอก (OPD) เบิกกับ สปส.,
               CIPN ใช้สำหรับผู้ป่วยใน (IPD) แต่ละไฟล์ XML จะมี 4 ส่วน: IPADT (ข้อมูลรับ-จำหน่าย), IPDx (วินิจฉัย),
@@ -1175,6 +1192,7 @@ const sections: Section[] = [
               แสดงข้อมูลส่วนตัว บทบาท อีเมล แผนก/ตำแหน่ง เบอร์โทร
               ผู้ใช้ทุกบทบาทสามารถเข้าถึงได้
             </p>
+            <ManualImage src="/images/manual/16-profile.png" alt="User profile page" caption="หน้าโปรไฟล์ผู้ใช้งาน" />
           </>
         ),
       },
@@ -1231,6 +1249,7 @@ const sections: Section[] = [
               ADMIN สามารถ: เพิ่มผู้ใช้ใหม่, เปลี่ยนบทบาท, รีเซ็ตรหัสผ่าน (สร้างรหัสชั่วคราว),
               ปิด/เปิดใช้งานบัญชี, ลบ session ที่ค้าง
             </p>
+            <ManualImage src="/images/manual/17-settings-users.png" alt="User management settings page" caption="หน้าจัดการผู้ใช้งานในระบบ" />
           </>
         ),
       },
@@ -1244,6 +1263,7 @@ const sections: Section[] = [
               <strong className="text-foreground"> ssop</strong> (รหัสบัญชีดูแล)
               ADMIN ดูค่าได้แต่แก้ไขไม่ได้ (อ่านอย่างเดียว) ค่า sensitive เช่น API key จะแสดงเป็น ****
             </p>
+            <ManualImage src="/images/manual/18-settings-app.png" alt="Application settings page" caption="หน้าตั้งค่าระบบ" />
             <Tip>ตัวกรองนำเข้า HIS (his_import_filters) ควบคุมว่าระบบจะนำเข้า visit ประเภทใดบ้าง: cancer_diag (วินิจฉัยมะเร็ง), Z510 (เคมีบำบัด), Z511 (ภูมิคุ้มกันบำบัด)</Tip>
           </>
         ),
@@ -1257,6 +1277,7 @@ const sections: Section[] = [
               ตั้งค่าการใช้งาน AI: เปิด/ปิด AI, เลือก provider (Gemini/Claude/OpenAI), ตั้ง API key, เลือกโมเดล,
               ปรับ max_tokens/temperature ต้องตั้งค่าก่อนจึงจะใช้ฟีเจอร์ AI แนะนำโปรโตคอลได้
             </p>
+            <ManualImage src="/images/manual/19-settings-ai.png" alt="AI provider settings page" caption="หน้าตั้งค่า AI Provider" />
           </>
         ),
       },
@@ -1269,6 +1290,7 @@ const sections: Section[] = [
               รายการยา/เวชภัณฑ์ในบัญชียาหลัก สปส. (~1,200 รายการ) อ่านอย่างเดียว ค้นด้วยรหัสหรือชื่อ
               แสดงรหัส AIPN, TMT, ชื่อ, หมวด, อัตราเบิก ใช้ตรวจสอบรหัสยาสำหรับ SSOP Export
             </p>
+            <ManualImage src="/images/manual/20-settings-aipn.png" alt="SSO AIPN drug catalog page" caption="หน้าบัญชียา AIPN ของ สปส." />
           </>
         ),
       },
@@ -1283,6 +1305,7 @@ const sections: Section[] = [
               แต่ละรายการแสดง วันที่สแกน, สถานะ (สำเร็จ/ข้อผิดพลาด), จำนวนผู้ป่วยที่สแกน,
               visit ใหม่ที่นำเข้า, visit ที่ข้าม, ข้อผิดพลาด, ระยะเวลาทำงาน
             </p>
+            <ManualImage src="/images/manual/22-settings-scan-logs.png" alt="HIS scan logs page" caption="หน้าบันทึกสแกน HIS" />
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
               คลิกขยายแต่ละรายการเพื่อดูรายละเอียดต่อผู้ป่วย: HN, ชื่อ, สถานะ (imported/skipped/error),
               จำนวน visit ที่นำเข้า/ข้าม พร้อมลิงก์ไปหน้ารายละเอียดผู้ป่วย
@@ -1316,6 +1339,7 @@ const sections: Section[] = [
               ระบบบันทึกทุกการเปลี่ยนแปลง (สร้าง/แก้ไข/ลบ) อัตโนมัติ แสดงวันเวลา ผู้ดำเนินการ ประเภท ทรัพยากร
               คลิกขยายเพื่อดู diff (ค่าก่อน/หลัง) ส่งออกเป็น CSV ได้
             </p>
+            <ManualImage src="/images/manual/21-settings-audit-logs.png" alt="Audit logs page showing system activity" caption="หน้าบันทึกกิจกรรมระบบ (Audit Logs)" />
           </>
         ),
       },
@@ -1329,6 +1353,7 @@ const sections: Section[] = [
               แสดงจำนวนแถวในแต่ละตาราง กด &quot;ดาวน์โหลดสำรองข้อมูล&quot; สร้างไฟล์ .json.gz พร้อม checksum
               เลือกว่าจะรวม audit log หรือไม่ แนะนำให้สำรองเป็นประจำ (เช่น ทุกสัปดาห์)
             </p>
+            <ManualImage src="/images/manual/23-settings-backup.png" alt="Database backup and restore page" caption="หน้าสำรองและกู้คืนข้อมูล" />
             <Tip>ส่วนกู้คืน (Restore) สงวนสิทธิ์เฉพาะ SUPER_ADMIN</Tip>
           </>
         ),
@@ -1342,6 +1367,7 @@ const sections: Section[] = [
             <p className="text-sm text-muted-foreground leading-relaxed">
               หน้าบำรุงรักษาระบบ (/settings/maintenance) รวมเครื่องมือสำหรับผู้ดูแลระบบ แบ่งเป็นหมวด (พับ/ขยายได้):
             </p>
+            <ManualImage src="/images/manual/24-settings-maintenance.png" alt="System maintenance page" caption="หน้าบำรุงรักษาระบบ" />
             <div className="my-3 space-y-3 text-sm text-muted-foreground">
               <div>
                 <p className="font-medium text-foreground">ข้อมูลระบบ (System Diagnostics)</p>
@@ -1428,7 +1454,7 @@ const sections: Section[] = [
             <StepList steps={[
               'ลงทะเบียนผู้ป่วย — หน้าผู้ป่วยมะเร็ง > เพิ่มผู้ป่วย (หรือนำเข้าจาก HIS)',
               'เปิดเคสรักษา — หน้ารายละเอียดผู้ป่วย > เปิดเคส > เลือกตำแหน่ง/โปรโตคอล/โรงพยาบาล',
-              'นำเข้าข้อมูล visit — จาก Excel/CSV หรือระบบ HIS',
+              'นำเข้าข้อมูล visit — ดึงจากระบบ HIS ที่หน้ารายละเอียดผู้ป่วย',
               'วิเคราะห์โปรโตคอล — หน้าวิเคราะห์ > เลือกผู้ป่วย > ดูผล > ยืนยัน',
               'จัดการเบิกจ่าย — หน้ารายละเอียดผู้ป่วย > visit > เพิ่มรอบเบิก',
               'ส่งออก SSOP — ไปที่ /ssop-export > เลือก > ตรวจสอบ > สร้างไฟล์ ZIP',
@@ -1442,12 +1468,12 @@ const sections: Section[] = [
         content: (
           <>
             <StepList steps={[
-              'เตรียมไฟล์ Excel/CSV ตามรูปแบบ (หรือเลือกนำเข้าจาก HIS)',
-              'อัปโหลดที่หน้านำเข้าข้อมูล > ตรวจสอบ preview > ยืนยัน',
+              'ไปที่หน้ารายละเอียดผู้ป่วย > แผงข้อมูล HIS > ดึงข้อมูล',
+              'ตรวจสอบจำนวน visit ที่จะนำเข้า > กด "นำเข้า"',
               'ไปหน้าวิเคราะห์โปรโตคอล > เลือก visit ใหม่',
               'ดูผลจับคู่ > ขอคำแนะนำ AI (ถ้าเปิดใช้) > ยืนยันโปรโตคอล',
             ]} />
-            <Tip>แนะนำให้นำเข้าทีละชุดไม่ใหญ่เกิน และตรวจสอบข้อมูลก่อนยืนยัน</Tip>
+            <Tip>สำหรับการนำเข้าจำนวนมาก ใช้ Bulk Import ที่หน้าบำรุงรักษาระบบ (SUPER_ADMIN)</Tip>
           </>
         ),
       },
@@ -1530,20 +1556,20 @@ const sections: Section[] = [
           <>
             <div className="space-y-3 text-sm text-muted-foreground">
               <div>
-                <p className="font-medium text-foreground">ไฟล์อัปโหลดไม่ได้</p>
-                <p>ตรวจสอบขนาดไฟล์ (สูงสุด 10 MB) และรูปแบบ (.csv/.xlsx เท่านั้น)</p>
-              </div>
-              <div>
-                <p className="font-medium text-foreground">หัวคอลัมน์ไม่รู้จัก</p>
-                <p>ตรวจสอบว่าหัวคอลัมน์ตรงตามรูปแบบ: HN, VN, วันที่, วินิจฉัยหลัก</p>
+                <p className="font-medium text-foreground">HIS เชื่อมต่อไม่ได้</p>
+                <p>ตรวจสอบ URL และ API key ในตั้งค่าระบบ ทดสอบด้วยปุ่ม Health Check ที่หน้าตั้งค่า</p>
               </div>
               <div>
                 <p className="font-medium text-foreground">ยาจับคู่ไม่ได้ (unresolved)</p>
-                <p>ชื่อยาในไฟล์ไม่ตรงกับฐานข้อมูล — อาจต้องเพิ่มชื่อการค้าหรือตรวจสอบสะกด</p>
+                <p>HIS ไม่มี sksDrugCode หรือชื่อยาไม่ตรงกับฐานข้อมูล — ตรวจสอบข้อมูลยาใน HIS หรือเพิ่มชื่อการค้าในระบบ</p>
               </div>
               <div>
-                <p className="font-medium text-foreground">HIS เชื่อมต่อไม่ได้</p>
-                <p>ตรวจสอบ URL และ API key ในตั้งค่าระบบ</p>
+                <p className="font-medium text-foreground">ไม่พบ visit มะเร็ง</p>
+                <p>ระบบนำเข้าเฉพาะ visit ที่มี ICD-10 ขึ้นต้นด้วย C, D0, Z51 — ตรวจสอบว่ามีรหัสวินิจฉัยเหล่านี้ใน HIS</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">นำเข้าช้า / timeout</p>
+                <p>HIS API อาจตอบช้า — เพิ่ม timeout ที่ตั้งค่าระบบ หรือนำเข้าทีละช่วงวันที่สั้นลง</p>
               </div>
             </div>
           </>
