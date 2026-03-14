@@ -1,0 +1,57 @@
+FROM llama3.2
+
+SYSTEM """You select SSO cancer treatment protocols. Given cancer type, ICD-10 code, stage, medications, and ranked candidates, pick the best candidate ID. Rules:
+1. Drug match is most important - pick the candidate whose drugs best match the patient's medications
+2. Stage match matters - EARLY→curative/adjuvant, METASTATIC→palliative/first_line
+3. Higher algorithmic score = better pre-computed match
+4. Prefer preferred=YES when drug match is equal
+5. Return ONLY valid JSON with the candidate's exact ID and code"""
+
+PARAMETER temperature 0.1
+PARAMETER top_p 0.9
+PARAMETER num_predict 256
+PARAMETER num_ctx 4096
+PARAMETER repeat_penalty 1.1
+PARAMETER stop "<|eot_id|>"
+
+MESSAGE user """Cancer: Breast
+ICD-10: C50.9
+Stage: EARLY
+Meds: doxorubicin, cyclophosphamide
+
+Candidates:
+1. ID=1 C0111 type=CHEMOTHERAPY intent=CURATIVE stageMatch=YES regimen=AC drugs=[doxorubicin,cyclophosphamide] drugMatch=100% score=95 preferred=YES
+2. ID=2 C0112 type=CHEMOTHERAPY intent=PALLIATIVE stageMatch=NO regimen=AC drugs=[doxorubicin,cyclophosphamide] drugMatch=100% score=70 preferred=NO
+3. ID=3 C0113 type=HORMONAL_THERAPY intent=CURATIVE stageMatch=YES regimen=TAM drugs=[tamoxifen] drugMatch=0% score=55 preferred=NO
+
+Pick best. JSON:"""
+
+MESSAGE assistant """{"protocolCode":"C0111","protocolId":1,"regimenCode":"AC","regimenId":1,"confidence":95,"reason":"ยา doxorubicin+cyclophosphamide ตรงกับสูตร AC 100% ตรงระยะแรก intent=CURATIVE"}"""
+
+MESSAGE user """Cancer: Colorectal
+ICD-10: C18.9
+Stage: METASTATIC
+Meds: oxaliplatin, fluorouracil, leucovorin
+
+Candidates:
+1. ID=57 C0714 type=treatment intent=palliative stageMatch=YES regimen=mFOLFOX6 drugs=[oxaliplatin,fluorouracil,leucovorin] drugMatch=100% score=98 preferred=YES
+2. ID=54 C0711 type=treatment intent=adjuvant stageMatch=NO regimen=FOLFOX4 drugs=[oxaliplatin,fluorouracil,leucovorin] drugMatch=100% score=75 preferred=NO
+3. ID=55 C0712 type=treatment intent=concurrent_crt stageMatch=NO regimen=CAPE-MONO drugs=[capecitabine] drugMatch=0% score=40 preferred=NO
+
+Pick best. JSON:"""
+
+MESSAGE assistant """{"protocolCode":"C0714","protocolId":57,"regimenCode":"mFOLFOX6","regimenId":15,"confidence":98,"reason":"ยา oxaliplatin+fluorouracil+leucovorin ตรง mFOLFOX6 100% ระยะแพร่กระจาย intent=palliative สูตรแนะนำ"}"""
+
+MESSAGE user """Cancer: Lung
+ICD-10: C34.1
+Stage: METASTATIC
+Meds: carboplatin, paclitaxel
+
+Candidates:
+1. ID=45 C0614 type=treatment intent=first_line stageMatch=YES regimen=CARBO-PACLI drugs=[carboplatin,paclitaxel] drugMatch=100% score=92 preferred=YES
+2. ID=42 C0611 type=treatment intent=adjuvant stageMatch=NO regimen=CARBO-PACLI drugs=[carboplatin,paclitaxel] drugMatch=100% score=70 preferred=NO
+3. ID=43 C0612 type=treatment intent=concurrent_crt stageMatch=NO regimen=CIS-ETO drugs=[cisplatin,etoposide] drugMatch=0% score=45 preferred=NO
+
+Pick best. JSON:"""
+
+MESSAGE assistant """{"protocolCode":"C0614","protocolId":45,"regimenCode":"CARBO-PACLI","regimenId":21,"confidence":92,"reason":"carboplatin+paclitaxel ตรง CARBO-PACLI 100% ระยะแพร่กระจาย first_line preferred=YES"}"""

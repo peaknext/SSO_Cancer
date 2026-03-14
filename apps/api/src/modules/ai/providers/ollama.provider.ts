@@ -1,41 +1,56 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AiProvider, AiCompletionRequest, AiCompletionResponse } from './ai-provider.interface';
 
+// ─── Few-shot example injected in Ollama requests ────────────────────────────
+// Single concise example teaches the model: stage > drug match, exact JSON format.
+// Keep minimal — every token costs ~0.11s on 2 vCPU (qwen2.5:7b).
+const FEWSHOT_MESSAGES: { role: string; content: string }[] = [
+  {
+    role: 'user',
+    content: `Cancer: Breast\nICD-10: C50.9\nStage: METASTATIC\nMeds: doxorubicin, cyclophosphamide\n\nCandidates:\n1. ID=1 C0111 type=CHEMOTHERAPY intent=CURATIVE stageMatch=NO regimen=AC(ID=1) drugs=[doxorubicin,cyclophosphamide] drugMatch=100% score=85 preferred=YES\n2. ID=5 C0105 type=CHEMOTHERAPY intent=PALLIATIVE stageMatch=YES regimen=PACLI(ID=8) drugs=[paclitaxel] drugMatch=0% score=65 preferred=NO\n\nPick best. JSON:`,
+  },
+  {
+    role: 'assistant',
+    content: `{"recommendedProtocolCode":"C0105","recommendedProtocolId":5,"recommendedRegimenCode":"PACLI","recommendedRegimenId":8,"confidenceScore":65,"reasoning":"เลือก C0105 เพราะ stageMatch=YES intent=PALLIATIVE เหมาะกับระยะแพร่กระจาย ไม่เลือก C0111 แม้ drugMatch=100% แต่ stageMatch=NO intent=CURATIVE ไม่เหมาะกับ metastatic","alternativeProtocols":[],"clinicalNotes":""}`,
+  },
+];
+
 @Injectable()
 export class OllamaProvider implements AiProvider {
   readonly providerName = 'ollama';
   private readonly logger = new Logger(OllamaProvider.name);
-  private readonly MAX_RETRIES = 2;
+  private readonly MAX_RETRIES = 1; // Reduced from 2 — each attempt is slow on CPU
 
   async complete(request: AiCompletionRequest): Promise<AiCompletionResponse> {
     const startTime = Date.now();
     const baseUrl = (request.config.baseUrl || 'https://ollama.peaknext.cloud').replace(/\/+$/, '');
     const model = request.config.model || 'llama3.2';
 
-    // Ollama small models need higher num_predict for JSON output (default 128 is too low)
-    const numPredict = Math.max(request.config.maxTokens, 1024);
-
     let lastContent = '';
-    let lastJson: any = null;
+    let lastEvalCount: number | null = null;
+    let lastModel = model;
 
     for (let attempt = 0; attempt <= this.MAX_RETRIES; attempt++) {
       const body = {
         model,
         messages: [
           { role: 'system', content: request.systemPrompt },
+          // Single few-shot example: teaches stage > drug match + exact JSON format
+          ...FEWSHOT_MESSAGES,
           { role: 'user', content: request.userPrompt },
         ],
         format: 'json',
-        stream: false,
+        stream: true, // Stream to prevent reverse-proxy idle-timeouts on CPU-only inference
         options: {
           temperature: request.config.temperature,
-          num_predict: numPredict,
+          num_predict: 512, // qwen2.5 is more verbose; 256 truncates JSON
+          num_ctx: 4096, // Room for few-shot + query + response
         },
       };
 
       this.logger.log(
         `Calling Ollama (attempt ${attempt + 1}/${this.MAX_RETRIES + 1}): ${baseUrl}/api/chat ` +
-          `model=${model} bodySize=${JSON.stringify(body).length}`,
+          `model=${model} promptTokens≈${Math.round(JSON.stringify(body).length / 4)}`,
       );
 
       const response = await fetch(`${baseUrl}/api/chat`, {
@@ -45,7 +60,7 @@ export class OllamaProvider implements AiProvider {
           Authorization: `Bearer ${request.config.apiKey}`,
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(240000),
+        signal: AbortSignal.timeout(300000), // 5 min max for streaming on slow CPU
       });
 
       if (!response.ok) {
@@ -54,11 +69,17 @@ export class OllamaProvider implements AiProvider {
         throw new Error(`Ollama API error ${response.status}: ${error.substring(0, 200)}`);
       }
 
-      lastJson = await response.json();
-      lastContent = lastJson.message?.content || '';
+      // Read streaming response (newline-delimited JSON chunks)
+      const streamResult = await this.readStream(response, model);
+      lastContent = streamResult.content;
+      lastEvalCount = streamResult.evalCount;
+      lastModel = streamResult.responseModel;
+
+      this.logger.log(
+        `Ollama stream complete: ${lastEvalCount ?? '?'} tokens, ${Date.now() - startTime}ms`,
+      );
 
       // Validate that response is parseable JSON with required fields
-      // Note: small models may include protocolCode but not protocolId — accept either
       const parsed = this.tryExtractJson(lastContent);
       if (parsed && (parsed.recommendedProtocolId || parsed.recommendedProtocolCode)) {
         this.logger.log(
@@ -68,9 +89,9 @@ export class OllamaProvider implements AiProvider {
         );
         return {
           content: JSON.stringify(parsed),
-          tokensUsed: lastJson.eval_count ?? null,
+          tokensUsed: lastEvalCount,
           latencyMs: Date.now() - startTime,
-          model: lastJson.model || model,
+          model: lastModel,
           provider: 'ollama',
         };
       }
@@ -88,11 +109,83 @@ export class OllamaProvider implements AiProvider {
 
     return {
       content: lastContent,
-      tokensUsed: lastJson?.eval_count ?? null,
+      tokensUsed: lastEvalCount,
       latencyMs: Date.now() - startTime,
-      model: lastJson?.model || model,
+      model: lastModel,
       provider: 'ollama',
     };
+  }
+
+  /**
+   * Read Ollama streaming response (newline-delimited JSON chunks).
+   * Each line: {"model":"...","message":{"role":"assistant","content":"token"},"done":false}
+   * Final line: {"done":true,"eval_count":N,...}
+   *
+   * Streaming prevents reverse-proxy idle-timeout (nginx default 60s) which kills
+   * the connection when CPU-only inference takes >60s with stream:false.
+   */
+  private async readStream(
+    response: Response,
+    defaultModel: string,
+  ): Promise<{ content: string; evalCount: number | null; responseModel: string }> {
+    let content = '';
+    let evalCount: number | null = null;
+    let responseModel = defaultModel;
+
+    // Fallback for environments where response.body is unavailable
+    if (!response.body) {
+      const json = await response.json();
+      return {
+        content: json.message?.content || '',
+        evalCount: json.eval_count ?? null,
+        responseModel: json.model || defaultModel,
+      };
+    }
+
+    const reader = (response.body as any).getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete last line in buffer
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const chunk = JSON.parse(line);
+            content += chunk.message?.content || '';
+            if (chunk.done) {
+              evalCount = chunk.eval_count ?? null;
+              responseModel = chunk.model || defaultModel;
+            }
+          } catch {
+            // Skip unparseable chunks
+          }
+        }
+      }
+
+      // Process any remaining data in buffer
+      if (buffer.trim()) {
+        try {
+          const chunk = JSON.parse(buffer);
+          content += chunk.message?.content || '';
+          if (chunk.done) {
+            evalCount = chunk.eval_count ?? null;
+            responseModel = chunk.model || defaultModel;
+          }
+        } catch {}
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    return { content, evalCount, responseModel };
   }
 
   /**
@@ -102,7 +195,7 @@ export class OllamaProvider implements AiProvider {
   private tryExtractJson(content: string): any | null {
     if (!content?.trim()) return null;
 
-    let jsonStr = content.trim();
+    const jsonStr = content.trim();
 
     // 1. Try direct parse
     try {

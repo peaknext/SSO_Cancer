@@ -21,7 +21,7 @@ export class AiController {
   constructor(private readonly aiService: AiService) {}
 
   @Post('suggest/:vn')
-  @SetTimeout(180000)
+  @SetTimeout(300000)
   @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EDITOR)
   @ApiOperation({ summary: 'Get AI protocol suggestion for a visit (calls AI provider)' })

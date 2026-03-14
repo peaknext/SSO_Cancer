@@ -133,8 +133,8 @@ export class AiService {
       apiKey,
       model,
       maxTokens: parseInt(settings['ai_max_tokens'] || '2048'),
-      // Ollama small models need slightly higher temperature for structured output
-      temperature: isOllama ? Math.max(baseTemperature, 0.5) : baseTemperature,
+      // Ollama: cap temperature low for deterministic selection (not creativity)
+      temperature: isOllama ? Math.min(baseTemperature, 0.2) : baseTemperature,
       ...(isOllama && { baseUrl: settings['ai_ollama_base_url'] }),
     };
 
@@ -187,8 +187,39 @@ export class AiService {
       );
     }
 
+    // Validate FK references — AI models (especially small ones) may hallucinate IDs
+    let validProtocolId: number | null = recommendation.recommendedProtocolId || null;
+    let validRegimenId: number | null = recommendation.recommendedRegimenId || null;
+
+    if (validProtocolId) {
+      const exists = await this.prisma.protocolName.findUnique({
+        where: { id: validProtocolId },
+        select: { id: true },
+      });
+      if (!exists) {
+        this.logger.warn(`AI returned non-existent protocolId=${validProtocolId} — setting to null`);
+        validProtocolId = null;
+      }
+    }
+    if (validRegimenId) {
+      const exists = await this.prisma.regimen.findUnique({
+        where: { id: validRegimenId },
+        select: { id: true },
+      });
+      if (!exists) {
+        this.logger.warn(`AI returned non-existent regimenId=${validRegimenId} — setting to null`);
+        validRegimenId = null;
+      }
+    }
+
+    this.logger.log(
+      `AI response parsed: status=${status} protocolId=${validProtocolId} regimenId=${validRegimenId} confidence=${recommendation.confidenceScore}`,
+    );
+
     // Save to DB
-    const suggestion = await this.prisma.aiSuggestion.create({
+    let suggestion: any;
+    try {
+    suggestion = await this.prisma.aiSuggestion.create({
       data: {
         visitId: visit.id,
         provider: providerName,
@@ -198,8 +229,8 @@ export class AiService {
         responseRaw: aiResponse.content.substring(0, 20000),
         recommendation: JSON.stringify(recommendation),
         confidenceScore: recommendation.confidenceScore ?? null,
-        protocolId: recommendation.recommendedProtocolId || null,
-        regimenId: recommendation.recommendedRegimenId || null,
+        protocolId: validProtocolId,
+        regimenId: validRegimenId,
         tokensUsed: aiResponse.tokensUsed,
         latencyMs: aiResponse.latencyMs,
         status,
@@ -209,6 +240,12 @@ export class AiService {
         requestedByUserId: userId,
       },
     });
+    } catch (saveError: any) {
+      this.logger.error(
+        `Failed to save AI suggestion: ${saveError.message?.substring(0, 500)}`,
+      );
+      throw saveError;
+    }
 
     // Audit log
     await this.prisma.auditLog.create({
