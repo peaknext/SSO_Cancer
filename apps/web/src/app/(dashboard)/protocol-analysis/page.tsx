@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
-import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { ConfirmProtocolDialog } from './confirm-protocol-dialog';
 import { ThaiDatePicker } from '@/components/shared/thai-date-picker';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/auth-store';
@@ -316,7 +316,6 @@ export default function ProtocolAnalysisPage() {
       if (filterHasZ511) params.set('hasZ511', 'true');
       if (filterDateFrom) params.set('visitDateFrom', filterDateFrom);
       if (filterDateTo) params.set('visitDateTo', filterDateTo);
-      params.set('visitType', viewMode === 'opd' ? '1' : '2');
       const res = await apiClient.get<PaginatedResponse<Patient>>(
         `/protocol-analysis/patients?${params}`,
       );
@@ -327,7 +326,7 @@ export default function ProtocolAnalysisPage() {
     } finally {
       setLoadingPatients(false);
     }
-  }, [patientSearch, filterSiteId, filterHasMeds, filterHasZ510, filterHasZ511, filterDateFrom, filterDateTo, hasActiveFilters, filtersHydrated, viewMode]);
+  }, [patientSearch, filterSiteId, filterHasMeds, filterHasZ510, filterHasZ511, filterDateFrom, filterDateTo, hasActiveFilters, filtersHydrated]);
 
   useEffect(() => {
     fetchPatients();
@@ -459,7 +458,7 @@ export default function ProtocolAnalysisPage() {
     setConfirmingMatch(match);
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (caseId: number | null) => {
     if (!confirmingMatch || !selectedVn) return;
     setConfirmLoading(true);
     try {
@@ -470,19 +469,37 @@ export default function ProtocolAnalysisPage() {
           regimenId: confirmingMatch.matchedRegimen?.regimenId || undefined,
         },
       );
-      setVisitDetail((prev) =>
-        prev
-          ? {
-              ...prev,
-              confirmedProtocolId: result.confirmedProtocolId,
-              confirmedRegimenId: result.confirmedRegimenId,
-              confirmedAt: result.confirmedAt,
-              confirmedProtocol: result.confirmedProtocol,
-              confirmedRegimen: result.confirmedRegimen,
-              confirmedByUser: result.confirmedByUser,
-            }
-          : prev,
-      );
+
+      // Assign case if selected
+      if (caseId) {
+        try {
+          await apiClient.patch(`/cancer-patients/visits/${selectedVn}/assign-case`, { caseId });
+        } catch {
+          toast.error('ยืนยันโปรโตคอลสำเร็จ แต่ไม่สามารถผูกเคสได้');
+        }
+      }
+
+      // Re-fetch visit detail to get updated case info
+      try {
+        const refreshed = await apiClient.get<VisitDetail>(`/protocol-analysis/visits/${selectedVn}`);
+        setVisitDetail(refreshed);
+      } catch {
+        // Fallback: update only confirmation fields
+        setVisitDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                confirmedProtocolId: result.confirmedProtocolId,
+                confirmedRegimenId: result.confirmedRegimenId,
+                confirmedAt: result.confirmedAt,
+                confirmedProtocol: result.confirmedProtocol,
+                confirmedRegimen: result.confirmedRegimen,
+                confirmedByUser: result.confirmedByUser,
+              }
+            : prev,
+        );
+      }
+
       setVisits((prev) =>
         prev.map((v) =>
           v.vn === selectedVn
@@ -491,8 +508,9 @@ export default function ProtocolAnalysisPage() {
         ),
       );
       setConfirmingMatch(null);
+      toast.success('ยืนยันโปรโตคอลสำเร็จ');
     } catch {
-      // silently fail — user sees no change
+      toast.error('ไม่สามารถยืนยันโปรโตคอลได้');
     } finally {
       setConfirmLoading(false);
     }
@@ -594,34 +612,6 @@ export default function ProtocolAnalysisPage() {
         </div>
       </div>
 
-      {/* OPD / IPD segmented control */}
-      <div className="inline-flex items-center rounded-lg bg-muted/50 p-1 gap-0.5">
-        <button
-          onClick={() => { setViewMode('opd'); setSelectedHn(null); setSelectedVn(null); }}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
-            viewMode === 'opd'
-              ? 'bg-primary text-white shadow-sm'
-              : 'text-muted-foreground hover:text-foreground hover:bg-white/50 dark:hover:bg-white/8',
-          )}
-        >
-          <Stethoscope className="h-3.5 w-3.5" />
-          OPD ผู้ป่วยนอก
-        </button>
-        <button
-          onClick={() => { setViewMode('ipd'); setSelectedHn(null); setSelectedVn(null); }}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
-            viewMode === 'ipd'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'text-muted-foreground hover:text-foreground hover:bg-white/50 dark:hover:bg-white/8',
-          )}
-        >
-          <BedDouble className="h-3.5 w-3.5" />
-          IPD ผู้ป่วยใน
-        </button>
-      </div>
-
       {/* Filter bar */}
       <div className="flex items-center gap-3 flex-wrap glass-light rounded-xl px-3 py-2">
         <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -683,12 +673,40 @@ export default function ProtocolAnalysisPage() {
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-3 w-3" />
             ล้าง
           </button>
         )}
+
+        {/* OPD / IPD toggle — right end */}
+        <div className="inline-flex items-center rounded-md bg-muted/60 p-0.5 gap-0.5 ml-auto shrink-0">
+          <button
+            onClick={() => { setViewMode('opd'); setSelectedVn(null); }}
+            className={cn(
+              'inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-all',
+              viewMode === 'opd'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Stethoscope className="h-3 w-3" />
+            OPD
+          </button>
+          <button
+            onClick={() => { setViewMode('ipd'); setSelectedVn(null); }}
+            className={cn(
+              'inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-all',
+              viewMode === 'ipd'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <BedDouble className="h-3 w-3" />
+            IPD
+          </button>
+        </div>
       </div>
 
       {/* 3-Column layout */}
@@ -1535,17 +1553,15 @@ export default function ProtocolAnalysisPage() {
       </div>
 
       {/* Confirmation dialog */}
-      <ConfirmDialog
+      <ConfirmProtocolDialog
         open={!!confirmingMatch}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmingMatch(null)}
-        title="ยืนยันโปรโตคอล"
-        description={
-          confirmingMatch
-            ? `ยืนยัน ${confirmingMatch.protocolCode} — ${confirmingMatch.protocolName}${confirmingMatch.matchedRegimen ? ` (สูตร ${confirmingMatch.matchedRegimen.regimenCode})` : ''} สำหรับ ${viewMode === 'opd' ? 'VN' : 'AN'} ${viewMode === 'ipd' && selectedVn?.startsWith('IPD-') ? selectedVn.slice(4) : selectedVn}?`
-            : ''
-        }
         loading={confirmLoading}
+        match={confirmingMatch}
+        selectedVn={selectedVn}
+        patientId={visitDetail?.patient?.id ?? null}
+        viewMode={viewMode}
       />
 
     </div>

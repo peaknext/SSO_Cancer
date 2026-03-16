@@ -370,6 +370,24 @@ export default function CipnExportPage() {
                 />
               </div>
 
+              {/* Action bar */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  พบ {admissionTotal.toLocaleString()} admissions
+                  {selectedIds.size > 0 && (
+                    <> — เลือกแล้ว <span className="font-semibold text-primary">{selectedIds.size}</span> รายการ</>
+                  )}
+                </span>
+                <Button onClick={handlePreview} disabled={selectedIds.size === 0 || isLoading}>
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                  )}
+                  ตรวจสอบข้อมูล ({selectedIds.size})
+                </Button>
+              </div>
+
               {/* Table */}
               {admissionsLoading ? (
                 <TableSkeleton rows={10} cols={6} />
@@ -469,35 +487,18 @@ export default function CipnExportPage() {
                 </div>
               )}
 
-              {/* Pagination + Action bar */}
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  {admissionTotal} รายการ
-                  {selectedIds.size > 0 && ` · เลือก ${selectedIds.size} รายการ`}
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-end">
+                  <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    totalItems={admissionTotal}
+                    pageSize={50}
+                    onPageChange={setPage}
+                  />
                 </div>
-                <div className="flex items-center gap-3">
-                  {totalPages > 1 && (
-                    <Pagination
-                      page={page}
-                      totalPages={totalPages}
-                      totalItems={admissionTotal}
-                      pageSize={50}
-                      onPageChange={setPage}
-                    />
-                  )}
-                  <Button
-                    onClick={handlePreview}
-                    disabled={selectedIds.size === 0 || isLoading}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4 mr-2" />
-                    )}
-                    ตรวจสอบข้อมูล ({selectedIds.size})
-                  </Button>
-                </div>
-              </div>
+              )}
             </>
           )}
 
