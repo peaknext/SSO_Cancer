@@ -31,10 +31,9 @@ export class CipnExportService {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const andConditions: any[] = [
       { visitType: '2' },           // IPD only
-      { an: { not: null } },        // Must have admission number
+      { an: { not: null } },        // Must have admission number (an is nullable)
       { visitBillingItems: { some: { isActive: true } } },
-      { patient: { isNot: null } },
-      { hn: { not: null } },
+      { patientId: { not: null } }, // hn is required (non-nullable) — no null check needed
     ];
 
     // Date range filter

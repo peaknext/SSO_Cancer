@@ -501,15 +501,12 @@ export class SsopExportService {
       { visitType: '1' },
       // 1. Must have billing items
       { visitBillingItems: { some: { isActive: true } } },
-      // 2. Approximate "data completeness" checks
-      { patient: { isNot: null } },
-      { primaryDiagnosis: { not: null } },
-      { hn: { not: null } },
-      { vn: { not: null } },
-      { visitDate: { not: null } },
-      // 3. Must have a linked case (caseNumber, vcrCode, protocol needed for SSOP)
-      { case: { isNot: null } },
-      // 4. NOT exported with active PENDING or APPROVED claim
+      // 2. Must have linked patient and case
+      // Note: hn, vn, visitDate, primaryDiagnosis are required (non-nullable) in schema
+      // so no need to check them for null. Prisma 7 StringFilter rejects { not: null }.
+      { patientId: { not: null } },
+      { caseId: { not: null } },
+      // 3. NOT exported with active PENDING or APPROVED claim
       {
         NOT: {
           billingClaims: {
