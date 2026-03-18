@@ -175,6 +175,7 @@ export function ConfirmProtocolDialog({
     } catch (err: unknown) {
       const apiErr = err as { error?: { message?: string } };
       toast.error(apiErr?.error?.message || 'ไม่สามารถสร้างเคสได้');
+    } finally {
       setCreatingCase(false);
     }
   }

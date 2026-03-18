@@ -1,12 +1,15 @@
 import { IsInt, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ConfirmProtocolDto {
-  @ApiProperty({ description: 'Protocol ID to confirm for this visit' })
+  @ApiPropertyOptional({
+    description: 'Protocol ID to confirm for this visit. Omit or set null for non-protocol treatment.',
+  })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
-  protocolId: number;
+  protocolId?: number;
 
   @ApiPropertyOptional({ description: 'Matched regimen ID (optional for non-drug protocols)' })
   @IsOptional()

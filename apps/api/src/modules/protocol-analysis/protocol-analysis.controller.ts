@@ -620,7 +620,7 @@ export class ProtocolAnalysisController {
 
   @Patch('visits/:vn/confirm')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EDITOR)
-  @ApiOperation({ summary: 'Confirm a protocol match for a visit' })
+  @ApiOperation({ summary: 'Confirm a protocol match for a visit (omit protocolId for non-protocol treatment)' })
   async confirmProtocol(
     @Param('vn') vn: string,
     @Body() dto: ConfirmProtocolDto,
@@ -629,35 +629,37 @@ export class ProtocolAnalysisController {
     const visit = await this.prisma.patientVisit.findUnique({ where: { vn } });
     if (!visit) throw new NotFoundException('VISIT_NOT_FOUND');
 
-    const protocol = await this.prisma.protocolName.findUnique({
-      where: { id: dto.protocolId },
-    });
-    if (!protocol || !protocol.isActive) {
-      throw new BadRequestException('โปรโตคอลไม่ถูกต้อง — Invalid protocol');
-    }
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (dto.protocolId != null) {
+        const protocol = await tx.protocolName.findUnique({ where: { id: dto.protocolId } });
+        if (!protocol || !protocol.isActive) {
+          throw new BadRequestException('โปรโตคอลไม่ถูกต้อง — Invalid protocol');
+        }
 
-    if (dto.regimenId) {
-      const link = await this.prisma.protocolRegimen.findFirst({
-        where: { protocolId: dto.protocolId, regimenId: dto.regimenId },
-      });
-      if (!link) {
-        throw new BadRequestException('สูตรยาไม่อยู่ในโปรโตคอลนี้ — Regimen not linked to this protocol');
+        if (dto.regimenId) {
+          const link = await tx.protocolRegimen.findFirst({
+            where: { protocolId: dto.protocolId, regimenId: dto.regimenId },
+          });
+          if (!link) {
+            throw new BadRequestException('สูตรยาไม่อยู่ในโปรโตคอลนี้ — Regimen not linked to this protocol');
+          }
+        }
       }
-    }
 
-    const updated = await this.prisma.patientVisit.update({
-      where: { vn },
-      data: {
-        confirmedProtocolId: dto.protocolId,
-        confirmedRegimenId: dto.regimenId ?? null,
-        confirmedByUserId: userId,
-        confirmedAt: new Date(),
-      },
-      include: {
-        confirmedProtocol: { select: { id: true, protocolCode: true, nameEnglish: true, nameThai: true } },
-        confirmedRegimen: { select: { id: true, regimenCode: true, regimenName: true } },
-        confirmedByUser: { select: { id: true, fullName: true, fullNameThai: true } },
-      },
+      return tx.patientVisit.update({
+        where: { vn },
+        data: {
+          confirmedProtocolId: dto.protocolId ?? null,
+          confirmedRegimenId: dto.regimenId ?? null,
+          confirmedByUserId: userId,
+          confirmedAt: new Date(),
+        },
+        include: {
+          confirmedProtocol: { select: { id: true, protocolCode: true, nameEnglish: true, nameThai: true } },
+          confirmedRegimen: { select: { id: true, regimenCode: true, regimenName: true } },
+          confirmedByUser: { select: { id: true, fullName: true, fullNameThai: true } },
+        },
+      });
     });
 
     return {

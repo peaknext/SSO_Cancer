@@ -196,7 +196,7 @@ interface PaginatedResponse<T> {
 }
 
 interface ConfirmationResponse {
-  confirmedProtocolId: number;
+  confirmedProtocolId: number | null;
   confirmedRegimenId: number | null;
   confirmedAt: string;
   confirmedProtocol: { id: number; protocolCode: string; nameEnglish: string; nameThai: string | null } | null;
@@ -446,12 +446,22 @@ export default function ProtocolAnalysisPage() {
       )
     : visits;
 
+  // ─── Confirmation helpers ───────────────────────────────────
+  function isMatchConfirmed(match: MatchResult): boolean {
+    if (!visitDetail?.confirmedAt) return false;
+    if (match.protocolId === 0) {
+      // Non-protocol sentinel: confirmed when confirmedAt is set but no protocol ID stored
+      return visitDetail.confirmedProtocolId == null;
+    }
+    return (
+      visitDetail.confirmedProtocolId === match.protocolId &&
+      visitDetail.confirmedRegimenId === (match.matchedRegimen?.regimenId || null)
+    );
+  }
+
   // ─── Confirmation handlers ─────────────────────────────────
   const handleConfirmClick = (match: MatchResult) => {
-    if (
-      visitDetail?.confirmedProtocolId === match.protocolId &&
-      visitDetail?.confirmedRegimenId === (match.matchedRegimen?.regimenId || null)
-    ) {
+    if (isMatchConfirmed(match)) {
       handleUnconfirm();
       return;
     }
@@ -461,21 +471,32 @@ export default function ProtocolAnalysisPage() {
   const handleConfirm = async (caseId: number | null) => {
     if (!confirmingMatch || !selectedVn) return;
     setConfirmLoading(true);
+    const isNonProtocol = confirmingMatch.protocolId === 0;
     try {
+      const body = isNonProtocol
+        ? {}
+        : {
+            protocolId: confirmingMatch.protocolId,
+            regimenId: confirmingMatch.matchedRegimen?.regimenId || undefined,
+          };
+
       const result = await apiClient.patch<ConfirmationResponse>(
         `/protocol-analysis/visits/${selectedVn}/confirm`,
-        {
-          protocolId: confirmingMatch.protocolId,
-          regimenId: confirmingMatch.matchedRegimen?.regimenId || undefined,
-        },
+        body,
       );
 
-      // Assign case if selected
+      // Assign case if selected — rollback confirmation on failure
       if (caseId) {
         try {
           await apiClient.patch(`/cancer-patients/visits/${selectedVn}/assign-case`, { caseId });
         } catch {
-          toast.error('ยืนยันโปรโตคอลสำเร็จ แต่ไม่สามารถผูกเคสได้');
+          try {
+            await apiClient.delete(`/protocol-analysis/visits/${selectedVn}/confirm`);
+          } catch {
+            // best-effort rollback
+          }
+          toast.error('ไม่สามารถผูกเคสได้ — ยกเลิกการยืนยันแล้ว');
+          return;
         }
       }
 
@@ -508,7 +529,7 @@ export default function ProtocolAnalysisPage() {
         ),
       );
       setConfirmingMatch(null);
-      toast.success('ยืนยันโปรโตคอลสำเร็จ');
+      toast.success(isNonProtocol ? 'บันทึกการรักษานอกโปรโตคอลสำเร็จ' : 'ยืนยันโปรโตคอลสำเร็จ');
     } catch {
       toast.error('ไม่สามารถยืนยันโปรโตคอลได้');
     } finally {
@@ -518,28 +539,43 @@ export default function ProtocolAnalysisPage() {
 
   const handleUnconfirm = async () => {
     if (!selectedVn) return;
+    const prevDetail = visitDetail;
+    const prevVisits = visits;
+    // Optimistic update
+    setVisitDetail((prev) =>
+      prev
+        ? {
+            ...prev,
+            confirmedProtocolId: null,
+            confirmedRegimenId: null,
+            confirmedAt: null,
+            confirmedProtocol: null,
+            confirmedRegimen: null,
+            confirmedByUser: null,
+            case: null,
+          }
+        : prev,
+    );
+    setVisits((prev) =>
+      prev.map((v) =>
+        v.vn === selectedVn ? { ...v, confirmedProtocolId: null, confirmedAt: null } : v,
+      ),
+    );
     try {
       await apiClient.delete(`/protocol-analysis/visits/${selectedVn}/confirm`);
-      setVisitDetail((prev) =>
-        prev
-          ? {
-              ...prev,
-              confirmedProtocolId: null,
-              confirmedRegimenId: null,
-              confirmedAt: null,
-              confirmedProtocol: null,
-              confirmedRegimen: null,
-              confirmedByUser: null,
-            }
-          : prev,
-      );
-      setVisits((prev) =>
-        prev.map((v) =>
-          v.vn === selectedVn ? { ...v, confirmedProtocolId: null, confirmedAt: null } : v,
-        ),
-      );
+      // Also unassign case if one was linked
+      if (prevDetail?.case?.id) {
+        try {
+          await apiClient.delete(`/cancer-patients/visits/${selectedVn}/assign-case`);
+        } catch {
+          // Not critical — case unassign is best-effort
+        }
+      }
     } catch {
-      // silently fail
+      toast.error('ไม่สามารถยกเลิกการยืนยันได้');
+      // Revert optimistic update
+      setVisitDetail(prevDetail);
+      setVisits(prevVisits);
     }
   };
 
@@ -1247,27 +1283,30 @@ export default function ProtocolAnalysisPage() {
                 ) : (
                   <div className="space-y-2">
                     {matchResults.map((match, idx) => {
-                      const isConfirmed =
-                        visitDetail?.confirmedProtocolId === match.protocolId &&
-                        visitDetail?.confirmedRegimenId === (match.matchedRegimen?.regimenId || null);
+                      const isConfirmed = isMatchConfirmed(match);
                       const isRadiation = match.protocolType === 'radiation';
+                      const isNonProtocolCard = match.protocolId === 0;
 
                       return (
                       <div
                         key={`${match.protocolId}-${match.matchedRegimen?.regimenId ?? idx}`}
-                        onClick={() => canConfirm && match.protocolId !== 0 && handleConfirmClick(match)}
+                        onClick={() => canConfirm && handleConfirmClick(match)}
                         className={cn(
                           'rounded-lg border p-3 text-xs transition-all',
                           isConfirmed
                             ? 'border-green-400/60 dark:border-green-600/50 bg-green-50/80 dark:bg-green-950/30 ring-1 ring-green-300/30 dark:ring-green-700/30'
-                            : isRadiation
+                            : isNonProtocolCard
                               ? idx === 0
-                                ? 'border-orange-400/50 dark:border-orange-600/40 bg-orange-50/60 dark:bg-orange-950/25'
-                                : 'border-orange-200/50 dark:border-orange-700/30 hover:bg-orange-50/40 dark:hover:bg-orange-950/15'
-                              : idx === 0
-                                ? 'border-primary/40 bg-primary/5'
-                                : 'hover:bg-primary/4',
-                          canConfirm && match.protocolId !== 0 && 'cursor-pointer hover:shadow-sm',
+                                ? 'border-rose-400/50 dark:border-rose-600/40 bg-rose-50/60 dark:bg-rose-950/25'
+                                : 'border-rose-200/50 dark:border-rose-700/30 hover:bg-rose-50/40 dark:hover:bg-rose-950/15'
+                              : isRadiation
+                                ? idx === 0
+                                  ? 'border-orange-400/50 dark:border-orange-600/40 bg-orange-50/60 dark:bg-orange-950/25'
+                                  : 'border-orange-200/50 dark:border-orange-700/30 hover:bg-orange-50/40 dark:hover:bg-orange-950/15'
+                                : idx === 0
+                                  ? 'border-primary/40 bg-primary/5'
+                                  : 'hover:bg-primary/4',
+                          canConfirm && 'cursor-pointer hover:shadow-sm',
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
