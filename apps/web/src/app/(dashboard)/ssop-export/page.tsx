@@ -606,6 +606,17 @@ export default function SsopExportPage() {
         </button>
       </div>
 
+      {/* ─── Re-export hint ─────────────────────────────────────────────── */}
+      <div className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+        <Info className="h-4 w-4 shrink-0 mt-0.5" />
+        <span>
+          หากต้องการส่งออก visit ที่เคยส่งออกแล้ว (เช่น เพื่อการแก้ C)
+          ให้ไปที่<strong>ข้อมูลผู้ป่วยมะเร็ง</strong>ที่ต้องการ เลือก visit นั้น
+          และเปลี่ยนสถานะ claim เป็น <strong>REJECTED</strong> แล้ว visit
+          ดังกล่าวจะกลับมาให้เลือกส่งออกใหม่ได้
+        </span>
+      </div>
+
       {/* ─── Tab: Create Export ──────────────────────────────────────────── */}
       {activeTab === 'select' && (
         <>
@@ -920,15 +931,6 @@ function SelectVisitsStep({
 }) {
   return (
     <>
-      {/* Info */}
-      <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/15 px-4 py-3">
-        <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-        <p className="text-sm text-foreground/80">
-          แสดงเฉพาะ visits ที่มีข้อมูลพร้อมส่งออก และยังไม่มีรอบเรียกเก็บที่รออนุมัติหรืออนุมัติแล้ว
-          — เลือก visits แล้วกด &quot;ตรวจสอบข้อมูล&quot;
-        </p>
-      </div>
-
       {/* Filters */}
       <div className="flex flex-wrap gap-3 glass-light rounded-xl p-3">
         <div className="flex items-center gap-2">

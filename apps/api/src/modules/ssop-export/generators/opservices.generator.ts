@@ -31,10 +31,13 @@ export function buildOpServiceRecords(
     ? formatDateTime(visit.serviceEndTime)
     : '';
 
+  // Cancer add-on claims use Class 'OP' and ICD-9-CM 9925 (chemo injection/infusion)
+  const svcClass = 'OP';
+
   const service: OpServiceRecord = {
     invno: visit.vn,
     svId: svid,
-    class_: visit.serviceClass || 'EC',
+    class_: svcClass,
     hcode,
     hn: visit.patientHn,
     pid: visit.patientCitizenId,
@@ -47,16 +50,15 @@ export function buildOpServiceRecords(
     clinic: visit.clinicCode || '99',
     begDt,
     endDt,
-    lcCode: '',
-    codeSet: '',
-    stdCode: '',
+    lcCode: hcode,
+    codeSet: 'IN',
+    stdCode: '9925',
     svCharge: '0.00',
     completion: 'Y',
     svTxCode: '',
     claimCat: 'OP1',
   };
 
-  const svcClass = visit.serviceClass || 'EC';
   const dxRecords: OpDxRecord[] = [];
 
   // Primary diagnosis — strip dots from ICD-10 codes (C11.9 → C119)

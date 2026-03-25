@@ -20,7 +20,6 @@ export function buildBilltranRecords(
   hcode: string,
   svidMap: Map<string, string>,
   dispIdMap: Map<string, string> = new Map(),
-  previouslyExportedVns: Set<string> = new Set(),
 ): { tran: BilltranRecord; items: BillItemRecord[] } {
   const chargeAmount = visit.billingItems.reduce(
     (sum, item) => sum + item.quantity * item.unitPrice,
@@ -47,7 +46,9 @@ export function buildBilltranRecords(
     amount: formatAmount(chargeAmount),
     paid: '0.00',
     verCode: visit.vcrCode || visit.protocolCode || '',
-    tflag: previouslyExportedVns.has(visit.vn) ? 'E' : 'A',
+    // Cancer claims (SSOCAC) always use 'E' — they are additional claims on top of
+    // standard OP billing already submitted. Non-cancer would use A/E logic.
+    tflag: 'E',
     pid: visit.patientCitizenId,
     name: visit.patientFullName,
     hMain: visit.mainHospitalCode,
@@ -104,14 +105,13 @@ export function generateBilltranXml(
   sessNo: string,
   svidMap: Map<string, string>,
   dispIdMap: Map<string, string> = new Map(),
-  previouslyExportedVns: Set<string> = new Set(),
 ): string {
   const tranRecords: string[] = [];
   const itemRecords: string[] = [];
 
   for (const visit of visits) {
     const { tran, items } = buildBilltranRecords(
-      visit, hcode, svidMap, dispIdMap, previouslyExportedVns,
+      visit, hcode, svidMap, dispIdMap,
     );
     tranRecords.push(Object.values(tran).join('|'));
     for (const item of items) {

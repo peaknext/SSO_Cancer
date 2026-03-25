@@ -166,17 +166,12 @@ export class SsopExportService {
     // Get CareAccount setting for OPServices
     const careAccount = await this.getCareAccountSetting();
 
-    // Check which VNs were previously exported (for tflag: A=new, E=edit)
-    const previouslyExportedVns = await this.findPreviouslyExportedVns(
-      validVisits.map((v) => v.vn),
-    );
-
     // Generate XML content — billdisp first to get dispIdMap for billtran
     const { xml: billdispXml, dispIdMap } = generateBilldispXml(
       ssopVisits, hcode, hname, sessNoStr, svidMap,
     );
     const billtranXml = generateBilltranXml(
-      ssopVisits, hcode, hname, sessNoStr, svidMap, dispIdMap, previouslyExportedVns,
+      ssopVisits, hcode, hname, sessNoStr, svidMap, dispIdMap,
     );
     const opservicesXml = generateOpServicesXml(
       ssopVisits, hcode, hname, sessNoStr, svidMap, careAccount,
@@ -207,9 +202,10 @@ export class SsopExportService {
       0,
     );
 
-    // Save export batch (atomic with session number via transaction)
+    // Save export batch + auto-create PENDING billing claims (atomic)
+    const validVisitIds = validVisits.map((v) => v.visitId);
     const batch = await this.prisma.$transaction(async (tx) => {
-      return tx.billingExportBatch.create({
+      const created = await tx.billingExportBatch.create({
         data: {
           sessionNo: sessNo,
           hcode,
@@ -217,11 +213,48 @@ export class SsopExportService {
           visitCount: validVisits.length,
           totalAmount,
           fileName,
-          visitIds: validVisits.map((v) => v.visitId),
+          visitIds: validVisitIds,
           fileData: new Uint8Array(zipBuffer),
           createdByUserId: userId,
         },
       });
+
+      // Auto-create PENDING billing claims for each exported visit
+      // Skip visits that already have PENDING or APPROVED claims
+      const existingClaims = await tx.visitBillingClaim.findMany({
+        where: {
+          visitId: { in: validVisitIds },
+          isActive: true,
+          status: { in: ['PENDING', 'APPROVED'] },
+        },
+        select: { visitId: true },
+      });
+      const skipVisitIds = new Set(existingClaims.map((c) => c.visitId));
+
+      // Get max round number per visit for next round calculation
+      const maxRounds = await tx.visitBillingClaim.groupBy({
+        by: ['visitId'],
+        where: { visitId: { in: validVisitIds }, isActive: true },
+        _max: { roundNumber: true },
+      });
+      const maxRoundMap = new Map(maxRounds.map((r) => [r.visitId, r._max.roundNumber ?? 0]));
+
+      const claimsToCreate = validVisitIds
+        .filter((id) => !skipVisitIds.has(id))
+        .map((visitId) => ({
+          visitId,
+          roundNumber: (maxRoundMap.get(visitId) ?? 0) + 1,
+          status: 'PENDING',
+          submittedAt: now,
+          notes: `SSOP Session ${sessNoStr}`,
+          createdByUserId: userId,
+        }));
+
+      if (claimsToCreate.length > 0) {
+        await tx.visitBillingClaim.createMany({ data: claimsToCreate });
+      }
+
+      return created;
     });
 
     return { buffer: zipBuffer, fileName, batchId: batch.id };
@@ -616,7 +649,10 @@ export class SsopExportService {
     drugCategory: string | null,
     hasResolvedAipn: boolean = false,
   ): string {
-    const category = rawCategory || 'OP1';
+    // Ignore HIS-provided OPR — we determine OPR ourselves based on item criteria.
+    // HIS may mark ALL items as OPR for cancer visits, but only qualifying items should be OPR.
+    // Preserve other non-OP1 values (RRT, REF, EM1, etc.) from HIS as-is.
+    const category = (rawCategory === 'OPR' ? 'OP1' : rawCategory) || 'OP1';
     if (category !== 'OP1') return category;
 
     const hasCancerCase =
@@ -988,41 +1024,6 @@ export class SsopExportService {
       where: { settingKey: 'ssop_care_account' },
     });
     return setting?.settingValue || '1';
-  }
-
-  /** Find VNs that were already exported in a previous batch (for tflag=E) */
-  private async findPreviouslyExportedVns(vns: string[]): Promise<Set<string>> {
-    if (vns.length === 0) return new Set();
-
-    // Get all batches that contain any of these VNs via visitIds → PatientVisit.vn
-    const batches = await this.prisma.billingExportBatch.findMany({
-      where: { isActive: true },
-      select: { visitIds: true },
-    });
-
-    // Collect all previously exported visit IDs
-    const allExportedIds = new Set<number>();
-    for (const batch of batches) {
-      if (Array.isArray(batch.visitIds)) {
-        for (const id of batch.visitIds) {
-          allExportedIds.add(id as number);
-        }
-      }
-    }
-
-    if (allExportedIds.size === 0) return new Set();
-
-    // Look up VNs for these visit IDs that match our target VN list
-    const visits = await this.prisma.patientVisit.findMany({
-      where: {
-        vn: { in: vns },
-        id: { in: Array.from(allExportedIds) },
-        visitType: '1',
-      },
-      select: { vn: true },
-    });
-
-    return new Set(visits.map((v) => v.vn));
   }
 
   /** Reserve next session number scoped by hcode (atomic via transaction) */
